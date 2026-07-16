@@ -1,3 +1,5 @@
+import 'react-native-url-polyfill/auto';
+
 import { createClient } from '@supabase/supabase-js';
 
 import { getPublicEnv } from '@/src/lib/env/publicEnv';
