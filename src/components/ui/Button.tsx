@@ -24,9 +24,9 @@ export function Button({ label, variant = 'primary', style, disabled, accessibil
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: 52, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, paddingHorizontal: spacing[4] },
-  primary: { backgroundColor: colors.textPrimary },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
+  base: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing[4] },
+  primary: { backgroundColor: colors.ink, borderColor: colors.ink },
+  secondary: { backgroundColor: colors.paper, borderColor: colors.ink },
   disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.78 },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
 });

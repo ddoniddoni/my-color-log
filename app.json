@@ -34,7 +34,16 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "오늘의 색을 사진으로 기록하려면 카메라 권한이 필요해요.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
+        }
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

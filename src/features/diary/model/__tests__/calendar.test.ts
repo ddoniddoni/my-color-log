@@ -1,0 +1,18 @@
+import { getCalendarCells, moveMonth } from '@/src/features/diary/model/calendar';
+
+describe('diary calendar model', () => {
+  it('pads a month into complete Sunday-first calendar rows', () => {
+    const cells = getCalendarCells(2026, 7);
+
+    expect(cells).toHaveLength(35);
+    expect(cells.slice(0, 3).every((cell) => cell.day === null)).toBe(true);
+    expect(cells[3]?.day).toBe(1);
+    expect(cells[33]?.day).toBe(31);
+    expect(cells[34]?.day).toBeNull();
+  });
+
+  it('moves across the December and January year boundary', () => {
+    expect(moveMonth({ year: 2026, month: 1 }, -1)).toEqual({ year: 2025, month: 12 });
+    expect(moveMonth({ year: 2026, month: 12 }, 1)).toEqual({ year: 2027, month: 1 });
+  });
+});

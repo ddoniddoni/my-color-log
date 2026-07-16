@@ -1,4 +1,4 @@
-import { getStartupDestination } from '@/src/features/auth/model/startupRoute';
+import { getAuthenticatedDestination, getStartupDestination } from '@/src/features/auth/model/startupRoute';
 
 describe('getStartupDestination', () => {
   const completedProfile = { id: 'user-id', nickname: '오늘빛', timezone: 'Asia/Seoul', isOnboarded: true };
@@ -13,5 +13,10 @@ describe('getStartupDestination', () => {
 
   it('sends an onboarded user to the tabs', () => {
     expect(getStartupDestination(true, completedProfile)).toBe('/(tabs)');
+  });
+
+  it('uses an explicit destination after authentication', () => {
+    expect(getAuthenticatedDestination(null)).toBe('/(onboarding)/nickname');
+    expect(getAuthenticatedDestination(completedProfile)).toBe('/(tabs)');
   });
 });

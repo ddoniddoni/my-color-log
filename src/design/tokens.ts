@@ -2,6 +2,8 @@ export const colors = {
   canvas: '#F7F5F1',
   surface: '#FFFFFF',
   surfaceMuted: '#F0EEE9',
+  paper: '#FFFDF8',
+  ink: '#171714',
   textPrimary: '#1D1C1A',
   textSecondary: '#6C6963',
   textTertiary: '#9A968E',
@@ -18,7 +20,7 @@ export const colors = {
 
 export const spacing = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 } as const;
 
-export const radius = { sm: 8, md: 12, lg: 18, xl: 24, pill: 999 } as const;
+export const radius = { sketch: 2, sm: 8, md: 12, lg: 18, xl: 24, pill: 999 } as const;
 
 export const typography = {
   display: { fontSize: 36, lineHeight: 44, fontWeight: '700' },

@@ -35,7 +35,7 @@
 18. MVP에서 사진 속 색상을 강제로 판정하지 않는다. 색상 일치도는 후속 비차단형 피드백이다.
 19. MVP에는 공개 피드, 팔로워, 전체 랭킹, 댓글 스레드, 채팅을 넣지 않는다.
 20. 사진은 네트워크가 없어도 로컬에 먼저 안전하게 저장되고, 연결 복구 후 업로드된다.
-21. 사용자는 이메일 OTP로 계정을 확인한 뒤 솔로 기록을 시작하며, 같은 이메일로 모든 기기에서 자신의 데이터를 복구할 수 있다.
+21. 사용자는 이메일과 비밀번호로 계정을 만든 뒤 솔로 기록을 시작하며, 같은 계정으로 모든 기기에서 자신의 데이터를 복구할 수 있다.
 
 ## 1. 제품 요약
 
@@ -220,7 +220,7 @@
 #### 계정과 온보딩
 
 - 최초 실행 시 짧은 3장 온보딩
-- 이메일 OTP 로그인 또는 계정 생성
+- 이메일·비밀번호 회원가입 및 로그인
 - 닉네임 설정
 - 로그아웃, 계정 삭제
 
@@ -354,7 +354,7 @@
 
 1. 앱 실행
 2. 제품 가치 3장 온보딩
-3. 이메일 OTP 확인
+3. 이메일·비밀번호 회원가입 또는 로그인
 4. 닉네임 입력
 5. 오늘의 컬러 룰렛 공개
 6. 오늘 화면 진입
@@ -450,9 +450,9 @@
 
 ### 11.1 계정 및 프로필
 
-#### FR-AUTH-001 — 이메일 OTP 시작
+#### FR-AUTH-001 — 이메일·비밀번호 회원가입과 로그인
 
-- 사용자는 첫 기록 전에 이메일 주소와 6자리 이메일 OTP를 확인해야 한다.
+- 사용자는 첫 기록 전에 이메일 주소와 비밀번호로 회원가입하거나 로그인해야 한다.
 - 인증된 이메일 계정은 서버 사용자 ID와 개인 데이터 영역을 가진다.
 - 사용자는 같은 이메일로 다시 로그인해 다른 기기에서도 자신의 기록을 복구할 수 있다.
 
@@ -1397,7 +1397,7 @@ features/diary/api/diaryRepository.ts
 
 ### 24.4 친구방
 
-- 이메일 OTP 인증 완료율
+- 이메일·비밀번호 회원가입 완료율
 - 방 만들기 시작 → 생성 완료율
 - 초대 생성 → 첫 친구 참여 전환율
 - 생성된 방의 평균 활성 멤버 수
@@ -1472,7 +1472,7 @@ features/diary/api/diaryRepository.ts
 
 ### 계정
 
-- [ ] 이메일 OTP 확인 후 솔로 첫 사진을 남길 수 있다.
+- [ ] 이메일·비밀번호 회원가입 또는 로그인 후 솔로 첫 사진을 남길 수 있다.
 - [ ] 이메일 인증 사용자에게 서버 사용자 ID가 생성된다.
 - [ ] 같은 이메일로 로그인하면 기존 개인 데이터를 복구할 수 있다.
 - [ ] 친구방 생성·참여 전에 이메일 인증 계정이 요구된다.
@@ -1546,7 +1546,7 @@ features/diary/api/diaryRepository.ts
 
 ### Phase 1 — 완전한 솔로 수직 슬라이스
 
-- 이메일 OTP 세션
+- 이메일·비밀번호 세션
 - 닉네임 온보딩
 - 오늘의 전역 미션
 - 룰렛 공개
@@ -1558,7 +1558,7 @@ features/diary/api/diaryRepository.ts
 
 ### Phase 2 — 친구방
 
-- 이메일 OTP 계정 연결
+- 이메일·비밀번호 계정 연결
 - 방 생성과 이름 설정
 - 멤버 2~6명 구조
 - 다중 사용 초대 코드/링크
@@ -1663,6 +1663,6 @@ features/diary/api/diaryRepository.ts
 - Expo: https://docs.expo.dev/
 - Expo Router: https://docs.expo.dev/router/introduction/
 - Supabase Expo React Native: https://supabase.com/docs/guides/getting-started/quickstarts/expo-react-native
-- Supabase Email OTP: https://supabase.com/docs/guides/auth/auth-email-passwordless
+- Supabase Password Auth: https://supabase.com/docs/guides/auth/passwords
 - Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
 - Google Stitch: https://stitch.withgoogle.com/

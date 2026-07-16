@@ -1,5 +1,6 @@
-import { type Session, type User } from '@supabase/supabase-js';
+import { type Session } from '@supabase/supabase-js';
 
+import { mapSignInErrorCode, mapSignUpErrorCode } from '@/src/features/auth/model/authErrors';
 import { supabase } from '@/src/lib/supabase/client';
 
 export async function getStoredSession(): Promise<Session | null> {
@@ -8,13 +9,22 @@ export async function getStoredSession(): Promise<Session | null> {
   return data.session;
 }
 
-export async function requestEmailOtp(email: string): Promise<void> {
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  if (error) throw new Error('email_otp_request_failed');
+export async function signUpWithEmailPassword(email: string, password: string): Promise<Session> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new Error(mapSignUpErrorCode(error.code));
+  if (data.user?.identities?.length === 0) throw new Error('email_already_registered');
+  if (!data.session) throw new Error('email_confirmation_required');
+  return data.session;
 }
 
-export async function verifyEmailOtp(email: string, token: string): Promise<User> {
-  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
-  if (error || !data.user) throw new Error('email_otp_verification_failed');
-  return data.user;
+export async function signInWithEmailPassword(email: string, password: string): Promise<Session> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(mapSignInErrorCode(error.code));
+  if (!data.session) throw new Error('password_sign_in_failed');
+  return data.session;
+}
+
+export async function signOutCurrentSession(): Promise<void> {
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error) throw new Error('sign_out_failed');
 }

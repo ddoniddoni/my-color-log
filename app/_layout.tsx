@@ -17,6 +17,8 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="camera" />
+            <Stack.Screen name="photo-review" />
           </Stack>
         </AppProviders>
       </AppErrorBoundary>
