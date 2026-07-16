@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'rea
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 
-import { ensureAnonymousUser } from '@/src/features/auth/api/authRepository';
+import { getStoredSession } from '@/src/features/auth/api/authRepository';
 import { completeProfile } from '@/src/features/profile/api/profileRepository';
 import { validateNickname } from '@/src/features/profile/model/profile';
 import { Screen } from '@/src/components/layout/Screen';
@@ -21,8 +21,9 @@ export default function NicknameScreen() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!validation.isValid) throw new Error('invalid_nickname');
-      const user = await ensureAnonymousUser();
-      return completeProfile(user.id, validation.value);
+      const session = await getStoredSession();
+      if (!session?.user) throw new Error('missing_authenticated_session');
+      return completeProfile(session.user.id, validation.value);
     },
     onSuccess: async (profile) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile(profile.id) });
@@ -45,7 +46,7 @@ export default function NicknameScreen() {
           <View style={styles.meta}><AppText color={showValidation ? 'primary' : 'tertiary'} variant="caption">{showValidation ? validation.message : '2~12자'}</AppText><AppText color="tertiary" variant="caption">{nickname.trim().length}/12</AppText></View>
           {mutation.isError && hasSubmitted ? <AppText color="secondary">연결을 확인한 뒤 다시 시도해 주세요.</AppText> : null}
         </View>
-        <View style={styles.bottom}><AppText variant="caption" color="secondary">가입 없이 바로 시작할 수 있어요. 로그아웃하거나 앱을 삭제하면 익명 계정은 복구되지 않을 수 있어요.</AppText><Button label={mutation.isPending ? '시작하는 중…' : '시작하기'} onPress={handleSubmit} disabled={mutation.isPending} /></View>
+        <View style={styles.bottom}><AppText variant="caption" color="secondary">이메일 계정으로 내 기록을 안전하게 이어갈 수 있어요.</AppText><Button label={mutation.isPending ? '시작하는 중…' : '시작하기'} onPress={handleSubmit} disabled={mutation.isPending} /></View>
       </Screen>
     </KeyboardAvoidingView>
   );

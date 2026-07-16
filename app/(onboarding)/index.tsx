@@ -21,18 +21,18 @@ export default function OnboardingScreen() {
   const isLastSlide = currentIndex === slides.length - 1;
 
   const handleNext = (): void => {
-    if (isLastSlide) router.replace('/(onboarding)/nickname');
+    if (isLastSlide) router.replace('/(onboarding)/email');
     else setCurrentIndex((index) => index + 1);
   };
 
   return (
     <Screen contentContainerStyle={styles.content}>
       <View style={styles.progress} accessibilityLabel={`${currentIndex + 1} / ${slides.length} 단계`}>
-        {slides.map((_, index) => <View key={index} style={[styles.progressDot, index === currentIndex && styles.progressDotActive]} />)}
+        {slides.map((slide, index) => <View key={slide.title} style={[styles.progressDot, index === currentIndex && styles.progressDotActive]} />)}
       </View>
       <Surface style={styles.artwork}><View style={styles.colorDisc} /><View style={styles.colorDiscSmall} /></Surface>
       <View style={styles.copy}><AppText variant="title1">{slide.title}</AppText><AppText color="secondary">{slide.description}</AppText></View>
-      <Button label={isLastSlide ? '오늘의 색 만나기' : '다음'} onPress={handleNext} />
+      <Button label={isLastSlide ? '이메일로 시작하기' : '다음'} onPress={handleNext} />
     </Screen>
   );
 }
