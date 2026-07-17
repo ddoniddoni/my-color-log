@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
-import { getActiveRoom } from '@/src/features/rooms/api/roomRepository';
+import { getMyRooms } from '@/src/features/rooms/api/roomRepository';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
-export function useActiveRoom(userId: string | null) {
+export function useMyRooms(userId: string | null) {
   const query = useQuery({
     enabled: userId !== null,
-    queryFn: getActiveRoom,
-    queryKey: userId ? queryKeys.activeRoom(userId) : ['activeRoom', 'unauthenticated'],
+    queryFn: getMyRooms,
+    queryKey: userId ? queryKeys.rooms(userId) : ['rooms', 'unauthenticated'],
     staleTime: 30_000,
   });
   const { refetch } = query;

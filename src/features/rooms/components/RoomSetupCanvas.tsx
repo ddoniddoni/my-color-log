@@ -24,12 +24,13 @@ import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
-import { createActiveRoomInvite, createRoom, endActiveRoom, getRoomInvitePreview, joinRoomByCode, leaveActiveRoom, revokeActiveRoomInvites, transferActiveRoomOwnership, updateActiveRoomSettings } from '@/src/features/rooms/api/roomRepository';
+import { createRoom, createRoomInvite, endRoom, getRoomInvitePreview, joinRoomByCode, leaveRoom, revokeRoomInvites, transferRoomOwnership, updateRoomSettings } from '@/src/features/rooms/api/roomRepository';
 import { RoomManagementModal, type RoomManagementPendingAction } from '@/src/features/rooms/components/RoomManagementModal';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
-import { useActiveRoom } from '@/src/features/rooms/hooks/useActiveRoom';
-import { useActiveRoomTodayBoard } from '@/src/features/rooms/hooks/useActiveRoomTodayBoard';
+import { useRoom } from '@/src/features/rooms/hooks/useRoom';
+import { useRoomTodayBoard } from '@/src/features/rooms/hooks/useActiveRoomTodayBoard';
 import { type ActiveRoom, type RoomInvitePreview, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
+import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { getRoomPhotoMosaicSlots, type RoomBoardMember, type RoomBoardPhoto, type RoomTodayBoard } from '@/src/features/rooms/model/roomTodayBoard';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
@@ -37,19 +38,20 @@ import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
 const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_DIGIT_IDS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const;
 
-export function RoomSetupCanvas() {
+export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const dateKey = useKstDateKey();
-  const activeRoomQuery = useActiveRoom(userId);
-  const roomTodayBoardQuery = useActiveRoomTodayBoard(userId, dateKey);
+  const roomQuery = useRoom(userId, roomId);
+  const roomTodayBoardQuery = useRoomTodayBoard(userId, dateKey, roomId);
   const [inviteCode, setInviteCode] = useState<string[]>(() => Array.from({ length: INVITE_CODE_LENGTH }, () => ''));
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [roomName, setRoomName] = useState('');
@@ -75,8 +77,8 @@ export function RoomSetupCanvas() {
       setRoomEmoji('');
       if (userId) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.activeRoom(userId) }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomTodayBoard(userId, dateKey) }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
         ]);
       }
     },
@@ -90,43 +92,45 @@ export function RoomSetupCanvas() {
       setInviteCode(Array.from({ length: INVITE_CODE_LENGTH }, () => ''));
       if (userId) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.activeRoom(userId) }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomTodayBoard(userId, dateKey) }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
         ]);
       }
     },
   });
   const leaveRoomMutation = useMutation({
-    mutationFn: leaveActiveRoom,
+    mutationFn: () => leaveRoom(roomId),
     onSuccess: async () => {
       setIsRoomManagementVisible(false);
       await invalidateActiveRoomData();
+      router.replace('/(tabs)/room');
     },
   });
   const transferRoomOwnershipMutation = useMutation({
-    mutationFn: transferActiveRoomOwnership,
+    mutationFn: (newOwnerId: string) => transferRoomOwnership(roomId, newOwnerId),
     onSuccess: async () => {
       setIsRoomManagementVisible(false);
       await invalidateActiveRoomData();
     },
   });
   const endRoomMutation = useMutation({
-    mutationFn: endActiveRoom,
+    mutationFn: () => endRoom(roomId),
     onSuccess: async () => {
       setIsRoomManagementVisible(false);
       await invalidateActiveRoomData();
+      router.replace('/(tabs)/room');
     },
   });
   const updateRoomSettingsMutation = useMutation({
-    mutationFn: ({ emoji, name }: { emoji: string | null; name: string }) => updateActiveRoomSettings(name, emoji),
+    mutationFn: ({ emoji, name }: { emoji: string | null; name: string }) => updateRoomSettings(roomId, name, emoji),
     onSuccess: invalidateActiveRoomData,
   });
   const revokeRoomInvitesMutation = useMutation({
-    mutationFn: revokeActiveRoomInvites,
+    mutationFn: () => revokeRoomInvites(roomId),
     onSuccess: invalidateActiveRoomData,
   });
   const createRoomInviteMutation = useMutation({
-    mutationFn: createActiveRoomInvite,
+    mutationFn: () => createRoomInvite(roomId),
     onSuccess: invalidateActiveRoomData,
   });
   const pendingRoomAction: RoomManagementPendingAction | null = leaveRoomMutation.isPending
@@ -146,10 +150,11 @@ export function RoomSetupCanvas() {
   async function invalidateActiveRoomData(): Promise<void> {
     if (!userId) return;
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoom(userId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomTodayBoard(userId, dateKey) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistory(userId) }),
-      queryClient.invalidateQueries({ queryKey: ['activeRoomHistoryBoard', userId] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.room(userId, roomId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
     ]);
   }
 
@@ -215,15 +220,15 @@ export function RoomSetupCanvas() {
     joinRoomMutation.mutate(code, { onError: (error) => Alert.alert('방에 참여하지 못했어요', getRoomErrorMessage(error)) });
   };
 
-  if (sessionState.status === 'loading' || activeRoomQuery.isPending) {
+  if (sessionState.status === 'loading' || roomQuery.isPending) {
     return <RoomStatusCanvas message="친구방을 확인하고 있어요." />;
   }
 
-  if (sessionState.status === 'error' || !userId || activeRoomQuery.isError) {
+  if (sessionState.status === 'error' || !userId || roomQuery.isError) {
     return <RoomStatusCanvas message="친구방을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요." />;
   }
 
-  if (activeRoomQuery.data) {
+  if (roomQuery.data) {
     return (
       <>
         <ActiveRoomCanvas
@@ -237,7 +242,8 @@ export function RoomSetupCanvas() {
           isBoardRefreshing={roomTodayBoardQuery.isFetching}
           onOpenManagement={() => setIsRoomManagementVisible(true)}
           onRefreshBoard={() => { void roomTodayBoardQuery.refetch(); }}
-          room={activeRoomQuery.data}
+          onBack={() => router.back()}
+          room={roomQuery.data}
           topInset={insets.top}
         />
         <RoomManagementModal
@@ -250,7 +256,7 @@ export function RoomSetupCanvas() {
           onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => Alert.alert('방장을 넘기지 못했어요', getRoomErrorMessage(error)) })}
           onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => Alert.alert('방 정보를 저장하지 못했어요', getRoomErrorMessage(error)) })}
           pendingAction={pendingRoomAction}
-          room={activeRoomQuery.data}
+          room={roomQuery.data}
           visible={isRoomManagementVisible}
         />
       </>
@@ -444,13 +450,14 @@ type ActiveRoomCanvasProps = {
   isBoardError: boolean;
   isBoardLoading: boolean;
   isBoardRefreshing: boolean;
+  onBack: () => void;
   onOpenManagement: () => void;
   onRefreshBoard: () => void;
   room: ActiveRoom;
   topInset: number;
 };
 
-function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, isBoardError, isBoardLoading, isBoardRefreshing, onOpenManagement, onRefreshBoard, room, topInset }: ActiveRoomCanvasProps) {
+function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, room, topInset }: ActiveRoomCanvasProps) {
   const remainingSeats = room.maxMembers - room.members.length;
   const formattedDate = dateKey.replaceAll('-', '.');
 
@@ -469,6 +476,9 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
   return (
     <View style={styles.page}>
       <View style={[styles.roomTopBar, { paddingTop: Math.max(topInset, 8) }]}>
+        <Pressable accessibilityLabel="친구방 목록으로 돌아가기" accessibilityRole="button" hitSlop={10} onPress={onBack} style={styles.roomBackButton}>
+          <AppText style={styles.roomBackText}>‹</AppText>
+        </Pressable>
         <View style={styles.roomDateGroup}>
           <View accessibilityLabel="우리 방 아이콘" accessibilityRole="image" style={styles.roomMark}>
             <AppText style={[styles.roomMarkText, { fontFamily: boldFont }]}>{room.emoji ?? room.name.slice(0, 1)}</AppText>
@@ -588,7 +598,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoad
                   <TuneIcon />
                   <AppText style={styles.canvasActionLabel}>Rules</AppText>
                 </Pressable>
-                <Pressable accessibilityLabel="친구방 지난 기록 보기" accessibilityRole="button" onPress={() => router.push('/room-history')} style={styles.canvasActionButton}>
+                <Pressable accessibilityLabel="친구방 지난 기록 보기" accessibilityRole="button" onPress={() => router.push({ pathname: '/room-history', params: { roomId: board.roomId } })} style={styles.canvasActionButton}>
                   <HistoryIcon />
                   <AppText style={styles.canvasActionLabel}>History</AppText>
                 </Pressable>
@@ -627,7 +637,7 @@ function RoomMemberMosaic({ member, onCapture, onOpenPhoto }: { member: RoomBoar
   );
 }
 
-function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiChange, onNameChange, roomName, visible }: {
+export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiChange, onNameChange, roomName, visible }: {
   emoji: string;
   isPending: boolean;
   onClose: () => void;
@@ -659,7 +669,7 @@ function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiChange, o
   );
 }
 
-function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boolean; onClose: () => void; onJoin: () => void; preview: RoomInvitePreview | null }) {
+export function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boolean; onClose: () => void; onJoin: () => void; preview: RoomInvitePreview | null }) {
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={preview !== null}>
       <View style={styles.modalOverlay}>
@@ -678,20 +688,6 @@ function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boo
     </Modal>
   );
 }
-
-function getRoomErrorMessage(error: Error): string {
-  if (error.message === 'room_name_invalid') return '방 이름은 2~20자로 입력해 주세요.';
-  if (error.message === 'room_request_signature_failed') return '방 만들기 요청을 새로고침하는 중이에요. 앱을 다시 열고 한 번 더 시도해 주세요.';
-  if (error.message === 'authentication_required') return '로그인 정보를 확인하지 못했어요. 다시 로그인한 뒤 시도해 주세요.';
-  if (error.message === 'room_name_invalid') return '방 이름은 2~20자로 입력해 주세요.';
-  if (error.message === 'room_emoji_invalid') return '방 이모지는 8자 이하로 입력해 주세요.';
-  if (error.message === 'active_room_already_exists') return '이미 참여 중인 친구방이 있어요. MVP에서는 한 개의 활성 친구방만 참여할 수 있어요.';
-  if (error.message === 'room_invite_not_available') return '초대가 만료됐거나 사용 가능 횟수가 끝났어요.';
-  if (error.message === 'room_invite_cannot_join_self') return '내가 만든 초대 코드로는 참여할 수 없어요.';
-  if (error.message === 'room_member_limit_reached') return '이 방은 이미 6명으로 가득 찼어요.';
-  return '연결을 확인한 뒤 다시 시도해 주세요.';
-}
-
 
 function PencilIcon() {
   return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m5 19 3.3-.7L19 7.6 16.4 5 5.7 15.7 5 19Z" fill="none" stroke={colors.black} strokeLinejoin="round" strokeWidth={1.8} /><Path d="m15.7 5.7 2.6 2.6" fill="none" stroke={colors.black} strokeLinecap="round" strokeWidth={1.8} /></Svg>;
@@ -785,6 +781,8 @@ const styles = StyleSheet.create({
   recentEmptyTitle: { color: colors.black, fontSize: 15, fontWeight: '700', lineHeight: 20 },
   recentEmptyDescription: { color: 'rgba(0, 0, 0, 0.6)', fontSize: 10, lineHeight: 14 },
   roomTopBar: { alignItems: 'center', backgroundColor: '#F9F9F9', flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 8, paddingHorizontal: 16 },
+  roomBackButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 36 },
+  roomBackText: { color: colors.black, fontSize: 42, fontWeight: '300', lineHeight: 42 },
   roomDateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   roomMark: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 20, borderWidth: 2, height: 40, justifyContent: 'center', overflow: 'hidden', width: 40 },
   roomMarkText: { color: colors.black, fontSize: 18, fontWeight: '700' },

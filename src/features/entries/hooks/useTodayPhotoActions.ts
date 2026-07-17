@@ -28,9 +28,9 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingPhotos(userId, dateKey) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomTodayBoard(userId, dateKey) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistory(userId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistoryBoard(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
     ]);
   };
 

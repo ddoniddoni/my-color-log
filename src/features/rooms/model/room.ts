@@ -60,21 +60,57 @@ export function validateInviteCode(value: string): boolean {
 }
 
 export function parseActiveRoomRows(value: unknown): ActiveRoom | null {
-  if (!Array.isArray(value) || value.length === 0) return null;
-  const rows = value.map(parseActiveRoomRow);
-  const first = rows[0];
-  if (!rows.every((row) => row.roomId === first.roomId)) throw new Error('invalid_active_room_response');
+  const rooms = parseRoomListRows(value);
+  if (rooms.length === 0) return null;
+  if (rooms.length > 1) throw new Error('invalid_active_room_response');
+  return rooms[0] ?? null;
+}
 
-  return {
-    emoji: first.roomEmoji,
-    id: first.roomId,
-    inviteCode: first.inviteCode,
-    inviteExpiresAt: first.inviteExpiresAt,
-    maxMembers: first.maxMembers,
-    members: rows.map((row) => ({ id: row.memberId, joinedAt: row.memberJoinedAt, nickname: row.memberNickname, role: row.memberRole })),
-    name: first.roomName,
-    status: first.roomStatus,
-  };
+export function parseRoomListRows(value: unknown): ActiveRoom[] {
+  if (!Array.isArray(value)) throw new Error('invalid_room_list_response');
+
+  const roomsById = new Map<string, ActiveRoom>();
+  for (const row of value.map(parseActiveRoomRow)) {
+    const existing = roomsById.get(row.roomId);
+    if (existing) {
+      if (
+        existing.name !== row.roomName
+        || existing.emoji !== row.roomEmoji
+        || existing.status !== row.roomStatus
+        || existing.maxMembers !== row.maxMembers
+        || existing.inviteCode !== row.inviteCode
+        || existing.inviteExpiresAt !== row.inviteExpiresAt
+        || existing.members.some((member) => member.id === row.memberId)
+      ) {
+        throw new Error('invalid_room_list_response');
+      }
+      existing.members.push({
+        id: row.memberId,
+        joinedAt: row.memberJoinedAt,
+        nickname: row.memberNickname,
+        role: row.memberRole,
+      });
+      continue;
+    }
+
+    roomsById.set(row.roomId, {
+      emoji: row.roomEmoji,
+      id: row.roomId,
+      inviteCode: row.inviteCode,
+      inviteExpiresAt: row.inviteExpiresAt,
+      maxMembers: row.maxMembers,
+      members: [{
+        id: row.memberId,
+        joinedAt: row.memberJoinedAt,
+        nickname: row.memberNickname,
+        role: row.memberRole,
+      }],
+      name: row.roomName,
+      status: row.roomStatus,
+    });
+  }
+
+  return [...roomsById.values()];
 }
 
 export function parseRoomInvitePreview(value: unknown): RoomInvitePreview | null {

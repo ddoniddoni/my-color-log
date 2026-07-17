@@ -2,7 +2,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -11,13 +10,13 @@ import {
   BricolageGrotesque_800ExtraBold,
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
-import { Image } from 'expo-image';
 import { useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { AppText } from '@/src/components/ui/AppText';
+import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { DiaryEditModal, type DiaryEditTarget } from '@/src/features/diary/components/DiaryEditModal';
@@ -193,13 +192,10 @@ function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; 
 }
 
 function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onPhotoPress: (photoId: string) => void }) {
-  const { width: screenWidth } = useWindowDimensions();
-  const contentWidth = Math.max(200, screenWidth - 80);
   const photoCount = entry.photos.length;
-  const columns = photoCount === 1 ? 1 : photoCount <= 4 ? 2 : 3;
-  const gap = 7;
-  const tileWidth = (contentWidth - gap * (columns - 1)) / columns;
-  const tileHeight = photoCount === 1 ? 172 : tileWidth;
+  const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
+    photo.signedUrl ? [{ capturedAt: photo.capturedAt, id: photo.id, position: photo.position, uri: photo.signedUrl }] : []
+  ));
   const memo = getDiaryEntryMemo(entry);
 
   return (
@@ -211,20 +207,11 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{entry.color.nameKo}</AppText>
       <AppText style={[styles.entryDescription, { fontFamily: bodyFont }]}>{memo}</AppText>
       {photoCount > 0 ? (
-        <View style={styles.photoGrid}>
-          {entry.photos.map((photo) => (
-            <Pressable
-              accessibilityLabel={`${photo.position}번째 사진 전체 보기`}
-              accessibilityRole="button"
-              disabled={!photo.signedUrl}
-              key={photo.id}
-              onPress={() => onPhotoPress(photo.id)}
-              style={({ pressed }) => [styles.photoTile, { height: tileHeight, width: tileWidth }, pressed && styles.photoTilePressed]}>
-              <Image cachePolicy="memory-disk" contentFit="cover" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photoImage} />
-              <View style={styles.photoPosition}><AppText style={styles.photoPositionText}>{photo.position}</AppText></View>
-            </Pressable>
-          ))}
-        </View>
+        <NinePhotoMosaic
+          accessibilityLabel={`${entry.dateKey}의 ${entry.color.nameKo} 사진 ${photoCount}장, 9칸 기록판`}
+          onPhotoPress={(photo) => onPhotoPress(photo.id)}
+          photos={mosaicPhotos}
+        />
       ) : <View style={styles.awaitingPhoto}><AppText style={styles.awaitingPhotoText}>사진을 안전하게 올리는 중이에요.</AppText></View>}
       <View style={styles.tags}>
         <View style={styles.tag}><AppText style={styles.tagLabel}>#{entry.color.nameEn.replaceAll(' ', '').toLowerCase()}</AppText></View>
@@ -368,12 +355,6 @@ const styles = StyleSheet.create({
   colorBadge: { borderColor: colors.black, borderRadius: 9, borderWidth: 1, height: 18, width: 18 },
   entryTitle: { color: colors.black, fontSize: 18, fontWeight: '700', lineHeight: 24, marginBottom: 5 },
   entryDescription: { color: colors.black, fontSize: 14, lineHeight: 21, marginBottom: 16 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  photoTile: { backgroundColor: '#F1F1F1', borderColor: colors.black, borderWidth: 1.5, overflow: 'hidden', position: 'relative' },
-  photoTilePressed: { opacity: 0.76, transform: [{ scale: 0.98 }] },
-  photoImage: { height: '100%', width: '100%' },
-  photoPosition: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', bottom: 5, height: 17, justifyContent: 'center', position: 'absolute', right: 5, width: 17 },
-  photoPositionText: { color: colors.black, fontFamily: 'monospace', fontSize: 8 },
   awaitingPhoto: { alignItems: 'center', backgroundColor: '#F1F1F1', borderColor: colors.black, borderStyle: 'dashed', borderWidth: 1.5, height: 112, justifyContent: 'center' },
   awaitingPhotoText: { color: '#5D5F5F', fontSize: 12 },
   photoPlaceholder: { alignItems: 'center', backgroundColor: '#F1F1F1', borderColor: colors.black, borderWidth: 1.5, height: 150, justifyContent: 'center', overflow: 'hidden', position: 'relative' },

@@ -11,10 +11,10 @@ export function useUpdateProfileNickname(userId: string) {
     onSuccess: async (profile) => {
       queryClient.setQueryData(queryKeys.profile(userId), profile);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.activeRoom(userId) }),
-        queryClient.invalidateQueries({ queryKey: ['activeRoomTodayBoard', userId] }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistory(userId) }),
-        queryClient.invalidateQueries({ queryKey: ['activeRoomHistoryBoard', userId] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) }),
+        queryClient.invalidateQueries({ queryKey: ['roomTodayBoard', userId] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
       ]);
     },
   });

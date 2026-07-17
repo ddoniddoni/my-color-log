@@ -31,9 +31,9 @@ export function useDiaryEdits({ monthKey, userId }: UseDiaryEditsInput) {
     if (!userId) return;
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomTodayBoard(userId, dateKey) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistory(userId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoomHistoryBoard(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
     ]);
   };
 

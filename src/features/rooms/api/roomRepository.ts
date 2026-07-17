@@ -1,5 +1,5 @@
 import {
-  parseActiveRoomRows,
+  parseRoomListRows,
   parseCreatedRoom,
   parseRoomInvitePreview,
   type ActiveRoom,
@@ -12,29 +12,37 @@ import { logError } from '@/src/lib/logging/logger';
 import { supabase } from '@/src/lib/supabase/client';
 import { getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 
-export async function getActiveRoom(): Promise<ActiveRoom | null> {
-  const { data, error } = await supabase.rpc('get_active_room');
-  if (error) throw new Error('active_room_fetch_failed');
-  return parseActiveRoomRows(data);
+export async function getMyRooms(): Promise<ActiveRoom[]> {
+  const { data, error } = await supabase.rpc('get_my_rooms');
+  if (error) throw new Error('room_list_fetch_failed');
+  return parseRoomListRows(data);
 }
 
-export async function getActiveRoomTodayBoard(): Promise<RoomTodayBoard | null> {
-  const { data, error } = await supabase.rpc('get_active_room_today_board');
+export async function getRoom(roomId: string): Promise<ActiveRoom | null> {
+  const { data, error } = await supabase.rpc('get_room', { p_room_id: roomId });
+  if (error) throw new Error('room_fetch_failed');
+  const rooms = parseRoomListRows(data);
+  if (rooms.length > 1) throw new Error('room_fetch_failed');
+  return rooms[0] ?? null;
+}
+
+export async function getRoomTodayBoard(roomId: string): Promise<RoomTodayBoard | null> {
+  const { data, error } = await supabase.rpc('get_room_today_board', { p_room_id: roomId });
   if (error || !Array.isArray(data)) throw new Error('room_today_board_fetch_failed');
 
   const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));
   return parseRoomTodayBoardRows(data, signedUrlByPath);
 }
 
-export async function getActiveRoomHistory(): Promise<RoomHistoryDay[]> {
-  const { data, error } = await supabase.rpc('get_active_room_history');
+export async function getRoomHistory(roomId: string): Promise<RoomHistoryDay[]> {
+  const { data, error } = await supabase.rpc('get_room_history', { p_room_id: roomId });
   if (error || !Array.isArray(data)) throw new Error('room_history_fetch_failed');
   return parseRoomHistoryRows(data);
 }
 
-export async function getActiveRoomDayBoard(dateKey: string): Promise<RoomTodayBoard | null> {
+export async function getRoomDayBoard(roomId: string, dateKey: string): Promise<RoomTodayBoard | null> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new Error('invalid_room_history_date');
-  const { data, error } = await supabase.rpc('get_active_room_day_board', { p_date_key: dateKey });
+  const { data, error } = await supabase.rpc('get_room_day_board', { p_date_key: dateKey, p_room_id: roomId });
   if (error || !Array.isArray(data)) throw new Error('room_history_board_fetch_failed');
 
   const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));
@@ -61,38 +69,40 @@ export async function getRoomInvitePreview(code: string): Promise<RoomInvitePrev
   return parseRoomInvitePreview(data);
 }
 
-export async function joinRoomByCode(code: string): Promise<void> {
-  const { error } = await supabase.rpc('join_room_by_code', { p_display_code: code });
+export async function joinRoomByCode(code: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_room_by_code', { p_display_code: code });
+  if (error) throw toRoomError(error);
+  if (typeof data !== 'string') throw new Error('room_join_failed');
+  return data;
+}
+
+export async function leaveRoom(roomId: string): Promise<void> {
+  const { error } = await supabase.rpc('leave_room', { p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
-export async function leaveActiveRoom(): Promise<void> {
-  const { error } = await supabase.rpc('leave_active_room');
+export async function transferRoomOwnership(roomId: string, newOwnerId: string): Promise<void> {
+  const { error } = await supabase.rpc('transfer_room_ownership', { p_new_owner_id: newOwnerId, p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
-export async function transferActiveRoomOwnership(newOwnerId: string): Promise<void> {
-  const { error } = await supabase.rpc('transfer_active_room_ownership', { p_new_owner_id: newOwnerId });
+export async function endRoom(roomId: string): Promise<void> {
+  const { error } = await supabase.rpc('end_room', { p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
-export async function endActiveRoom(): Promise<void> {
-  const { error } = await supabase.rpc('end_active_room');
+export async function updateRoomSettings(roomId: string, name: string, emoji: string | null): Promise<void> {
+  const { error } = await supabase.rpc('update_room_settings', { p_emoji: emoji, p_name: name, p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
-export async function updateActiveRoomSettings(name: string, emoji: string | null): Promise<void> {
-  const { error } = await supabase.rpc('update_active_room_settings', { p_emoji: emoji, p_name: name });
+export async function revokeRoomInvites(roomId: string): Promise<void> {
+  const { error } = await supabase.rpc('revoke_room_invites', { p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
-export async function revokeActiveRoomInvites(): Promise<void> {
-  const { error } = await supabase.rpc('revoke_active_room_invites');
-  if (error) throw toRoomError(error);
-}
-
-export async function createActiveRoomInvite(): Promise<void> {
-  const { error } = await supabase.rpc('create_active_room_invite');
+export async function createRoomInvite(roomId: string): Promise<void> {
+  const { error } = await supabase.rpc('create_room_invite', { p_room_id: roomId });
   if (error) throw toRoomError(error);
 }
 
@@ -113,7 +123,8 @@ function toRoomError(error: RoomRpcError): Error {
   if (code === '42501') return new Error('authentication_required');
   if (message.includes('room_name_invalid')) return new Error('room_name_invalid');
   if (message.includes('room_emoji_invalid')) return new Error('room_emoji_invalid');
-  if (message.includes('active_room_already_exists')) return new Error('active_room_already_exists');
+  if (message.includes('active_room_limit_reached')) return new Error('active_room_limit_reached');
+  if (message.includes('room_already_joined')) return new Error('room_already_joined');
   if (message.includes('room_invite_not_available')) return new Error('room_invite_not_available');
   if (message.includes('room_invite_cannot_join_self')) return new Error('room_invite_cannot_join_self');
   if (message.includes('room_member_limit_reached')) return new Error('room_member_limit_reached');

@@ -23,8 +23,8 @@ import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
-import { useActiveRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoard';
-import { useActiveRoomHistory } from '@/src/features/rooms/hooks/useActiveRoomHistory';
+import { useRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoard';
+import { useRoomHistory } from '@/src/features/rooms/hooks/useActiveRoomHistory';
 import { type RoomHistoryDay } from '@/src/features/rooms/model/roomHistory';
 import { type RoomBoardMember, type RoomBoardPhoto } from '@/src/features/rooms/model/roomTodayBoard';
 
@@ -40,7 +40,7 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
   weekday: 'short',
 });
 
-export function RoomHistoryCanvas() {
+export function RoomHistoryCanvas({ roomId }: { roomId: string }) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -50,10 +50,10 @@ export function RoomHistoryCanvas() {
   const router = useRouter();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
-  const historyQuery = useActiveRoomHistory(userId);
+  const historyQuery = useRoomHistory(userId, roomId);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const effectiveDateKey = selectedDateKey ?? historyQuery.data?.[0]?.dateKey ?? null;
-  const boardQuery = useActiveRoomDayBoard(userId, effectiveDateKey);
+  const boardQuery = useRoomDayBoard(userId, roomId, effectiveDateKey);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [photoSelection, setPhotoSelection] = useState<RoomBoardPhotoSelection | null>(null);
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;

@@ -1,5 +1,5 @@
-import { RoomSetupCanvas } from '@/src/features/rooms/components/RoomSetupCanvas';
+import { RoomListCanvas } from '@/src/features/rooms/components/RoomListCanvas';
 
 export default function RoomScreen() {
-  return <RoomSetupCanvas />;
+  return <RoomListCanvas />;
 }
