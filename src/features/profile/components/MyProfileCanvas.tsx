@@ -17,8 +17,10 @@ import { AppText } from '@/src/components/ui/AppText';
 import { colors } from '@/src/design/tokens';
 
 type MyProfileCanvasProps = {
+  deletingAccount: boolean;
   email: string;
   nickname: string;
+  onDeleteAccountPress: () => void;
   onNotificationsPress: () => void;
   onProfileEditPress: () => void;
   onSignOutPress: () => void;
@@ -26,8 +28,10 @@ type MyProfileCanvasProps = {
 };
 
 export function MyProfileCanvas({
+  deletingAccount,
   email,
   nickname,
+  onDeleteAccountPress,
   onNotificationsPress,
   onProfileEditPress,
   onSignOutPress,
@@ -70,16 +74,18 @@ export function MyProfileCanvas({
 
         <View style={styles.menuList}>
           <MarkerLine strong />
-          <MenuRow label="프로필 수정" onPress={onProfileEditPress} />
+          <MenuRow disabled={deletingAccount} label="프로필 수정" onPress={onProfileEditPress} />
           <MarkerLine />
-          <MenuRow label="알림 설정" onPress={onNotificationsPress} />
+          <MenuRow disabled={deletingAccount} label="알림 설정" onPress={onNotificationsPress} />
           <MarkerLine />
-          <MenuRow destructive label={signingOut ? '로그아웃 중…' : '로그아웃'} onPress={onSignOutPress} />
+          <MenuRow destructive disabled={deletingAccount || signingOut} label={signingOut ? '로그아웃 중…' : '로그아웃'} onPress={onSignOutPress} />
           <MarkerLine strong />
         </View>
 
         <View style={styles.accountManagement}>
-          <AppText style={[styles.accountHint, { fontFamily: bodyFont }]}>계정 삭제 기능은 준비 중이에요.</AppText>
+          <Pressable accessibilityLabel="계정 삭제" accessibilityRole="button" accessibilityState={{ disabled: deletingAccount }} disabled={deletingAccount} onPress={onDeleteAccountPress} style={({ pressed }) => [styles.accountDelete, pressed && styles.accountDeletePressed, deletingAccount && styles.accountDeleteDisabled]}>
+            <AppText style={[styles.accountDeleteText, { fontFamily: bodyFont }]}>{deletingAccount ? '계정 삭제 중…' : '계정 삭제'}</AppText>
+          </Pressable>
         </View>
 
         <View pointerEvents="none" style={styles.doodle}><PenDoodle /></View>
@@ -88,10 +94,10 @@ export function MyProfileCanvas({
   );
 }
 
-function MenuRow({ destructive = false, label, onPress }: { destructive?: boolean; label: string; onPress: () => void }) {
+function MenuRow({ destructive = false, disabled = false, label, onPress }: { destructive?: boolean; disabled?: boolean; label: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityLabel={label} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}>
-      <AppText style={[styles.menuLabel, destructive && styles.destructiveText]}>{label}</AppText>
+    <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && !disabled && styles.menuRowPressed, disabled && styles.menuRowDisabled]}>
+      <AppText style={[styles.menuLabel, destructive && styles.destructiveText, disabled && styles.menuLabelDisabled]}>{label}</AppText>
       {destructive ? <LogoutIcon /> : <ArrowIcon />}
     </Pressable>
   );
@@ -153,9 +159,14 @@ const styles = StyleSheet.create({
   markerLineSoft: { opacity: 0.1 },
   menuRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 50, paddingVertical: 10 },
   menuRowPressed: { paddingLeft: 6, transform: [{ scale: 0.99 }] },
+  menuRowDisabled: { opacity: 0.48 },
   menuLabel: { color: colors.black, fontFamily: 'BricolageGrotesque_700Bold', fontSize: 18, fontWeight: '700', letterSpacing: -0.45, lineHeight: 24 },
+  menuLabelDisabled: { color: colors.textSecondary },
   destructiveText: { color: '#BA1A1A' },
   accountManagement: { alignItems: 'center', paddingTop: 2 },
-  accountHint: { color: 'rgba(0, 0, 0, 0.4)', fontFamily: 'monospace', fontSize: 10, lineHeight: 14, textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
+  accountDelete: { alignItems: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
+  accountDeletePressed: { opacity: 0.64 },
+  accountDeleteDisabled: { opacity: 0.48 },
+  accountDeleteText: { color: colors.danger, fontFamily: 'monospace', fontSize: 11, lineHeight: 14, textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
   doodle: { alignSelf: 'center', marginTop: -2, opacity: 0.2 },
 });

@@ -2,9 +2,10 @@ import { File } from 'expo-file-system';
 
 import { type DailyEntry, parseDailyEntry, parseEntryPhoto } from '@/src/features/entries/model/dailyEntry';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
+import { getQueuedPhoto } from '@/src/features/sync/queue/photoQueue';
+import { shareEntryToActiveRoom } from '@/src/features/rooms/api/roomRepository';
 import { supabase } from '@/src/lib/supabase/client';
-
-const ENTRY_PHOTO_BUCKET = 'entry-photos';
+import { ENTRY_PHOTO_BUCKET, getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 
 export async function getDailyEntry(userId: string, dateKey: string): Promise<DailyEntry | null> {
   const { data: entry, error: entryError } = await supabase
@@ -25,12 +26,17 @@ export async function getDailyEntry(userId: string, dateKey: string): Promise<Da
 
   if (photoError) throw new Error('entry_photos_fetch_failed');
   const paths = (photoRows ?? []).map((photo) => photo.storage_path);
-  const signedUrlByPath = await getSignedUrls(paths);
+  const signedUrlByPath = await getEntryPhotoSignedUrls(paths);
   const photos = (photoRows ?? []).map((photo) => parseEntryPhoto(photo, signedUrlByPath.get(photo.storage_path) ?? null));
   return parseDailyEntry(entry, photos);
 }
 
-export async function syncPendingPhoto(photo: PendingPhoto): Promise<{ entryId: string }> {
+type SyncPendingPhotoResult = {
+  entryId: string;
+  wasCancelled: boolean;
+};
+
+export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPendingPhotoResult> {
   const localFile = new File(photo.localUri);
   if (!localFile.exists) throw new Error('local_photo_missing');
 
@@ -50,28 +56,65 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<{ entryId: 
   });
   if (uploadError) throw new Error('photo_upload_failed');
 
+  const latestPhoto = await getQueuedPhoto(photo.id);
+  if (!latestPhoto || latestPhoto.status === 'cancelled') {
+    await cleanCancelledRemotePhoto(photo.id, photo.storagePath);
+    return { entryId, wasCancelled: true };
+  }
+
   const { error: photoError } = await supabase.from('entry_photos').upsert({
-    id: photo.id,
+    id: latestPhoto.id,
     entry_id: entryId,
-    owner_id: photo.userId,
-    date_key: photo.dateKey,
-    storage_path: photo.storagePath,
-    position: photo.position,
-    caption: photo.caption,
-    captured_at: photo.capturedAt,
-    width: photo.width,
-    height: photo.height,
-    byte_size: photo.byteSize,
+    owner_id: latestPhoto.userId,
+    date_key: latestPhoto.dateKey,
+    storage_path: latestPhoto.storagePath,
+    position: latestPhoto.position,
+    caption: latestPhoto.caption,
+    captured_at: latestPhoto.capturedAt,
+    width: latestPhoto.width,
+    height: latestPhoto.height,
+    byte_size: latestPhoto.byteSize,
   }, { onConflict: 'id' });
   if (photoError) throw new Error('entry_photo_save_failed');
-  return { entryId };
+
+  const afterSavePhoto = await getQueuedPhoto(photo.id);
+  if (!afterSavePhoto || afterSavePhoto.status === 'cancelled') {
+    await cleanCancelledRemotePhoto(photo.id, latestPhoto.storagePath);
+    return { entryId, wasCancelled: true };
+  }
+
+  await shareEntryToActiveRoom(entryId);
+  return { entryId, wasCancelled: false };
 }
 
-async function getSignedUrls(paths: string[]): Promise<Map<string, string>> {
-  if (paths.length === 0) return new Map();
-  const { data, error } = await supabase.storage.from(ENTRY_PHOTO_BUCKET).createSignedUrls(paths, 60 * 60);
-  if (error) throw new Error('photo_urls_create_failed');
-  return new Map(data.flatMap((item) => item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : []));
+export async function deleteMyEntryPhotoRecord(photoId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('delete_my_entry_photo', { p_photo_id: photoId });
+  if (error) throw new Error('entry_photo_delete_failed');
+  return readDeletedStoragePath(data);
+}
+
+export async function removeEntryPhotoObject(storagePath: string): Promise<void> {
+  const { error } = await supabase.storage.from(ENTRY_PHOTO_BUCKET).remove([storagePath]);
+  if (error) throw new Error('entry_photo_storage_delete_failed');
+}
+
+export async function reorderMyEntryPhotos(updates: readonly { photoId: string; position: number }[]): Promise<void> {
+  if (updates.length === 0) return;
+  const { error } = await supabase.rpc('reorder_my_entry_photos', {
+    p_photo_ids: updates.map((update) => update.photoId),
+    p_positions: updates.map((update) => update.position),
+  });
+  if (error) throw new Error('entry_photo_reorder_failed');
+}
+
+async function cleanCancelledRemotePhoto(photoId: string, fallbackStoragePath: string): Promise<void> {
+  try {
+    const storagePath = await deleteMyEntryPhotoRecord(photoId);
+    await removeEntryPhotoObject(storagePath ?? fallbackStoragePath);
+  } catch {
+    // The cancelled queue record remains a tombstone, so a later explicit deletion
+    // cannot accidentally revive this photo in the UI.
+  }
 }
 
 function readEntryId(value: unknown): string {
@@ -81,4 +124,13 @@ function readEntryId(value: unknown): string {
     throw new Error('daily_entry_create_failed');
   }
   return first.id;
+}
+
+function readDeletedStoragePath(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const first: unknown = value[0];
+  if (typeof first !== 'object' || first === null || !('storage_path' in first) || typeof first.storage_path !== 'string') {
+    throw new Error('entry_photo_delete_failed');
+  }
+  return first.storage_path;
 }

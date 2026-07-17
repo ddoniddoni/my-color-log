@@ -4,24 +4,44 @@ import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 export type TodayPhoto = {
   id: string;
   uri: string;
+  localUri: string | null;
+  storagePath: string | null;
   position: number;
   capturedAt: string;
+  caption: string | null;
   status: 'synced' | 'syncing' | 'failed';
 };
 
 export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPhotos: PendingPhoto[]): TodayPhoto[] {
   const byId = new Map<string, TodayPhoto>();
+  const cancelledPhotoIds = new Set<string>();
+  for (const photo of queuedPhotos) {
+    if (photo.status === 'cancelled') cancelledPhotoIds.add(photo.id);
+  }
   for (const photo of entry?.photos ?? []) {
+    if (cancelledPhotoIds.has(photo.id)) continue;
     if (!photo.signedUrl) continue;
-    byId.set(photo.id, { id: photo.id, uri: photo.signedUrl, position: photo.position, capturedAt: photo.capturedAt, status: 'synced' });
+    byId.set(photo.id, {
+      id: photo.id,
+      uri: photo.signedUrl,
+      localUri: null,
+      storagePath: photo.storagePath,
+      position: photo.position,
+      capturedAt: photo.capturedAt,
+      caption: photo.caption,
+      status: 'synced',
+    });
   }
   for (const photo of queuedPhotos) {
     if (photo.status === 'cancelled') continue;
     byId.set(photo.id, {
       id: photo.id,
       uri: photo.localUri,
+      localUri: photo.localUri,
+      storagePath: photo.storagePath,
       position: photo.position,
       capturedAt: photo.capturedAt,
+      caption: photo.caption,
       status: photo.status === 'failed' ? 'failed' : photo.status === 'synced' ? 'synced' : 'syncing',
     });
   }

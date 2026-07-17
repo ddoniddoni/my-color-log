@@ -72,11 +72,15 @@ export async function confirmCapturedPhoto(photo: PendingPhoto, caption: string)
 
 export async function discardCapturedPhoto(photo: PendingPhoto): Promise<void> {
   await updatePendingPhoto(photo.id, { status: 'cancelled' });
+  await removeLocalPhotoFile(photo.localUri);
+}
+
+export async function removeLocalPhotoFile(localUri: string): Promise<void> {
   try {
-    const file = new File(photo.localUri);
+    const file = new File(localUri);
     if (file.exists) file.delete();
   } catch {
-    // The queue item remains cancelled even if local cleanup cannot run.
+    // A remote deletion still completes even if this stale local cache cannot be cleaned now.
   }
 }
 

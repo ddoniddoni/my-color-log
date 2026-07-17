@@ -4,17 +4,17 @@ import {
   BricolageGrotesque_800ExtraBold,
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
-import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
+import { NinePhotoMosaic } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
 import { type DailyMission } from '@/src/features/missions/model/dailyMission';
 import { formatKstCountdown } from '@/src/features/missions/model/countdown';
-import { getTodayPhotoSlots, type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
+import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 
 type TodayJournalProps = {
   mission: DailyMission;
@@ -23,10 +23,12 @@ type TodayJournalProps = {
   isSyncing: boolean;
   hasSyncFailure: boolean;
   onCapturePress: () => void;
+  onPhotoLongPress: (photo: TodayPhoto) => void;
+  onPhotoPress: (photo: TodayPhoto) => void;
   onRetrySync: () => void;
 };
 
-export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onCapturePress, onRetrySync }: TodayJournalProps) {
+export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onCapturePress, onPhotoLongPress, onPhotoPress, onRetrySync }: TodayJournalProps) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -59,7 +61,18 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
         {photos.length === 0
           ? <EmptyJournalCanvas mission={mission} bodyFont={bodyFont} boldFont={boldFont} />
-          : <PhotoMosaic photos={photos} />}
+          : <NinePhotoMosaic
+              accessibilityLabel={`오늘의 사진 ${photos.length}장, 9칸 기록판`}
+              onPhotoLongPress={(photo) => {
+                const todayPhoto = photos.find((item) => item.id === photo.id);
+                if (todayPhoto) onPhotoLongPress(todayPhoto);
+              }}
+              onPhotoPress={(photo) => {
+                const todayPhoto = photos.find((item) => item.id === photo.id);
+                if (todayPhoto) onPhotoPress(todayPhoto);
+              }}
+              photos={photos}
+            />}
 
         <View style={styles.noteSection}>
           <AppText style={[styles.note, { fontFamily: bodyFont }]}>{mission.promptKo}</AppText>
@@ -75,28 +88,9 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
           <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onCapturePress} />
           {hasSyncFailure
             ? <Pressable accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={styles.retryText}>업로드 다시 시도</AppText></Pressable>
-            : <AppText accessibilityLiveRegion="polite" style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요.`}</AppText>}
+            : <AppText accessibilityLiveRegion="polite" style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요. 사진을 길게 눌러 순서를 바꿀 수 있어요.`}</AppText>}
         </View>
       </ScrollView>
-    </View>
-  );
-}
-
-function PhotoMosaic({ photos }: { photos: TodayPhoto[] }) {
-  const { width: screenWidth } = useWindowDimensions();
-  const slots = getTodayPhotoSlots(photos);
-  const boardSize = screenWidth - spacing[4] * 2;
-  const cellSize = (boardSize - spacing[2] * 2) / 3;
-  return (
-    <View accessibilityLabel={`오늘의 사진 ${photos.length}장, 9칸 기록판`} style={[styles.mosaic, { height: boardSize, width: boardSize }]}>
-      {slots.map((photo, index) => (
-        <View accessibilityLabel={photo ? `${photo.position}번째 오늘의 색 사진` : `${index + 1}번째 빈 사진 칸`} key={photo?.id ?? `empty-${index + 1}`} style={[styles.photoCard, { height: cellSize, width: cellSize }, photo ? styles.photoCardFilled : styles.photoCardEmpty]}>
-          {photo ? <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.uri }} style={styles.photoImage} />
-            <View style={styles.photoTime}><AppText style={styles.photoTimeText}>{formatPhotoTime(photo.capturedAt)}</AppText></View>
-            {photo.status !== 'synced' ? <View style={[styles.photoStatus, photo.status === 'failed' ? styles.photoStatusFailed : styles.photoStatusSyncing]}><AppText style={styles.photoStatusText}>{photo.status === 'failed' ? '!' : '↥'}</AppText></View> : null}
-          </> : null}
-        </View>
-      ))}
     </View>
   );
 }
@@ -141,13 +135,6 @@ function formatHeaderDate(dateKey: string): string {
   return `${year}.${month}.${day}`;
 }
 
-function formatPhotoTime(timestamp: string): string {
-  const kstDate = new Date(new Date(timestamp).getTime() + 9 * 60 * 60 * 1_000);
-  const hours = String(kstDate.getUTCHours()).padStart(2, '0');
-  const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
-
 const styles = StyleSheet.create({
   page: { backgroundColor: '#F9F9F9', flex: 1 },
   appBar: { alignItems: 'center', backgroundColor: '#F9F9F9', flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 10, paddingHorizontal: spacing[4] },
@@ -169,17 +156,6 @@ const styles = StyleSheet.create({
   canvasTitle: { color: colors.ink, fontSize: 18, fontWeight: '700', lineHeight: 23, textAlign: 'center' },
   canvasDescription: { color: '#5D5F5F', fontSize: 13, lineHeight: 18, marginTop: 6, textAlign: 'center' },
   canvasDoodle: { bottom: -18, opacity: 0.7, position: 'absolute', right: -6, transform: [{ rotate: '-14deg' }] },
-  mosaic: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  photoCard: { borderColor: colors.ink, borderWidth: 1, overflow: 'hidden', position: 'relative' },
-  photoCardFilled: { backgroundColor: '#E4E4E4' },
-  photoCardEmpty: { backgroundColor: '#F1F1EF', borderColor: '#B7B7B2', borderStyle: 'dashed' },
-  photoImage: { height: '100%', width: '100%' },
-  photoTime: { backgroundColor: 'rgba(255,255,255,0.88)', bottom: 4, paddingHorizontal: 4, paddingVertical: 2, position: 'absolute', right: 4 },
-  photoTimeText: { color: colors.ink, fontFamily: 'monospace', fontSize: 7 },
-  photoStatus: { alignItems: 'center', borderColor: colors.white, borderRadius: 9, borderWidth: 1, height: 18, justifyContent: 'center', left: 5, position: 'absolute', top: 5, width: 18 },
-  photoStatusSyncing: { backgroundColor: colors.info },
-  photoStatusFailed: { backgroundColor: colors.danger },
-  photoStatusText: { color: colors.white, fontSize: 10, fontWeight: '700' },
   noteSection: { borderBottomColor: colors.ink, borderBottomWidth: 1, gap: 8, paddingBottom: spacing[4] },
   note: { color: colors.ink, fontSize: 17, fontStyle: 'italic', lineHeight: 26 },
   countdown: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.4, lineHeight: 14 },

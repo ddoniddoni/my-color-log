@@ -22,7 +22,7 @@ export async function getPhotoQueue(): Promise<PendingPhoto[]> {
 export async function getDayPhotoQueue(userId: string, dateKey: string): Promise<PendingPhoto[]> {
   const queue = await getPhotoQueue();
   return queue
-    .filter((photo) => photo.userId === userId && photo.dateKey === dateKey && photo.status !== 'cancelled' && photo.status !== 'local_saved')
+    .filter((photo) => photo.userId === userId && photo.dateKey === dateKey && photo.status !== 'local_saved')
     .sort((left, right) => left.position - right.position);
 }
 
@@ -35,8 +35,40 @@ export function addPendingPhoto(photo: PendingPhoto): Promise<void> {
   return mutateQueue((queue) => [...queue.filter((item) => item.id !== photo.id), photo]);
 }
 
-export function updatePendingPhoto(photoId: string, update: Partial<Pick<PendingPhoto, 'caption' | 'entryId' | 'status' | 'retryCount' | 'lastErrorCode'>>): Promise<void> {
+export function updatePendingPhoto(photoId: string, update: Partial<Pick<PendingPhoto, 'caption' | 'entryId' | 'position' | 'status' | 'retryCount' | 'lastErrorCode'>>): Promise<void> {
   return mutateQueue((queue) => queue.map((photo) => photo.id === photoId ? { ...photo, ...update } : photo));
+}
+
+export function markPendingPhotoSynced(photoId: string, entryId: string): Promise<void> {
+  return mutateQueue((queue) => queue.map((photo) => (
+    photo.id === photoId && photo.status !== 'cancelled'
+      ? { ...photo, entryId, status: 'synced', lastErrorCode: null }
+      : photo
+  )));
+}
+
+export function cancelPendingPhoto(photoId: string): Promise<void> {
+  return updatePendingPhoto(photoId, { status: 'cancelled', lastErrorCode: null });
+}
+
+export function restorePendingPhoto(photo: PendingPhoto): Promise<void> {
+  return mutateQueue((queue) => queue.map((item) => item.id === photo.id ? photo : item));
+}
+
+export function removePendingPhoto(photoId: string): Promise<void> {
+  return mutateQueue((queue) => queue.filter((photo) => photo.id !== photoId));
+}
+
+export function removeUserPhotoQueue(userId: string): Promise<void> {
+  return mutateQueue((queue) => queue.filter((photo) => photo.userId !== userId));
+}
+
+export function updatePendingPhotoPositions(updates: readonly { photoId: string; position: number }[]): Promise<void> {
+  const positionByPhotoId = new Map(updates.map((update) => [update.photoId, update.position]));
+  return mutateQueue((queue) => queue.map((photo) => {
+    const position = positionByPhotoId.get(photo.id);
+    return position ? { ...photo, position } : photo;
+  }));
 }
 
 function mutateQueue(update: (queue: PendingPhoto[]) => PendingPhoto[]): Promise<void> {
