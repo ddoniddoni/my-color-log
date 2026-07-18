@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { Screen } from '@/src/components/layout/Screen';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
+import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
+import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
 import { MissionReveal } from '@/src/features/missions/components/MissionReveal';
 import { TodayJournal } from '@/src/features/missions/components/TodayJournal';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
@@ -25,7 +26,6 @@ import { usePhotoSync } from '@/src/features/sync/hooks/usePhotoSync';
 import { radius, spacing } from '@/src/design/tokens';
 
 export default function TodayScreen() {
-  const router = useRouter();
   const dateKey = useKstDateKey();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
@@ -39,6 +39,7 @@ export default function TodayScreen() {
   const photoSync = usePhotoSync({ userId, dateKey, photos: queueQuery.data ?? [] });
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const photoSource = usePhotoSourceSelection();
 
   if (sessionState.status === 'loading' || missionQuery.isPending || reveal.isLoading || (!reveal.isRevealed && revealPaletteQuery.isPending)) return <TodayLoadingScreen />;
   if (sessionState.status === 'error' || !userId) return <TodayMissionError onRetry={sessionState.retry} />;
@@ -63,9 +64,15 @@ export default function TodayScreen() {
         isSyncing={photoSync.isSyncing}
         millisecondsUntilMidnight={millisecondsUntilMidnight}
         mission={mission}
-        onCapturePress={() => {
+        onAddPhotoPress={() => {
           if (!nextPosition) return;
-          router.push({ pathname: '/camera', params: { missionId: mission.id, dateKey, position: String(nextPosition), colorNameEn: mission.color.nameEn } });
+          photoSource.openPhotoSource({
+            colorNameEn: mission.color.nameEn,
+            dateKey,
+            missionId: mission.id,
+            position: nextPosition,
+            userId,
+          });
         }}
         onPhotoLongPress={(photo) => setSelectedPhotoId(photo.id)}
         onPhotoPress={(photo) => setSelectedPhotoId(photo.id)}
@@ -83,6 +90,14 @@ export default function TodayScreen() {
         operation={photoActions.isDeleting ? 'deleting' : photoActions.isMoving || photoSync.isSyncing ? 'moving' : 'idle'}
         selectedPhoto={selectedPhoto}
         visible={selectedPhoto !== null}
+      />
+      <PhotoSourceModal
+        errorMessage={photoSource.errorMessage}
+        isImporting={photoSource.isGalleryImporting}
+        onCamera={photoSource.chooseCamera}
+        onClose={photoSource.closePhotoSource}
+        onGallery={() => void photoSource.chooseGallery()}
+        visible={photoSource.isSourceModalVisible}
       />
     </>
   );

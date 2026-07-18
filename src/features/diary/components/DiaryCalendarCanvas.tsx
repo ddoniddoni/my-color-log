@@ -19,6 +19,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
+import { DiaryCollageModal } from '@/src/features/diary/components/DiaryCollageModal';
 import { DiaryEditModal, type DiaryEditTarget } from '@/src/features/diary/components/DiaryEditModal';
 import { DiaryPhotoViewer } from '@/src/features/diary/components/DiaryPhotoViewer';
 import { useDiaryEdits } from '@/src/features/diary/hooks/useDiaryEdits';
@@ -145,7 +146,7 @@ export function DiaryCalendarCanvas() {
             : sessionState.status === 'error' || diaryQuery.isError
               ? <DiaryErrorCard onRetry={() => void diaryQuery.refetch()} />
               : selectedEntry
-                ? <DiaryEntryCard bodyFont={bodyFont} boldFont={boldFont} entry={selectedEntry} onEditNote={() => setEditTarget({ entry: selectedEntry, kind: 'note' })} onPhotoPress={setSelectedPhotoId} />
+                ? <DiaryEntryCard bodyFont={bodyFont} boldFont={boldFont} entry={selectedEntry} key={selectedEntry.id} onEditNote={() => setEditTarget({ entry: selectedEntry, kind: 'note' })} onPhotoPress={setSelectedPhotoId} />
                 : <EmptyDiaryCard bodyFont={bodyFont} boldFont={boldFont} dateKey={selectedCalendarDate} isFuture={selectedCalendarDate ? isFutureKstDate(selectedCalendarDate) : false} />}
         </View>
       </ScrollView>
@@ -193,6 +194,7 @@ function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; 
 
 function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onPhotoPress: (photoId: string) => void }) {
   const photoCount = entry.photos.length;
+  const [isCollageVisible, setIsCollageVisible] = useState(false);
   const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
     photo.signedUrl ? [{ capturedAt: photo.capturedAt, id: photo.id, position: photo.position, uri: photo.signedUrl }] : []
   ));
@@ -206,6 +208,10 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{entry.color.nameKo}</AppText>
       <AppText style={[styles.entryDescription, { fontFamily: bodyFont }]}>{memo}</AppText>
+      {photoCount > 0 ? <Pressable accessibilityLabel="내 기록 콜라주 내보내기" accessibilityRole="button" onPress={() => setIsCollageVisible(true)} style={styles.collageExportAction}>
+        <View><AppText style={styles.collageExportTitle}>내 기록 콜라주</AppText><AppText style={styles.collageExportDescription}>내 사진 {photoCount}장을 한 장으로 만들어요</AppText></View>
+        <AppText style={styles.collageExportArrow}>↗</AppText>
+      </Pressable> : null}
       {photoCount > 0 ? (
         <NinePhotoMosaic
           accessibilityLabel={`${entry.dateKey}의 ${entry.color.nameKo} 사진 ${photoCount}장, 9칸 기록판`}
@@ -221,6 +227,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
         <AppText style={styles.noteEditActionText}>{entry.note ? '오늘의 메모 수정' : '오늘의 메모 쓰기'}</AppText>
         <AppText style={styles.noteEditArrow}>→</AppText>
       </Pressable>
+      <DiaryCollageModal entry={entry} onClose={() => setIsCollageVisible(false)} visible={isCollageVisible} />
     </View>
   );
 }
@@ -364,6 +371,10 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', gap: 8, marginTop: 14 },
   tag: { borderColor: colors.black, borderWidth: 1.5, paddingHorizontal: 11, paddingVertical: 5 },
   tagLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
+  collageExportAction: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, marginTop: 16, minHeight: 62, paddingHorizontal: 12 },
+  collageExportTitle: { color: colors.black, fontSize: 13, fontWeight: '800' },
+  collageExportDescription: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 10, lineHeight: 15, marginTop: 2 },
+  collageExportArrow: { color: colors.black, fontSize: 22, fontWeight: '700' },
   noteEditAction: { alignItems: 'center', borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, minHeight: 44, paddingTop: 8 },
   noteEditActionText: { color: colors.black, fontSize: 12, fontWeight: '700' },
   noteEditArrow: { color: colors.black, fontSize: 18, lineHeight: 22 },

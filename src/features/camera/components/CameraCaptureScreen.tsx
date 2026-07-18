@@ -1,7 +1,7 @@
 import { CameraView, type FlashMode, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
@@ -21,18 +21,35 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [flash, setFlash] = useState<FlashMode>('auto');
   const [isReady, setIsReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const sessionState = useSessionBootstrap();
 
+  const refreshCameraPermission = useCallback((): void => {
+    void getPermission().catch(() => undefined);
+  }, [getPermission]);
+
+  useEffect(() => {
+    refreshCameraPermission();
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') refreshCameraPermission();
+    });
+    return () => subscription.remove();
+  }, [refreshCameraPermission]);
+
   if (!permission) return <View style={styles.permissionBackdrop} />;
   if (!permission.granted) {
     const openPermission = async (): Promise<void> => {
-      if (permission.canAskAgain) await requestPermission();
-      else await Linking.openSettings();
+      if (permission.canAskAgain) {
+        await requestPermission();
+        refreshCameraPermission();
+        return;
+      }
+
+      await Linking.openSettings();
     };
     return <CameraPermissionPrompt canAskAgain={permission.canAskAgain} onCancel={() => router.back()} onOpen={() => void openPermission()} />;
   }
@@ -86,6 +103,11 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         <CameraControl accessibilityLabel="카메라 닫기" onPress={() => router.back()}><CloseIcon /></CameraControl>
         <AppText style={styles.cameraTitle}>오늘의 색 · {captureContext.position}/9</AppText>
         <CameraControl accessibilityLabel={`플래시 ${flash}`} onPress={() => setFlash(getNextFlashMode(flash))}><FlashIcon mode={flash} /></CameraControl>
+      </View>
+      <View pointerEvents="none" style={styles.squareGuideArea}>
+        <View accessibilityLabel="정사각형 사진 저장 가이드" style={styles.squareGuide}>
+          <AppText style={styles.squareGuideLabel}>SQUARE FRAME · 정사각형으로 저장돼요</AppText>
+        </View>
       </View>
       <View style={[styles.cameraBottomBar, { paddingBottom: Math.max(insets.bottom, spacing[6]) }]}>
         {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.cameraError}>{errorMessage}</AppText> : null}
@@ -155,6 +177,9 @@ function getNextFlashMode(mode: FlashMode): FlashMode {
 const styles = StyleSheet.create({
   cameraPage: { backgroundColor: colors.black, flex: 1 },
   cameraTopBar: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.34)', flexDirection: 'row', justifyContent: 'space-between', left: 0, paddingBottom: spacing[3], paddingHorizontal: spacing[4], position: 'absolute', right: 0, top: 0 },
+  squareGuideArea: { alignItems: 'center', bottom: 172, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 98 },
+  squareGuide: { alignItems: 'flex-start', alignSelf: 'center', aspectRatio: 1, borderColor: 'rgba(255,255,255,0.92)', borderWidth: 2, justifyContent: 'flex-end', maxWidth: 420, padding: 10, width: '88%' },
+  squareGuideLabel: { backgroundColor: 'rgba(0,0,0,0.56)', color: colors.white, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.45, paddingHorizontal: 6, paddingVertical: 4 },
   cameraTitle: { color: colors.white, fontFamily: 'monospace', fontSize: 12, letterSpacing: 0.8 },
   cameraControl: { alignItems: 'center', height: 48, justifyContent: 'center', width: 48 },
   flashGroup: { alignItems: 'center' },

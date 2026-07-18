@@ -32,7 +32,9 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
             const cellStyle = [styles.photoCard, photo ? styles.photoCardFilled : styles.photoCardEmpty];
             if (!photo) {
               return onEmptyPress ? (
-                <Pressable accessibilityLabel={`${index + 1}번째 빈 사진 칸`} accessibilityRole="button" key={`empty-${index + 1}`} onPress={onEmptyPress} style={cellStyle} />
+                <Pressable accessibilityLabel={`${index + 1}번째 빈 사진 칸에 사진 추가`} accessibilityRole="button" key={`empty-${index + 1}`} onPress={onEmptyPress} style={cellStyle}>
+                  <AppText style={styles.emptyAddMark}>+</AppText>
+                </Pressable>
               ) : <View accessibilityLabel={`${index + 1}번째 빈 사진 칸`} key={`empty-${index + 1}`} style={cellStyle} />;
             }
 
@@ -71,7 +73,8 @@ const styles = StyleSheet.create({
   row: { flex: 1, flexDirection: 'row', gap: spacing[2] },
   photoCard: { borderColor: colors.ink, borderWidth: 1, flex: 1, overflow: 'hidden', position: 'relative' },
   photoCardFilled: { backgroundColor: '#E4E4E4' },
-  photoCardEmpty: { backgroundColor: '#F1F1EF', borderColor: '#B7B7B2', borderStyle: 'dashed' },
+  photoCardEmpty: { alignItems: 'center', backgroundColor: '#F1F1EF', borderColor: '#B7B7B2', borderStyle: 'dashed', justifyContent: 'center' },
+  emptyAddMark: { color: '#8E8D88', fontSize: 28, fontWeight: '300', lineHeight: 32 },
   photoImage: { height: '100%', width: '100%' },
   photoStatus: { alignItems: 'center', borderColor: colors.white, borderRadius: 9, borderWidth: 1, height: 18, justifyContent: 'center', left: 5, position: 'absolute', top: 5, width: 18 },
   photoStatusSyncing: { backgroundColor: colors.info },

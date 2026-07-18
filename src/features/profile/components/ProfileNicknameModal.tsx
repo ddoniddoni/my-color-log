@@ -15,7 +15,7 @@ type ProfileNicknameModalProps = {
 
 export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visible }: ProfileNicknameModalProps) {
   return (
-    <Modal animationType="fade" onRequestClose={() => !isSaving && onClose()} transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={() => !isSaving && onClose()} statusBarTranslucent transparent visible={visible}>
       <View style={styles.overlay}>
         <Pressable accessibilityLabel="닉네임 수정 닫기" disabled={isSaving} onPress={onClose} style={StyleSheet.absoluteFill} />
         <NicknameForm key={`${nickname}:${visible ? 'open' : 'closed'}`} isSaving={isSaving} nickname={nickname} onClose={onClose} onSave={onSave} />
@@ -75,8 +75,8 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.44)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: '#FAFAF8', borderColor: colors.black, borderWidth: 2, gap: 14, maxWidth: 390, padding: 20, width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 14, maxWidth: 390, padding: 20, width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
   title: { color: colors.black, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   description: { color: 'rgba(0, 0, 0, 0.68)', fontSize: 14, lineHeight: 21 },
   input: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 18, minHeight: 52, paddingHorizontal: 13, paddingVertical: 10 },
   errorText: { color: colors.danger, fontSize: 12, lineHeight: 17, marginTop: -6 },
-  saveButton: { alignItems: 'center', backgroundColor: colors.black, justifyContent: 'center', minHeight: 50, paddingHorizontal: 16 },
+  saveButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', justifyContent: 'center', minHeight: 50, paddingHorizontal: 16 },
   saveButtonText: { color: colors.white, fontSize: 15, fontWeight: '800' },
   disabledButton: { opacity: 0.5 },
   hint: { color: 'rgba(0, 0, 0, 0.52)', fontSize: 10, lineHeight: 14, textAlign: 'center' },

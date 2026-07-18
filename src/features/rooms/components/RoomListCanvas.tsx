@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
-import { createRoom, getRoomInvitePreview, joinRoomByCode } from '@/src/features/rooms/api/roomRepository';
+import { createRoom, endRoom, getRoomInvitePreview, joinRoomByCode } from '@/src/features/rooms/api/roomRepository';
 import { CreateRoomModal, JoinRoomModal } from '@/src/features/rooms/components/RoomSetupCanvas';
 import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
 import { type ActiveRoom, type RoomInvitePreview, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
@@ -60,6 +60,12 @@ export function RoomListCanvas() {
       openRoom(roomId);
     },
   });
+  const endRoomMutation = useMutation({
+    mutationFn: endRoom,
+    onSuccess: async () => {
+      if (userId) await queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) });
+    },
+  });
 
   const rooms = roomsQuery.data ?? [];
   const isAtRoomLimit = rooms.length >= MAX_ACTIVE_ROOMS;
@@ -91,6 +97,21 @@ export function RoomListCanvas() {
         setInvitePreview(preview);
       },
     });
+  };
+
+  const requestEndRoom = (room: ActiveRoom): void => {
+    Alert.alert(
+      `${room.name} 방을 종료할까요?`,
+      '모든 멤버의 상호 사진 접근과 초대가 중단돼요. 각자의 개인 다이어리와 사진은 삭제되지 않아요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          onPress: () => endRoomMutation.mutate(room.id, { onError: (error) => Alert.alert('방을 종료하지 못했어요', getRoomErrorMessage(error)) }),
+          style: 'destructive',
+          text: '방 종료',
+        },
+      ],
+    );
   };
 
   if (sessionState.status === 'loading' || roomsQuery.isPending) {
@@ -131,7 +152,16 @@ export function RoomListCanvas() {
               <AppText style={styles.sectionMeta}>ROOMS</AppText>
             </View>
             <View style={styles.roomList}>
-              {rooms.map((room) => <RoomListItem key={room.id} onPress={() => openRoom(room.id)} room={room} userId={userId} />)}
+              {rooms.map((room) => (
+                <RoomListItem
+                  isEnding={endRoomMutation.isPending}
+                  key={room.id}
+                  onEnd={() => requestEndRoom(room)}
+                  onPress={() => openRoom(room.id)}
+                  room={room}
+                  userId={userId}
+                />
+              ))}
             </View>
           </View>
         )}
@@ -186,17 +216,31 @@ export function RoomListCanvas() {
   );
 }
 
-function RoomListItem({ onPress, room, userId }: { onPress: () => void; room: ActiveRoom; userId: string }) {
+function RoomListItem({ isEnding, onEnd, onPress, room, userId }: { isEnding: boolean; onEnd: () => void; onPress: () => void; room: ActiveRoom; userId: string }) {
   const myMembership = room.members.find((member) => member.id === userId) ?? null;
+  const isOwner = myMembership?.role === 'owner';
   return (
-    <Pressable accessibilityLabel={`${room.name} 방 상세 보기`} accessibilityRole="button" onPress={onPress} style={styles.roomCard}>
-      <View style={styles.roomSymbol}><AppText style={styles.roomSymbolText}>{room.emoji ?? room.name.slice(0, 1)}</AppText></View>
-      <View style={styles.roomCopy}>
-        <AppText numberOfLines={1} style={styles.roomName}>{room.name}</AppText>
-        <AppText style={styles.roomMeta}>{room.members.length}명 참여 · {myMembership?.role === 'owner' ? '내가 방장' : '멤버'}</AppText>
-      </View>
-      <AppText style={styles.roomArrow}>→</AppText>
-    </Pressable>
+    <View style={styles.roomCard}>
+      <Pressable accessibilityLabel={`${room.name} 방 상세 보기`} accessibilityRole="button" onPress={onPress} style={styles.roomOpenButton}>
+        <View style={styles.roomSymbol}><AppText style={styles.roomSymbolText}>{room.emoji ?? room.name.slice(0, 1)}</AppText></View>
+        <View style={styles.roomCopy}>
+          <AppText numberOfLines={1} style={styles.roomName}>{room.name}</AppText>
+          <AppText style={styles.roomMeta}>{room.members.length}명 참여 · {isOwner ? '내가 방장' : '멤버'}</AppText>
+        </View>
+        <AppText style={styles.roomArrow}>→</AppText>
+      </Pressable>
+      {isOwner ? (
+        <Pressable
+          accessibilityLabel={`${room.name} 방 종료`}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isEnding }}
+          disabled={isEnding}
+          onPress={onEnd}
+          style={[styles.roomEndButton, isEnding && styles.disabledButton]}>
+          <AppText style={styles.roomEndButtonText}>{isEnding ? '종료 중' : '방 종료'}</AppText>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -224,13 +268,16 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.black, fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
   sectionMeta: { color: 'rgba(0, 0, 0, 0.52)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.7 },
   roomList: { gap: spacing[3] },
-  roomCard: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', gap: spacing[3], minHeight: 88, paddingHorizontal: spacing[3] },
+  roomCard: { alignItems: 'stretch', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', minHeight: 88 },
+  roomOpenButton: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing[3], paddingHorizontal: spacing[3] },
   roomSymbol: { alignItems: 'center', backgroundColor: '#F1F1EF', borderColor: colors.black, borderRadius: 999, borderWidth: 1.5, height: 48, justifyContent: 'center', width: 48 },
   roomSymbolText: { color: colors.black, fontSize: 22, fontWeight: '700' },
   roomCopy: { flex: 1, gap: 3 },
   roomName: { color: colors.black, fontSize: 19, fontWeight: '800', letterSpacing: -0.55 },
   roomMeta: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10 },
   roomArrow: { color: colors.black, fontSize: 24, fontWeight: '700' },
+  roomEndButton: { alignItems: 'center', borderLeftColor: colors.danger, borderLeftWidth: 1.5, justifyContent: 'center', minWidth: 70, paddingHorizontal: 8 },
+  roomEndButtonText: { color: colors.danger, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   joinSection: { borderTopColor: 'rgba(0, 0, 0, 0.22)', borderTopWidth: 1, gap: spacing[3], paddingTop: spacing[5] },
   actionRow: { flexDirection: 'row', gap: spacing[2] },
   secondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 50, paddingHorizontal: spacing[3] },

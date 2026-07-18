@@ -60,7 +60,7 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
   };
 
   return (
-    <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} statusBarTranslucent transparent visible={visible}>
       <View style={styles.overlay}>
         <Pressable accessibilityLabel="친구방 관리 닫기" disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.card}>
@@ -72,49 +72,56 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
             <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {managementState.canLeaveRoom ? (
-              <>
-                <AppText style={styles.description}>방에서 나가도 내 개인 다이어리와 사진은 유지돼요.</AppText>
-                <View style={styles.notice}><AppText style={styles.noticeTitle}>나가면 바뀌는 점</AppText><AppText style={styles.noticeText}>다른 멤버의 과거·새 기록을 더 이상 볼 수 없고, 새 사진도 이 방에 자동 공유되지 않아요.</AppText></View>
-                <DangerButton accessibilityLabel="친구방 나가기" disabled={isPending} label={pendingAction === 'leaving' ? '나가는 중' : '방 나가기'} onPress={confirmLeave} />
-              </>
-            ) : (
-              <>
-                <AppText style={styles.description}>방 이름과 초대 코드는 방장만 바꿀 수 있어요.</AppText>
-                <RoomOwnerSettings
-                  key={`${room.id}:${room.name}:${room.emoji ?? ''}:${visible ? 'open' : 'closed'}`}
-                  onReissueInvite={onReissueInvite}
-                  onRevokeInvite={onRevokeInvite}
-                  onUpdateSettings={onUpdateSettings}
-                  pendingAction={pendingAction}
-                  room={room}
-                />
-                {managementState.successors.length > 0 ? (
-                  <View style={styles.section}>
-                    <AppText style={styles.sectionLabel}>새 방장 선택</AppText>
-                    <View style={styles.memberList}>
-                      {managementState.successors.map((member) => (
-                        <Pressable
-                          accessibilityLabel={`${member.nickname} 님에게 방장 넘기기`}
-                          accessibilityRole="button"
-                          disabled={isPending}
-                          key={member.id}
-                          onPress={() => confirmTransfer(member)}
-                          style={styles.memberButton}>
-                          <View style={styles.memberAvatar}><AppText style={styles.memberInitial}>{member.nickname.slice(0, 1)}</AppText></View>
-                          <View style={styles.memberCopy}><AppText style={styles.memberName}>{member.nickname}</AppText><AppText style={styles.memberMeta}>방장으로 넘기기</AppText></View>
-                          <AppText style={styles.memberArrow}>→</AppText>
-                        </Pressable>
-                      ))}
+          <View style={styles.body}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+              {managementState.canLeaveRoom ? (
+                <>
+                  <AppText style={styles.description}>방에서 나가도 내 개인 다이어리와 사진은 유지돼요.</AppText>
+                  <View style={styles.notice}><AppText style={styles.noticeTitle}>나가면 바뀌는 점</AppText><AppText style={styles.noticeText}>다른 멤버의 과거·새 기록을 더 이상 볼 수 없고, 새 사진도 이 방에 자동 공유되지 않아요.</AppText></View>
+                  <DangerButton accessibilityLabel="친구방 나가기" disabled={isPending} label={pendingAction === 'leaving' ? '나가는 중' : '방 나가기'} onPress={confirmLeave} />
+                </>
+              ) : (
+                <>
+                  <AppText style={styles.description}>방 이름과 초대 코드는 방장만 바꿀 수 있어요.</AppText>
+                  <RoomOwnerSettings
+                    key={`${room.id}:${room.name}:${room.emoji ?? ''}:${visible ? 'open' : 'closed'}`}
+                    onReissueInvite={onReissueInvite}
+                    onRevokeInvite={onRevokeInvite}
+                    onUpdateSettings={onUpdateSettings}
+                    pendingAction={pendingAction}
+                    room={room}
+                  />
+                  {managementState.successors.length > 0 ? (
+                    <View style={styles.section}>
+                      <AppText style={styles.sectionLabel}>새 방장 선택</AppText>
+                      <View style={styles.memberList}>
+                        {managementState.successors.map((member) => (
+                          <Pressable
+                            accessibilityLabel={`${member.nickname} 님에게 방장 넘기기`}
+                            accessibilityRole="button"
+                            disabled={isPending}
+                            key={member.id}
+                            onPress={() => confirmTransfer(member)}
+                            style={styles.memberButton}>
+                            <View style={styles.memberAvatar}><AppText style={styles.memberInitial}>{member.nickname.slice(0, 1)}</AppText></View>
+                            <View style={styles.memberCopy}><AppText style={styles.memberName}>{member.nickname}</AppText><AppText style={styles.memberMeta}>방장으로 넘기기</AppText></View>
+                            <AppText style={styles.memberArrow}>→</AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                      {pendingAction === 'transferring' ? <AppText accessibilityLiveRegion="polite" style={styles.pendingText}>방장 권한을 넘기고 있어요.</AppText> : null}
                     </View>
-                    {pendingAction === 'transferring' ? <AppText accessibilityLiveRegion="polite" style={styles.pendingText}>방장 권한을 넘기고 있어요.</AppText> : null}
-                  </View>
-                ) : <View style={styles.notice}><AppText style={styles.noticeTitle}>넘길 멤버가 없어요</AppText><AppText style={styles.noticeText}>다른 멤버가 참여한 뒤 방장을 넘길 수 있어요. 지금은 방을 종료할 수 있어요.</AppText></View>}
+                  ) : <View style={styles.notice}><AppText style={styles.noticeTitle}>넘길 멤버가 없어요</AppText><AppText style={styles.noticeText}>다른 멤버가 참여한 뒤 방장을 넘길 수 있어요. 지금은 방을 종료할 수 있어요.</AppText></View>}
+                </>
+              )}
+            </ScrollView>
+            {managementState.canEndRoom ? (
+              <View style={styles.ownerDangerFooter}>
+                <AppText style={styles.ownerDangerHint}>방을 닫으면 모든 멤버의 공유 접근과 초대가 중단돼요.</AppText>
                 <DangerButton accessibilityLabel="친구방 종료" disabled={isPending} label={pendingAction === 'ending' ? '종료하는 중' : '방 종료'} onPress={confirmEnd} />
-              </>
-            )}
-          </ScrollView>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
     </Modal>
@@ -206,9 +213,10 @@ function DangerButton({ accessibilityLabel, disabled, label, onPress }: { access
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.44)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: '#FAFAF8', borderColor: colors.black, borderWidth: 2, gap: 16, maxHeight: '88%', maxWidth: 390, padding: 20, width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 16, maxHeight: '88%', maxWidth: 390, padding: 20, width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  body: { flexShrink: 1, gap: 14 },
   content: { gap: 16 },
   eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
   title: { color: colors.black, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
@@ -224,7 +232,7 @@ const styles = StyleSheet.create({
   fieldLabel: { color: colors.black, fontSize: 12, fontWeight: '700' },
   textInput: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 15, minHeight: 46, paddingHorizontal: 11, paddingVertical: 9 },
   emojiInput: { fontSize: 20 },
-  primaryButton: { alignItems: 'center', backgroundColor: colors.black, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
+  primaryButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
   primaryButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
   secondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
   secondaryButtonText: { color: colors.black, fontSize: 14, fontWeight: '800' },
@@ -240,6 +248,8 @@ const styles = StyleSheet.create({
   memberMeta: { color: 'rgba(0, 0, 0, 0.56)', fontFamily: 'monospace', fontSize: 9 },
   memberArrow: { color: colors.black, fontSize: 19 },
   pendingText: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12 },
+  ownerDangerFooter: { borderTopColor: 'rgba(210, 64, 61, 0.38)', borderTopWidth: 1, gap: 8, paddingTop: 14 },
+  ownerDangerHint: { color: 'rgba(130, 32, 30, 0.8)', fontSize: 11, lineHeight: 16 },
   dangerButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1.5, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
   dangerButtonText: { color: colors.danger, fontSize: 15, fontWeight: '800' },
   buttonDisabled: { opacity: 0.5 },

@@ -8,7 +8,9 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
-import { confirmCapturedPhoto, discardCapturedPhoto } from '@/src/features/camera/api/localPhotoRepository';
+import { cropCapturedPhoto, confirmCapturedPhoto, discardCapturedPhoto, rotateCapturedPhoto } from '@/src/features/camera/api/localPhotoRepository';
+import { PhotoCropModal } from '@/src/features/camera/components/PhotoCropModal';
+import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
 import { useQueuedPhoto } from '@/src/features/sync/hooks/useQueuedPhoto';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { queryKeys } from '@/src/lib/query/queryKeys';
@@ -24,13 +26,47 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   const insets = useSafeAreaInsets();
   const photoQuery = useQueuedPhoto(reviewContext.photoId);
   const [caption, setCaption] = useState('');
+  const [isCropVisible, setIsCropVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const colorTag = `#${reviewContext.colorNameEn.replaceAll(' ', '').toUpperCase()}`;
   const photo = photoQuery.data;
+  const isBusy = isSaving || isEditing;
+
+  const replaceReviewedPhoto = (updatedPhoto: PendingPhoto): void => {
+    queryClient.setQueryData(queryKeys.queuedPhoto(updatedPhoto.id), updatedPhoto);
+  };
+
+  const rotatePhoto = async (): Promise<void> => {
+    if (!photo || isBusy) return;
+    setIsEditing(true);
+    setErrorMessage(null);
+    try {
+      replaceReviewedPhoto(await rotateCapturedPhoto(photo));
+    } catch {
+      setErrorMessage('사진을 회전하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.');
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const applyCrop = async (crop: SquareCrop): Promise<void> => {
+    if (!photo || isBusy) return;
+    setIsEditing(true);
+    setErrorMessage(null);
+    try {
+      replaceReviewedPhoto(await cropCapturedPhoto(photo, crop));
+      setIsCropVisible(false);
+    } catch {
+      setErrorMessage('사진 구도를 적용하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.');
+    } finally {
+      setIsEditing(false);
+    }
+  };
 
   const retake = async (): Promise<void> => {
-    if (!photo) return;
+    if (!photo || isBusy) return;
     setIsSaving(true);
     try {
       await discardCapturedPhoto(photo);
@@ -50,7 +86,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   };
 
   const savePhoto = async (): Promise<void> => {
-    if (!photo || isSaving) return;
+    if (!photo || isBusy) return;
     setIsSaving(true);
     setErrorMessage(null);
     try {
@@ -67,6 +103,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   };
 
   const closeReview = async (): Promise<void> => {
+    if (isBusy) return;
     if (!photo) {
       router.replace('/(tabs)');
       return;
@@ -93,7 +130,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.page}>
       <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 6) }]}>
         <View style={styles.brandGroup}><ScribbleMark /><AppText style={styles.brandText}>Color Log</AppText></View>
-        <Pressable accessibilityLabel="촬영 결과 닫기" accessibilityRole="button" disabled={isSaving} hitSlop={10} onPress={() => void closeReview()} style={styles.closeButton}><CloseIcon /></Pressable>
+        <Pressable accessibilityLabel="촬영 결과 닫기" accessibilityRole="button" disabled={isBusy} hitSlop={10} onPress={() => void closeReview()} style={styles.closeButton}><CloseIcon /></Pressable>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 18) }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.titleRow}>
@@ -113,8 +150,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
             </View>
             <View pointerEvents="none" style={styles.photoReviewBadge}><AppText style={styles.photoReviewBadgeText}>촬영 결과 확인</AppText></View>
-            <View pointerEvents="none" style={styles.cropMark}><CropIcon /></View>
-            <View pointerEvents="none" style={styles.resetMark}><AgainIcon /></View>
+            <Pressable accessibilityLabel="사진 자르기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => setIsCropVisible(true)} style={({ pressed }) => [styles.cropMark, pressed && styles.pressed, isBusy && styles.disabled]}><CropIcon /></Pressable>
+            <Pressable accessibilityLabel="사진을 오른쪽으로 90도 회전" accessibilityRole="button" accessibilityState={{ busy: isEditing, disabled: isBusy }} disabled={isBusy} onPress={() => void rotatePhoto()} style={({ pressed }) => [styles.resetMark, pressed && styles.pressed, isBusy && styles.disabled]}><AgainIcon /></Pressable>
           </View>
         </View>
 
@@ -138,10 +175,11 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{errorMessage}</AppText> : null}
 
         <View style={styles.actions}>
-          <Pressable accessibilityRole="button" disabled={isSaving} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isSaving && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>Again</AppText></View></Pressable>
-          <Pressable accessibilityRole="button" disabled={isSaving} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isSaving && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? 'Saving...' : 'Use'}</AppText></View></Pressable>
+          <Pressable accessibilityRole="button" disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>Again</AppText></View></Pressable>
+          <Pressable accessibilityRole="button" disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? 'Saving...' : 'Use'}</AppText></View></Pressable>
         </View>
       </ScrollView>
+      {isCropVisible ? <PhotoCropModal isApplying={isEditing} onApply={(crop) => void applyCrop(crop)} onClose={() => setIsCropVisible(false)} photo={photo} /> : null}
     </KeyboardAvoidingView>
   );
 }
@@ -194,8 +232,8 @@ const styles = StyleSheet.create({
   photoStage: { alignItems: 'center', backgroundColor: '#D8D8D8', borderColor: colors.ink, borderWidth: 1.5, bottom: 7, justifyContent: 'center', left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
   photoBlur: { height: '100%', opacity: 0.6, width: '100%' },
   photoDimmer: { backgroundColor: 'rgba(255,255,255,0.5)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
-  photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#ECECEC', borderWidth: 1, padding: 8, position: 'absolute', width: 144 },
-  photoPreview: { height: 136, width: 126 },
+  photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#ECECEC', borderWidth: 1, padding: 8, position: 'absolute', width: 152 },
+  photoPreview: { height: 136, width: 136 },
   photoFileName: { color: '#8C8C8C', fontFamily: 'monospace', fontSize: 7, marginTop: 5 },
   photoReviewBadge: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 7, boxShadow: '0px 1px 2px rgba(0,0,0,0.18)', justifyContent: 'center', minHeight: 24, paddingHorizontal: 14, position: 'absolute', top: 10 },
   photoReviewBadgeText: { color: colors.ink, fontSize: 8, fontWeight: '700' },

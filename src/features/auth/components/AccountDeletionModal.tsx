@@ -70,8 +70,8 @@ function AccountDeletionForm({ isDeleting, onClose, onConfirm }: Omit<AccountDel
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: '#FFFCFA', borderColor: colors.black, borderWidth: 2, gap: 14, maxWidth: 410, padding: 20, width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.58)', flex: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 14, maxWidth: 410, padding: 20, width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   headerCopy: { flex: 1, gap: 3 },
   eyebrow: { color: colors.danger, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10 },
   cancelButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 10 },
   cancelText: { color: colors.black, fontSize: 14, fontWeight: '800' },
-  deleteButton: { alignItems: 'center', backgroundColor: colors.danger, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 10 },
+  deleteButton: { alignItems: 'center', backgroundColor: colors.danger, boxShadow: '3px 3px 0px #B74747', flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 10 },
   deleteText: { color: colors.white, fontSize: 14, fontWeight: '800' },
   disabledButton: { opacity: 0.42 },
 });

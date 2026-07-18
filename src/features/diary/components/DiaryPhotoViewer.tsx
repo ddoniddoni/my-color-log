@@ -82,14 +82,14 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.36)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: '#FAFAFA', borderColor: colors.ink, borderWidth: 1.5, maxHeight: '86%', maxWidth: 360, width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
+  card: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxHeight: '86%', maxWidth: 360, width: '100%' },
   photoSection: { alignItems: 'center', backgroundColor: '#F2F2EE', borderBottomColor: colors.ink, borderBottomWidth: 1.5, height: 224, justifyContent: 'center', padding: spacing[5], position: 'relative' },
   photo: { height: '100%', width: '100%' },
   closeButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, height: 32, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 32 },
-  photoNav: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderRadius: 10, borderWidth: 1.5, height: 32, justifyContent: 'center', position: 'absolute', top: '50%', width: 32 },
-  previousButton: { left: -12 },
-  nextButton: { right: -12 },
+  photoNav: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1.5, height: 38, justifyContent: 'center', position: 'absolute', top: '46%', width: 38 },
+  previousButton: { left: -20 },
+  nextButton: { right: -20 },
   metaSection: { padding: spacing[4] },
   metaHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   metaLabel: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },
@@ -104,6 +104,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   editAction: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 46 },
   editActionText: { color: colors.ink, fontSize: 12, fontWeight: '700' },
-  closeAction: { alignItems: 'center', backgroundColor: colors.black, flex: 1, justifyContent: 'center', minHeight: 46 },
+  closeAction: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', flex: 1, justifyContent: 'center', minHeight: 46 },
   closeActionText: { color: colors.white, fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
 });

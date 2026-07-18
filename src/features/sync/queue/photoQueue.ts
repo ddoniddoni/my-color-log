@@ -35,7 +35,7 @@ export function addPendingPhoto(photo: PendingPhoto): Promise<void> {
   return mutateQueue((queue) => [...queue.filter((item) => item.id !== photo.id), photo]);
 }
 
-export function updatePendingPhoto(photoId: string, update: Partial<Pick<PendingPhoto, 'caption' | 'entryId' | 'position' | 'status' | 'retryCount' | 'lastErrorCode'>>): Promise<void> {
+export function updatePendingPhoto(photoId: string, update: Partial<Pick<PendingPhoto, 'byteSize' | 'caption' | 'entryId' | 'height' | 'localUri' | 'position' | 'status' | 'retryCount' | 'lastErrorCode' | 'width'>>): Promise<void> {
   return mutateQueue((queue) => queue.map((photo) => photo.id === photoId ? { ...photo, ...update } : photo));
 }
 

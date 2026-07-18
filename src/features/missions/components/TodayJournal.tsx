@@ -22,13 +22,13 @@ type TodayJournalProps = {
   photos: TodayPhoto[];
   isSyncing: boolean;
   hasSyncFailure: boolean;
-  onCapturePress: () => void;
+  onAddPhotoPress: () => void;
   onPhotoLongPress: (photo: TodayPhoto) => void;
   onPhotoPress: (photo: TodayPhoto) => void;
   onRetrySync: () => void;
 };
 
-export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onCapturePress, onPhotoLongPress, onPhotoPress, onRetrySync }: TodayJournalProps) {
+export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync }: TodayJournalProps) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -71,6 +71,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
                 const todayPhoto = photos.find((item) => item.id === photo.id);
                 if (todayPhoto) onPhotoPress(todayPhoto);
               }}
+              onEmptyPress={photos.length < 9 ? onAddPhotoPress : undefined}
               photos={photos}
             />}
 
@@ -85,7 +86,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         </View>
 
         <View style={styles.actionArea}>
-          <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onCapturePress} />
+          <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onAddPhotoPress} />
           {hasSyncFailure
             ? <Pressable accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={styles.retryText}>업로드 다시 시도</AppText></Pressable>
             : <AppText accessibilityLiveRegion="polite" style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요. 사진을 길게 눌러 순서를 바꿀 수 있어요.`}</AppText>}

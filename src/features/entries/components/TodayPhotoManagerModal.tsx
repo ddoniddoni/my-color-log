@@ -113,8 +113,8 @@ function TrashIcon() {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.36)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: '#FAFAFA', borderColor: colors.ink, borderWidth: 1.5, maxWidth: 360, padding: spacing[4], width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
+  card: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxWidth: 360, padding: spacing[4], width: '100%' },
   heading: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[3] },
   eyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '800', lineHeight: 29, marginTop: 2 },

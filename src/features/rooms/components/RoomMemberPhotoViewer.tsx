@@ -83,17 +83,17 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.44)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, maxHeight: '88%', maxWidth: 390, width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxHeight: '88%', maxWidth: 390, width: '100%' },
   header: { alignItems: 'center', borderBottomColor: colors.black, borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
   eyebrow: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
   title: { color: colors.black, fontSize: 21, fontWeight: '800', letterSpacing: -0.5, marginTop: 2 },
   closeButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
   photoArea: { alignItems: 'center', aspectRatio: 1, backgroundColor: '#F1F1EF', justifyContent: 'center', position: 'relative' },
   photo: { height: '100%', width: '100%' },
-  navButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 999, borderWidth: 1.5, height: 38, justifyContent: 'center', position: 'absolute', top: '47%', width: 38 },
-  previousButton: { left: 12 },
-  nextButton: { right: 12 },
+  navButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, height: 40, justifyContent: 'center', position: 'absolute', top: '46%', width: 40 },
+  previousButton: { left: -20 },
+  nextButton: { right: -20 },
   meta: { gap: 8, padding: 16 },
   metaTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   colorLine: { alignItems: 'center', flexDirection: 'row', flex: 1, gap: 6 },

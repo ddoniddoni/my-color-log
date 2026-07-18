@@ -91,8 +91,8 @@ function CloseIcon() {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.36)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: '#FAFAFA', borderColor: colors.ink, borderWidth: 1.5, maxWidth: 360, padding: spacing[4], width: '100%' },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
+  card: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxWidth: 360, padding: spacing[4], width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   eyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '800', lineHeight: 29, marginTop: 2 },
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 12, lineHeight: 17, marginTop: spacing[2] },
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   cancelButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 46 },
-  saveButton: { alignItems: 'center', backgroundColor: colors.black, flex: 1, justifyContent: 'center', minHeight: 46 },
+  saveButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', flex: 1, justifyContent: 'center', minHeight: 46 },
   cancelText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
   saveText: { color: colors.white, fontSize: 13, fontWeight: '700' },
   pressed: { opacity: 0.76, transform: [{ translateY: 1 }] },

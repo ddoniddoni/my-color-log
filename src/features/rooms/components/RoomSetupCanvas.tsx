@@ -24,6 +24,8 @@ import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
+import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
+import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
 import { createRoom, createRoomInvite, endRoom, getRoomInvitePreview, joinRoomByCode, leaveRoom, revokeRoomInvites, transferRoomOwnership, updateRoomSettings } from '@/src/features/rooms/api/roomRepository';
 import { RoomManagementModal, type RoomManagementPendingAction } from '@/src/features/rooms/components/RoomManagementModal';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
@@ -528,6 +530,7 @@ type RoomBoardPhotoSelection = {
 
 function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoading, isRefreshing, onInvite, onRetry }: RoomTodayBoardSectionProps) {
   const router = useRouter();
+  const photoSource = usePhotoSourceSelection();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [photoSelection, setPhotoSelection] = useState<RoomBoardPhotoSelection | null>(null);
   const selectedMember = board?.members.find((member) => member.id === selectedMemberId)
@@ -539,16 +542,14 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoad
     ? getRoomPhotoMosaicSlots(selectedMember).find((slot) => slot.photo === null) ?? null
     : null;
 
-  const openCamera = (): void => {
+  const openPhotoSource = (): void => {
     if (!board || !captureSlot) return;
-    router.push({
-      pathname: '/camera',
-      params: {
-        colorNameEn: board.mission.colorNameEn,
-        dateKey: board.dateKey,
-        missionId: board.mission.id,
-        position: String(captureSlot.position),
-      },
+    photoSource.openPhotoSource({
+      colorNameEn: board.mission.colorNameEn,
+      dateKey: board.dateKey,
+      missionId: board.mission.id,
+      position: captureSlot.position,
+      userId: currentUserId,
     });
   };
 
@@ -604,7 +605,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoad
                 </Pressable>
               </View>
             </View>
-            {selectedMember ? <RoomMemberMosaic member={selectedMember} onCapture={captureSlot ? openCamera : null} onOpenPhoto={(photo) => setPhotoSelection({ memberId: selectedMember.id, photoId: photo.id })} /> : null}
+            {selectedMember ? <RoomMemberMosaic member={selectedMember} onCapture={captureSlot ? openPhotoSource : null} onOpenPhoto={(photo) => setPhotoSelection({ memberId: selectedMember.id, photoId: photo.id })} /> : null}
           </>
         ) : null}
         {!isLoading && !isError && board === null ? <View style={styles.boardState}><PaletteIcon /><AppText style={styles.boardStateText}>방에 참여하면 오늘의 사진 보드가 여기에 보여요.</AppText></View> : null}
@@ -615,6 +616,14 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoad
         member={selectedPhotoMember}
         mission={board?.mission ?? null}
         onClose={() => setPhotoSelection(null)}
+      />
+      <PhotoSourceModal
+        errorMessage={photoSource.errorMessage}
+        isImporting={photoSource.isGalleryImporting}
+        onCamera={photoSource.chooseCamera}
+        onClose={photoSource.closePhotoSource}
+        onGallery={() => void photoSource.chooseGallery()}
+        visible={photoSource.isSourceModalVisible}
       />
     </>
   );
@@ -648,12 +657,19 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
   visible: boolean;
 }) {
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
       <View style={styles.modalOverlay}>
         <Pressable accessibilityLabel="방 만들기 닫기" onPress={onClose} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.modalCard}>
-          <AppText style={styles.modalEyebrow}>NEW PRIVATE ROOM</AppText>
-          <AppText style={styles.modalTitle}>친구방 만들기</AppText>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderCopy}>
+              <AppText style={styles.modalEyebrow}>NEW PRIVATE ROOM</AppText>
+              <AppText style={styles.modalTitle}>친구방 만들기</AppText>
+            </View>
+            <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalCloseButton}>
+              <AppText style={styles.modalCloseText}>×</AppText>
+            </Pressable>
+          </View>
           <AppText style={styles.modalDescription}>2~6명이 함께하는 비공개 방이에요. 사진 원본은 언제나 내 다이어리에 남아요.</AppText>
           <AppText style={styles.inputLabel}>방 이름</AppText>
           <TextInput accessibilityLabel="방 이름" autoFocus maxLength={20} onChangeText={onNameChange} placeholder="예: 퇴근길 색수집단" placeholderTextColor="rgba(0, 0, 0, 0.32)" style={styles.modalInput} value={roomName} />
@@ -671,12 +687,19 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
 
 export function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boolean; onClose: () => void; onJoin: () => void; preview: RoomInvitePreview | null }) {
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={preview !== null}>
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={preview !== null}>
       <View style={styles.modalOverlay}>
         <Pressable accessibilityLabel="친구방 참여 닫기" onPress={onClose} style={StyleSheet.absoluteFill} />
         {preview ? <View accessibilityViewIsModal style={styles.modalCard}>
-          <AppText style={styles.modalEyebrow}>PRIVATE INVITATION</AppText>
-          <AppText style={styles.modalTitle}>{preview.roomEmoji ? `${preview.roomEmoji} ${preview.roomName}` : preview.roomName}</AppText>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderCopy}>
+              <AppText style={styles.modalEyebrow}>PRIVATE INVITATION</AppText>
+              <AppText style={styles.modalTitle}>{preview.roomEmoji ? `${preview.roomEmoji} ${preview.roomName}` : preview.roomName}</AppText>
+            </View>
+            <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalCloseButton}>
+              <AppText style={styles.modalCloseText}>×</AppText>
+            </Pressable>
+          </View>
           <AppText style={styles.modalDescription}>{preview.ownerNickname} 님의 방 · 현재 {preview.memberCount}/{preview.maxMembers}명</AppText>
           <View style={styles.privacyNotice}><AppText style={styles.privacyNoticeTitle}>참여 전에 확인해 주세요</AppText><AppText style={styles.privacyNoticeText}>참여하면 이 방의 멤버에게 내 오늘 기록이 함께 보여요. 내 다이어리 원본은 그대로 유지돼요.</AppText></View>
           <View style={styles.modalActions}>
@@ -815,17 +838,21 @@ const styles = StyleSheet.create({
   canvasActions: { flexDirection: 'row', gap: 8 },
   canvasActionButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', gap: 5, minHeight: 40, paddingHorizontal: 10, paddingVertical: 7 },
   canvasActionLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 13 },
-  modalOverlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.42)', flex: 1, justifyContent: 'center', padding: 20 },
-  modalCard: { backgroundColor: '#F9F9F9', borderColor: colors.black, borderWidth: 2, gap: 10, maxWidth: 380, padding: 22, width: '100%' },
+  modalOverlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 10, maxWidth: 380, padding: 22, width: '100%' },
+  modalHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  modalHeaderCopy: { flex: 1 },
   modalEyebrow: { color: 'rgba(0, 0, 0, 0.62)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
   modalTitle: { color: colors.black, fontSize: 25, fontWeight: '800', letterSpacing: -0.7, lineHeight: 32 },
+  modalCloseButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
+  modalCloseText: { color: colors.black, fontSize: 28, fontWeight: '300', lineHeight: 31 },
   modalDescription: { color: 'rgba(0, 0, 0, 0.68)', fontSize: 14, lineHeight: 21, marginBottom: 6 },
   inputLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 11, marginTop: 5 },
   modalInput: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 16, minHeight: 48, paddingHorizontal: 12 },
   modalActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 12 },
   modalSecondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 46, paddingHorizontal: 15 },
   modalSecondaryText: { color: colors.black, fontSize: 14, fontWeight: '700' },
-  modalPrimaryButton: { alignItems: 'center', backgroundColor: colors.black, justifyContent: 'center', minHeight: 46, paddingHorizontal: 15 },
+  modalPrimaryButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', justifyContent: 'center', minHeight: 46, paddingHorizontal: 15 },
   modalPrimaryText: { color: colors.white, fontSize: 14, fontWeight: '700' },
   modalButtonDisabled: { opacity: 0.54 },
   privacyNotice: { backgroundColor: '#FFF4D7', borderColor: '#B7892C', borderWidth: 1, gap: 5, marginTop: 4, padding: 12 },
