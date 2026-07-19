@@ -1,4 +1,4 @@
-import { parseProfile, type Profile } from '@/src/features/profile/model/profile';
+import { parseProfile, type Profile, validateNickname } from '@/src/features/profile/model/profile';
 import { supabase } from '@/src/lib/supabase/client';
 
 const profileColumns = 'id, nickname, timezone, is_onboarded';
@@ -17,5 +17,20 @@ export async function completeProfile(userId: string, nickname: string): Promise
     .single();
 
   if (error) throw new Error('profile_save_failed');
+  return parseProfile(data);
+}
+
+export async function updateProfileNickname(userId: string, nickname: string): Promise<Profile> {
+  const validation = validateNickname(nickname);
+  if (!validation.isValid) throw new Error('nickname_invalid');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ nickname: validation.value })
+    .eq('id', userId)
+    .select(profileColumns)
+    .maybeSingle();
+
+  if (error || !data) throw new Error('profile_update_failed');
   return parseProfile(data);
 }
