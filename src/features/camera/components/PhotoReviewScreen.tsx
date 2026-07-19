@@ -8,7 +8,9 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
+import { applyColorIsolationToPhoto } from '@/src/features/camera/api/colorIsolationRepository';
 import { cropCapturedPhoto, confirmCapturedPhoto, discardCapturedPhoto, rotateCapturedPhoto } from '@/src/features/camera/api/localPhotoRepository';
+import { ColorIsolationPreview, isColorIsolationPreviewAvailable } from '@/src/features/camera/components/ColorIsolationPreview';
 import { PhotoCropModal } from '@/src/features/camera/components/PhotoCropModal';
 import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
 import { useQueuedPhoto } from '@/src/features/sync/hooks/useQueuedPhoto';
@@ -16,6 +18,7 @@ import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export type PhotoReviewContext = {
+  colorHex: string;
   photoId: string;
   colorNameEn: string;
 };
@@ -27,6 +30,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   const photoQuery = useQueuedPhoto(reviewContext.photoId);
   const [caption, setCaption] = useState('');
   const [isCropVisible, setIsCropVisible] = useState(false);
+  const [isColorIsolationEnabled, setIsColorIsolationEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -76,6 +80,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           missionId: photo.missionId,
           dateKey: photo.dateKey,
           position: String(photo.position),
+          colorHex: reviewContext.colorHex,
           colorNameEn: reviewContext.colorNameEn,
         },
       });
@@ -90,7 +95,11 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     setIsSaving(true);
     setErrorMessage(null);
     try {
-      const confirmedPhoto = await confirmCapturedPhoto(photo, caption);
+      const photoToConfirm = isColorIsolationEnabled
+        ? await applyColorIsolationToPhoto(photo, reviewContext.colorHex)
+        : photo;
+      replaceReviewedPhoto(photoToConfirm);
+      const confirmedPhoto = await confirmCapturedPhoto(photoToConfirm, caption);
       queryClient.setQueryData<PendingPhoto[]>(queryKeys.pendingPhotos(photo.userId, photo.dateKey), (currentQueue) => [
         ...(currentQueue ?? []).filter((queuedPhoto) => queuedPhoto.id !== confirmedPhoto.id),
         confirmedPhoto,
@@ -143,19 +152,41 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         <View style={styles.photoStageWrapper}>
           <View pointerEvents="none" style={styles.photoStageShadow} />
           <View style={styles.photoStage}>
-            <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} />
-            <View pointerEvents="none" style={styles.photoDimmer} />
+            {isColorIsolationEnabled ? <View pointerEvents="none" style={styles.photoFilterBackdrop} /> : <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} /><View pointerEvents="none" style={styles.photoDimmer} /></>}
             <View pointerEvents="none" style={styles.photoPreviewPaper}>
-              <Image accessibilityLabel="촬영한 오늘의 색 사진" cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />
+              <View accessibilityLabel={isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진'} accessible style={styles.photoPreview}>
+                {isColorIsolationEnabled ? <ColorIsolationPreview colorHex={reviewContext.colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
+              </View>
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
             </View>
             <View pointerEvents="none" style={styles.photoReviewBadge}><AppText style={styles.photoReviewBadgeText}>촬영 결과 확인</AppText></View>
-            <Pressable accessibilityLabel="사진 자르기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => setIsCropVisible(true)} style={({ pressed }) => [styles.cropMark, pressed && styles.pressed, isBusy && styles.disabled]}><CropIcon /></Pressable>
-            <Pressable accessibilityLabel="사진을 오른쪽으로 90도 회전" accessibilityRole="button" accessibilityState={{ busy: isEditing, disabled: isBusy }} disabled={isBusy} onPress={() => void rotatePhoto()} style={({ pressed }) => [styles.resetMark, pressed && styles.pressed, isBusy && styles.disabled]}><AgainIcon /></Pressable>
+            {!isColorIsolationEnabled ? (
+              <>
+                <Pressable accessibilityLabel="사진 자르기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => setIsCropVisible(true)} style={({ pressed }) => [styles.cropMark, pressed && styles.pressed, isBusy && styles.disabled]}><CropIcon /></Pressable>
+                <Pressable accessibilityLabel="사진을 오른쪽으로 90도 회전" accessibilityRole="button" accessibilityState={{ busy: isEditing, disabled: isBusy }} disabled={isBusy} onPress={() => void rotatePhoto()} style={({ pressed }) => [styles.resetMark, pressed && styles.pressed, isBusy && styles.disabled]}><AgainIcon /></Pressable>
+              </>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>FOUND {colorTag}</AppText></View>
+
+        <Pressable
+          accessibilityLabel="오늘의 색만 보기"
+          accessibilityRole="switch"
+          accessibilityState={{ checked: isColorIsolationEnabled, disabled: !isColorIsolationPreviewAvailable }}
+          disabled={!isColorIsolationPreviewAvailable}
+          onPress={() => setIsColorIsolationEnabled((currentValue) => !currentValue)}
+          style={({ pressed }) => [styles.colorIsolationToggle, pressed && isColorIsolationPreviewAvailable && styles.pressed, !isColorIsolationPreviewAvailable && styles.disabled]}>
+          <View style={[styles.colorIsolationDot, { backgroundColor: reviewContext.colorHex }]} />
+          <View style={styles.colorIsolationCopy}>
+            <AppText style={styles.colorIsolationTitle}>오늘의 색만 보기</AppText>
+            <AppText style={styles.colorIsolationDescription}>{isColorIsolationPreviewAvailable ? '오늘의 색은 남기고 나머지는 흑백으로 저장해요.' : '최신 development build에서 사용할 수 있어요.'}</AppText>
+          </View>
+          <View style={[styles.colorIsolationTrack, isColorIsolationEnabled && styles.colorIsolationTrackEnabled]}>
+            <View style={[styles.colorIsolationKnob, isColorIsolationEnabled && styles.colorIsolationKnobEnabled]} />
+          </View>
+        </Pressable>
 
         <View style={styles.memoGroup}>
           <AppText style={styles.memoLabel}>ADD A MEMO</AppText>
@@ -232,6 +263,7 @@ const styles = StyleSheet.create({
   photoStage: { alignItems: 'center', backgroundColor: '#D8D8D8', borderColor: colors.ink, borderWidth: 1.5, bottom: 7, justifyContent: 'center', left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
   photoBlur: { height: '100%', opacity: 0.6, width: '100%' },
   photoDimmer: { backgroundColor: 'rgba(255,255,255,0.5)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  photoFilterBackdrop: { backgroundColor: '#A7A7A7', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#ECECEC', borderWidth: 1, padding: 8, position: 'absolute', width: 152 },
   photoPreview: { height: 136, width: 136 },
   photoFileName: { color: '#8C8C8C', fontFamily: 'monospace', fontSize: 7, marginTop: 5 },
@@ -241,6 +273,15 @@ const styles = StyleSheet.create({
   resetMark: { alignItems: 'center', backgroundColor: '#FFF', borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', left: 12, width: 36 },
   colorLabel: { alignItems: 'center', backgroundColor: colors.black, borderRadius: 8, marginTop: 10, minHeight: 32, justifyContent: 'center', paddingHorizontal: spacing[3] },
   colorLabelText: { color: colors.white, fontFamily: 'monospace', fontSize: 10, fontWeight: '700', letterSpacing: 0.7 },
+  colorIsolationToggle: { alignItems: 'center', borderBottomColor: '#D6D6D6', borderBottomWidth: 1, flexDirection: 'row', gap: 9, minHeight: 62, paddingVertical: 9 },
+  colorIsolationDot: { borderColor: colors.ink, borderRadius: 11, borderWidth: 1, height: 22, width: 22 },
+  colorIsolationCopy: { flex: 1, gap: 2 },
+  colorIsolationTitle: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  colorIsolationDescription: { color: '#6F6F6F', fontSize: 9, lineHeight: 13 },
+  colorIsolationTrack: { backgroundColor: '#D7D7D7', borderColor: '#8B8B8B', borderRadius: 12, borderWidth: 1, height: 24, padding: 2, width: 42 },
+  colorIsolationTrackEnabled: { backgroundColor: colors.black, borderColor: colors.black },
+  colorIsolationKnob: { backgroundColor: colors.white, borderRadius: 9, height: 18, width: 18 },
+  colorIsolationKnobEnabled: { transform: [{ translateX: 16 }] },
   memoGroup: { marginTop: spacing[4] },
   memoLabel: { color: colors.ink, fontFamily: 'monospace', fontSize: 9, marginBottom: 6 },
   memoInput: { borderBottomColor: colors.ink, borderBottomWidth: 1, color: colors.ink, fontSize: 13, minHeight: 42, paddingHorizontal: 0, paddingVertical: 8 },

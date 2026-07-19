@@ -67,6 +67,7 @@ export default function TodayScreen() {
         onAddPhotoPress={() => {
           if (!nextPosition) return;
           photoSource.openPhotoSource({
+            colorHex: mission.color.accent,
             colorNameEn: mission.color.nameEn,
             dateKey,
             missionId: mission.id,

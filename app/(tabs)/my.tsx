@@ -10,6 +10,8 @@ import { deleteCurrentAccount } from '@/src/features/auth/api/accountRepository'
 import { signOutCurrentSession } from '@/src/features/auth/api/authRepository';
 import { AccountDeletionModal } from '@/src/features/auth/components/AccountDeletionModal';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
+import { NotificationSettingsModal } from '@/src/features/notifications/components/NotificationSettingsModal';
+import { useNotificationSettings } from '@/src/features/notifications/hooks/useNotificationSettings';
 import { MyProfileCanvas } from '@/src/features/profile/components/MyProfileCanvas';
 import { ProfileNicknameModal } from '@/src/features/profile/components/ProfileNicknameModal';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -25,8 +27,10 @@ export default function MyScreen() {
   const profileQuery = useProfile(userId);
   const roomsQuery = useMyRooms(userId ?? null);
   const [isAccountDeletionVisible, setIsAccountDeletionVisible] = useState(false);
+  const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
   const updateNicknameMutation = useUpdateProfileNickname(userId ?? '');
+  const notificationSettings = useNotificationSettings();
   const signOutMutation = useMutation({
     mutationFn: signOutCurrentSession,
     onError: () => Alert.alert('로그아웃하지 못했어요', '잠시 후 다시 시도해 주세요.'),
@@ -64,7 +68,7 @@ export default function MyScreen() {
         email={email}
         nickname={profileQuery.data.nickname}
         onDeleteAccountPress={() => setIsAccountDeletionVisible(true)}
-        onNotificationsPress={showNotificationsNotice}
+        onNotificationsPress={() => setIsNotificationSettingsVisible(true)}
         onProfileEditPress={() => setIsProfileEditVisible(true)}
         onPrivacyPress={showPrivacyNotice}
         onRoomsPress={() => router.push('/(tabs)/room')}
@@ -89,6 +93,28 @@ export default function MyScreen() {
         onConfirm={() => deleteAccountMutation.mutate()}
         visible={isAccountDeletionVisible}
       />
+      <NotificationSettingsModal
+        isLoading={notificationSettings.isLoading}
+        isSaving={notificationSettings.isSaving}
+        onClose={() => setIsNotificationSettingsVisible(false)}
+        onSave={async (settings) => {
+          try {
+            const result = await notificationSettings.save(settings);
+            if (result === 'saved') return true;
+            if (result === 'unavailable') {
+              Alert.alert('앱 업데이트가 필요해요', '알림 기능을 사용하려면 최신 development build를 다시 설치해 주세요.');
+              return false;
+            }
+            Alert.alert('알림 권한이 필요해요', '기기 설정에서 Color Log의 알림을 허용한 뒤 다시 켜 주세요.');
+            return false;
+          } catch {
+            Alert.alert('알림을 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            return false;
+          }
+        }}
+        settings={notificationSettings.settings}
+        visible={isNotificationSettingsVisible}
+      />
     </>
   );
 }
@@ -106,10 +132,6 @@ function confirmSignOut(onConfirm: () => void): void {
     { style: 'cancel', text: '취소' },
     { onPress: onConfirm, style: 'destructive', text: '로그아웃' },
   ]);
-}
-
-function showNotificationsNotice(): void {
-  Alert.alert('알림 설정은 준비 중이에요', '알림 권한과 일일 알림 기능을 연결하고 있어요.');
 }
 
 function showPrivacyNotice(): void {

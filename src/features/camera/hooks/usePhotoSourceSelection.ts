@@ -28,6 +28,7 @@ export function usePhotoSourceSelection() {
     router.push({
       pathname: '/camera',
       params: {
+        colorHex: context.colorHex,
         colorNameEn: context.colorNameEn,
         dateKey: context.dateKey,
         missionId: context.missionId,
@@ -47,6 +48,7 @@ export function usePhotoSourceSelection() {
       router.push({
         pathname: '/photo-review',
         params: {
+          colorHex: context.colorHex,
           colorNameEn: context.colorNameEn,
           photoId: photo.id,
         },

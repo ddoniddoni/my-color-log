@@ -2,11 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 import { saveCapturedPhotoForReview } from '@/src/features/camera/api/localPhotoRepository';
+import { isColorHex } from '@/src/features/camera/model/colorIsolation';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
 const GALLERY_IMPORT_CONTEXT_STORAGE_KEY = '@mycolorlog/gallery-import-context/v1';
 
 export type GalleryImportContext = {
+  colorHex: string;
   colorNameEn: string;
   dateKey: string;
   missionId: string;
@@ -15,6 +17,7 @@ export type GalleryImportContext = {
 };
 
 export type RecoveredGalleryImport = {
+  colorHex: string;
   colorNameEn: string;
   photo: PendingPhoto;
 };
@@ -58,7 +61,7 @@ export async function recoverPendingGalleryImport(): Promise<RecoveredGalleryImp
   try {
     const photo = await savePickedAsset(result.assets[0], context);
     await clearImportContext();
-    return { colorNameEn: context.colorNameEn, photo };
+    return { colorHex: context.colorHex, colorNameEn: context.colorNameEn, photo };
   } catch (error) {
     await clearImportContext();
     throw error;
@@ -111,7 +114,8 @@ function isValidPickedImage(asset: ImagePicker.ImagePickerAsset): boolean {
 function isGalleryImportContext(value: unknown): value is GalleryImportContext {
   if (typeof value !== 'object' || value === null) return false;
   const context = value as Record<string, unknown>;
-  return typeof context.colorNameEn === 'string'
+  return isColorHex(context.colorHex)
+    && typeof context.colorNameEn === 'string'
     && typeof context.dateKey === 'string'
     && typeof context.missionId === 'string'
     && typeof context.position === 'number'

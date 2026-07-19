@@ -1,3 +1,5 @@
+import { MISSION_REVEAL_SLOT_COUNT } from '@/src/features/missions/model/missionRevealWheel';
+
 export type DailyAccent = { accent: string; accentTint: string; accentShade: string; onAccent: string };
 
 export type MissionRevealColor = {
@@ -44,7 +46,7 @@ export function parseDailyMission(value: unknown): DailyMission {
 }
 
 export function parseMissionRevealPalette(value: unknown): MissionRevealColor[] {
-  if (!Array.isArray(value) || value.length !== 12) throw new Error('Invalid mission reveal palette response');
+  if (!Array.isArray(value) || value.length !== MISSION_REVEAL_SLOT_COUNT) throw new Error('Invalid mission reveal palette response');
 
   const palette = value.map(parseMissionRevealColor);
   if (new Set(palette.map((color) => color.id)).size !== palette.length) {

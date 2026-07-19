@@ -11,6 +11,7 @@ import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstr
 import { saveCapturedPhotoForReview } from '@/src/features/camera/api/localPhotoRepository';
 
 export type CaptureContext = {
+  colorHex: string;
   missionId: string;
   dateKey: string;
   position: number;
@@ -76,6 +77,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
       router.replace({
         pathname: '/photo-review',
         params: {
+          colorHex: captureContext.colorHex,
           photoId: savedPhoto.id,
           colorNameEn: captureContext.colorNameEn,
         },

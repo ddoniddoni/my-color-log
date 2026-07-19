@@ -561,6 +561,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, inviteShareActi
   const openPhotoSource = (): void => {
     if (!board || !captureSlot) return;
     photoSource.openPhotoSource({
+      colorHex: board.mission.colorHex,
       colorNameEn: board.mission.colorNameEn,
       dateKey: board.dateKey,
       missionId: board.mission.id,

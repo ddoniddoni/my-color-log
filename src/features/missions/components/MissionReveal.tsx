@@ -88,7 +88,7 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
           <AppText style={[styles.subtitle, { fontFamily: fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined }]}>색을 돌려 오늘의 장면을 만나보세요.</AppText>
         </View>
 
-        <View accessibilityLabel={`12가지 실제 색상으로 구성된 오늘의 ${mission.color.nameKo} 룰렛`} style={styles.wheelFrame}>
+        <View accessibilityLabel={`${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${mission.color.nameKo} 룰렛`} style={styles.wheelFrame}>
           <Animated.View style={[styles.wheel, wheelStyle]}>
             <WheelArtwork palette={palette} />
           </Animated.View>

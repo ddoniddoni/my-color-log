@@ -1,4 +1,4 @@
-export const MISSION_REVEAL_SLOT_COUNT = 12;
+export const MISSION_REVEAL_SLOT_COUNT = 10;
 
 const WHEEL_FULL_TURNS = 5;
 
