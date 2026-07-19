@@ -15,6 +15,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { colors } from '@/src/design/tokens';
+import { getRoomOverview, type ProfileRoomSummary, type RoomSummaryStatus } from '@/src/features/profile/model/roomOverview';
 
 type MyProfileCanvasProps = {
   deletingAccount: boolean;
@@ -23,7 +24,11 @@ type MyProfileCanvasProps = {
   onDeleteAccountPress: () => void;
   onNotificationsPress: () => void;
   onProfileEditPress: () => void;
+  onPrivacyPress: () => void;
+  onRoomsPress: () => void;
   onSignOutPress: () => void;
+  rooms: readonly ProfileRoomSummary[];
+  roomsStatus: RoomSummaryStatus;
   signingOut: boolean;
 };
 
@@ -34,7 +39,11 @@ export function MyProfileCanvas({
   onDeleteAccountPress,
   onNotificationsPress,
   onProfileEditPress,
+  onPrivacyPress,
+  onRoomsPress,
   onSignOutPress,
+  rooms,
+  roomsStatus,
   signingOut,
 }: MyProfileCanvasProps) {
   const [fontsLoaded] = useFonts({
@@ -63,20 +72,15 @@ export function MyProfileCanvas({
           <AppText numberOfLines={1} style={[styles.email, { fontFamily: bodyFont }]}>{email}</AppText>
         </View>
 
-        <View accessibilityLabel="친구방 초대 코드가 아직 없어요" style={styles.inviteCard}>
-          <AppText style={styles.inviteLabel}>친구방 초대 코드</AppText>
-          <View style={styles.inviteValueRow}>
-            <AppText style={[styles.inviteValue, { fontFamily: boldFont }]}>아직 만든 방이 없어요</AppText>
-            <View accessibilityLabel="초대 코드 기능 준비 중" accessibilityRole="image" style={styles.copyGroup}><CopyIcon /><AppText style={styles.copyText}>준비 중</AppText></View>
-          </View>
-          <AppText style={[styles.inviteHint, { fontFamily: bodyFont }]}>친구방을 만들면 6자리 초대 코드가 생겨요.</AppText>
-        </View>
+        <RoomSummaryCard bodyFont={bodyFont} boldFont={boldFont} onPress={onRoomsPress} rooms={rooms} status={roomsStatus} />
 
         <View style={styles.menuList}>
           <MarkerLine strong />
           <MenuRow disabled={deletingAccount} label="프로필 수정" onPress={onProfileEditPress} />
           <MarkerLine />
           <MenuRow disabled={deletingAccount} label="알림 설정" onPress={onNotificationsPress} />
+          <MarkerLine />
+          <MenuRow disabled={deletingAccount} label="사진과 친구방" onPress={onPrivacyPress} />
           <MarkerLine />
           <MenuRow destructive disabled={deletingAccount || signingOut} label={signingOut ? '로그아웃 중…' : '로그아웃'} onPress={onSignOutPress} />
           <MarkerLine strong />
@@ -91,6 +95,27 @@ export function MyProfileCanvas({
         <View pointerEvents="none" style={styles.doodle}><PenDoodle /></View>
       </ScrollView>
     </View>
+  );
+}
+
+function RoomSummaryCard({ bodyFont, boldFont, onPress, rooms, status }: { bodyFont: string | undefined; boldFont: string | undefined; onPress: () => void; rooms: readonly ProfileRoomSummary[]; status: RoomSummaryStatus }) {
+  const overview = getRoomOverview(rooms, status);
+
+  return (
+    <Pressable
+      accessibilityLabel={overview.accessibilityLabel}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.roomCard, pressed && styles.roomCardPressed]}>
+      <AppText style={styles.roomLabel}>MY ROOMS</AppText>
+      <View style={styles.roomValueRow}>
+        <View style={styles.roomCopy}>
+          <AppText numberOfLines={1} style={[styles.roomTitle, { fontFamily: boldFont }]}>{overview.title}</AppText>
+          <AppText numberOfLines={2} style={[styles.roomDescription, { fontFamily: bodyFont }]}>{overview.description}</AppText>
+        </View>
+        <ArrowIcon />
+      </View>
+    </Pressable>
   );
 }
 
@@ -119,10 +144,6 @@ function DoodleAvatar() {
   return <Svg height={64} viewBox="0 0 72 72" width={64}><Circle cx={36} cy={36} fill="#F9F9F9" r={34} stroke={colors.black} strokeWidth={1.5} /><Path d="M22 29c-5-2-4-9 1-10 4-1 6 3 6 6m20 4c5-2 4-9-1-10-4-1-6 3-6 6M23 30c1-9 25-10 27 0v15c-2 9-24 9-27 0V30Z" fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.45} /><Circle cx={31} cy={36} fill={colors.black} r={1.7} /><Circle cx={42} cy={36} fill={colors.black} r={1.7} /><Path d="M32 45c2 1.6 6 1.6 8 0m-8-13 3-2 2 2 3-2" fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} /></Svg>;
 }
 
-function CopyIcon() {
-  return <Svg height={17} viewBox="0 0 24 24" width={17}><Path d="M9 8h10v11H9V8Zm-4 8V5h10" fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} /></Svg>;
-}
-
 function ArrowIcon() {
   return <Svg height={21} viewBox="0 0 24 24" width={21}><Path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
@@ -146,13 +167,13 @@ const styles = StyleSheet.create({
   avatar: { alignItems: 'center', borderColor: colors.black, borderRadius: 999, borderWidth: 1.5, height: 70, justifyContent: 'center', marginBottom: 4, width: 70 },
   nickname: { color: colors.black, fontSize: 18, fontWeight: '700', letterSpacing: -0.4, lineHeight: 24 },
   email: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 10, lineHeight: 14, maxWidth: '78%' },
-  inviteCard: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 3, gap: 10, padding: 16 },
-  inviteLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1, lineHeight: 12, textTransform: 'uppercase' },
-  inviteValueRow: { alignItems: 'center', flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
-  inviteValue: { color: colors.black, flex: 1, fontSize: 18, fontWeight: '700', letterSpacing: -0.5, lineHeight: 24 },
-  copyGroup: { alignItems: 'center', flexDirection: 'row', gap: 4 },
-  copyText: { color: colors.black, fontFamily: 'monospace', fontSize: 9, lineHeight: 11 },
-  inviteHint: { color: 'rgba(0, 0, 0, 0.6)', fontSize: 11, lineHeight: 15 },
+  roomCard: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 3, gap: 10, padding: 16 },
+  roomCardPressed: { backgroundColor: '#F1F1EE', transform: [{ scale: 0.99 }] },
+  roomLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1, lineHeight: 12, textTransform: 'uppercase' },
+  roomValueRow: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  roomCopy: { flex: 1, gap: 4 },
+  roomTitle: { color: colors.black, fontSize: 18, fontWeight: '700', letterSpacing: -0.5, lineHeight: 24 },
+  roomDescription: { color: 'rgba(0, 0, 0, 0.6)', fontSize: 11, lineHeight: 16 },
   menuList: { gap: 0 },
   markerLine: { backgroundColor: colors.black, height: 2, transform: [{ rotate: '-0.5deg' }], width: '100%' },
   markerLineStrong: { opacity: 0.22 },

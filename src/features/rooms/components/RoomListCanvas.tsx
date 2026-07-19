@@ -2,7 +2,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput,
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
@@ -16,7 +16,11 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 
 const MAX_ACTIVE_ROOMS = 3;
 
-export function RoomListCanvas() {
+type RoomListCanvasProps = {
+  initialInviteCode?: string | null;
+};
+
+export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -28,6 +32,7 @@ export function RoomListCanvas() {
   const [roomEmoji, setRoomEmoji] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [invitePreview, setInvitePreview] = useState<RoomInvitePreview | null>(null);
+  const handledInitialInviteCode = useRef<string | null>(null);
 
   const openRoom = (roomId: string): void => {
     router.push({ pathname: '/room/[roomId]', params: { roomId } });
@@ -50,7 +55,18 @@ export function RoomListCanvas() {
     },
   });
 
-  const previewInviteMutation = useMutation({ mutationFn: getRoomInvitePreview });
+  const previewInviteMutation = useMutation({
+    mutationFn: getRoomInvitePreview,
+    onError: (error) => Alert.alert('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
+    onSuccess: (preview) => {
+      if (!preview) {
+        Alert.alert('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
+        return;
+      }
+      setInvitePreview(preview);
+    },
+  });
+  const requestInvitePreview = previewInviteMutation.mutate;
   const joinRoomMutation = useMutation({
     mutationFn: joinRoomByCode,
     onSuccess: async (roomId) => {
@@ -70,6 +86,18 @@ export function RoomListCanvas() {
   const rooms = roomsQuery.data ?? [];
   const isAtRoomLimit = rooms.length >= MAX_ACTIVE_ROOMS;
 
+  useEffect(() => {
+    if (!initialInviteCode || handledInitialInviteCode.current === initialInviteCode || roomsQuery.isPending || roomsQuery.isError) return;
+
+    handledInitialInviteCode.current = initialInviteCode;
+    setInviteCode(initialInviteCode);
+    if (isAtRoomLimit) {
+      Alert.alert('친구방은 3개까지예요', '새 방에 참여하려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
+      return;
+    }
+    requestInvitePreview(initialInviteCode);
+  }, [initialInviteCode, isAtRoomLimit, requestInvitePreview, roomsQuery.isError, roomsQuery.isPending]);
+
   const requestCreate = (): void => {
     if (isAtRoomLimit) {
       Alert.alert('친구방은 3개까지예요', '새 방을 만들려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
@@ -87,16 +115,7 @@ export function RoomListCanvas() {
       Alert.alert('초대 코드를 확인해 주세요', '친구가 보낸 6자리 숫자를 모두 입력해 주세요.');
       return;
     }
-    previewInviteMutation.mutate(inviteCode, {
-      onError: (error) => Alert.alert('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
-      onSuccess: (preview) => {
-        if (!preview) {
-          Alert.alert('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
-          return;
-        }
-        setInvitePreview(preview);
-      },
-    });
+    requestInvitePreview(inviteCode);
   };
 
   const requestEndRoom = (room: ActiveRoom): void => {

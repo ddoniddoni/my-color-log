@@ -5,7 +5,7 @@ import {
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useMutation } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -25,6 +25,7 @@ import { getAuthErrorMessage, type AppAuthErrorCode } from '@/src/features/auth/
 import { validateEmail, validatePassword, validatePasswordConfirmation } from '@/src/features/auth/model/emailPassword';
 import { getAuthenticatedDestination } from '@/src/features/auth/model/startupRoute';
 import { getProfile } from '@/src/features/profile/api/profileRepository';
+import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -41,6 +42,8 @@ export default function EmailOnboardingScreen() {
   });
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { inviteCode: inviteCodeParam } = useLocalSearchParams<{ inviteCode?: string | string[] }>();
+  const inviteCode = getInviteCodeFromParam(inviteCodeParam);
   const isSignUp = mode === 'sign-up';
   const emailValidation = validateEmail(email);
   const passwordValidation = validatePassword(password);
@@ -58,7 +61,17 @@ export default function EmailOnboardingScreen() {
       const profile = await getProfile(session.user.id);
       return getAuthenticatedDestination(profile);
     },
-    onSuccess: (destination) => router.replace(destination),
+    onSuccess: (destination) => {
+      if (!inviteCode) {
+        router.replace(destination);
+        return;
+      }
+      if (destination === '/(onboarding)/nickname') {
+        router.replace({ pathname: '/(onboarding)/nickname', params: { inviteCode } });
+        return;
+      }
+      router.replace({ pathname: '/(tabs)/room', params: { inviteCode } });
+    },
   });
 
   const handleSubmit = (): void => {

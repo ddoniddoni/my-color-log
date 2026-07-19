@@ -5,7 +5,7 @@ import {
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { getStoredSession } from '@/src/features/auth/api/authRepository';
 import { completeProfile } from '@/src/features/profile/api/profileRepository';
 import { validateNickname } from '@/src/features/profile/model/profile';
+import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export default function NicknameScreen() {
@@ -27,6 +28,8 @@ export default function NicknameScreen() {
   });
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { inviteCode: inviteCodeParam } = useLocalSearchParams<{ inviteCode?: string | string[] }>();
+  const inviteCode = getInviteCodeFromParam(inviteCodeParam);
   const queryClient = useQueryClient();
   const validation = validateNickname(nickname);
   const mutation = useMutation({
@@ -38,6 +41,10 @@ export default function NicknameScreen() {
     },
     onSuccess: async (profile) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile(profile.id) });
+      if (inviteCode) {
+        router.replace({ pathname: '/(tabs)/room', params: { inviteCode } });
+        return;
+      }
       router.replace('/(tabs)');
     },
   });

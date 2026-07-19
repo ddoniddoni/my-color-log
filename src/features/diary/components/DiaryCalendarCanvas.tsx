@@ -25,7 +25,7 @@ import { DiaryPhotoViewer } from '@/src/features/diary/components/DiaryPhotoView
 import { useDiaryEdits } from '@/src/features/diary/hooks/useDiaryEdits';
 import { useDiaryMonth } from '@/src/features/diary/hooks/useDiaryMonth';
 import { getDiaryEntryMemo, type DiaryEntry } from '@/src/features/diary/model/diaryMonth';
-import { getCalendarCells, moveMonth, type MonthCursor } from '@/src/features/diary/model/calendar';
+import { getCalendarCells, getSelectedDiaryDateKey, moveMonth, type MonthCursor } from '@/src/features/diary/model/calendar';
 import { getKstDateKey, isFutureKstDate } from '@/src/utils/dates/kst';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
@@ -54,8 +54,8 @@ export function DiaryCalendarCanvas() {
   const calendar = getCalendarCells(cursor.year, cursor.month);
   const isCurrentMonth = cursor.year === todayYear && cursor.month === todayMonth;
   const entriesByDate = useMemo(() => new Map(entries.map((entry) => [entry.dateKey, entry])), [entries]);
-  const selectedEntry = selectedDateKey ? entriesByDate.get(selectedDateKey) ?? null : entries[0] ?? null;
-  const selectedCalendarDate = selectedDateKey ?? selectedEntry?.dateKey ?? null;
+  const selectedCalendarDate = getSelectedDiaryDateKey({ entries, isCurrentMonth, selectedDateKey, todayKey });
+  const selectedEntry = selectedCalendarDate ? entriesByDate.get(selectedCalendarDate) ?? null : null;
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
@@ -130,7 +130,7 @@ export function DiaryCalendarCanvas() {
                   ]}>
                   {cell.day ? <AppText style={[styles.dayNumber, entry && { color: entry.color.accentShade }, isToday && styles.todayNumber, isSelected && styles.selectedDayNumber]}>{cell.day}</AppText> : null}
                   {entry ? <View pointerEvents="none" style={[styles.entryDot, { backgroundColor: entry.color.accent }, isSelected && styles.selectedEntryDot]} /> : null}
-                  {isToday ? <View pointerEvents="none" style={styles.todayMarker}><TodayMarker /></View> : null}
+                  {isToday ? <View pointerEvents="none" style={[styles.todayUnderline, isSelected && styles.selectedTodayUnderline]} /> : null}
                 </Pressable>
               );
             })}
@@ -296,10 +296,6 @@ function SettingsSketch() {
   return <Svg height={23} viewBox="0 0 24 24" width={23}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={colors.black} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={colors.black} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
-function TodayMarker() {
-  return <Svg height={31} viewBox="0 0 32 32" width={31}><Path d="M16 3.4c7.9 0 12.8 4.4 12.4 12.4-.3 7.2-4.9 12.8-12.6 12.6C8.4 28.3 3.4 23.8 3.6 16 3.8 8.4 8 3.4 16 3.4Z" fill="none" stroke={colors.black} strokeWidth={1.7} /></Svg>;
-}
-
 function StarIcon() {
   return <Svg height={18} viewBox="0 0 24 24" width={18}><Path d="m12 3 2.1 5.5 5.9.2-4.6 3.7 1.6 5.7-5-3.4-5 3.4 1.6-5.7L4 8.7l5.9-.2L12 3Z" fill={colors.black} stroke={colors.black} strokeLinejoin="round" strokeWidth={1.1} /></Svg>;
 }
@@ -346,7 +342,8 @@ const styles = StyleSheet.create({
   dayNumber: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
   selectedDayNumber: { color: colors.white, fontWeight: '700' },
   todayNumber: { fontWeight: '700' },
-  todayMarker: { left: 2, position: 'absolute', top: 0 },
+  todayUnderline: { backgroundColor: colors.black, height: 2, left: 7, position: 'absolute', top: 23, width: 12 },
+  selectedTodayUnderline: { backgroundColor: colors.white },
   entryDot: { borderColor: colors.black, borderRadius: 3, borderWidth: 0.5, bottom: 7, height: 6, position: 'absolute', right: 7, width: 6 },
   selectedEntryDot: { borderColor: colors.white },
   monthSummaryCard: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 76, padding: 20 },

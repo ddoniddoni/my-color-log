@@ -14,6 +14,7 @@ import { MyProfileCanvas } from '@/src/features/profile/components/MyProfileCanv
 import { ProfileNicknameModal } from '@/src/features/profile/components/ProfileNicknameModal';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useUpdateProfileNickname } from '@/src/features/profile/hooks/useUpdateProfileNickname';
+import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
 import { spacing } from '@/src/design/tokens';
 
 export default function MyScreen() {
@@ -22,6 +23,7 @@ export default function MyScreen() {
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id : undefined;
   const profileQuery = useProfile(userId);
+  const roomsQuery = useMyRooms(userId ?? null);
   const [isAccountDeletionVisible, setIsAccountDeletionVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
   const updateNicknameMutation = useUpdateProfileNickname(userId ?? '');
@@ -64,7 +66,11 @@ export default function MyScreen() {
         onDeleteAccountPress={() => setIsAccountDeletionVisible(true)}
         onNotificationsPress={showNotificationsNotice}
         onProfileEditPress={() => setIsProfileEditVisible(true)}
+        onPrivacyPress={showPrivacyNotice}
+        onRoomsPress={() => router.push('/(tabs)/room')}
         onSignOutPress={() => confirmSignOut(signOutMutation.mutate)}
+        rooms={(roomsQuery.data ?? []).map((room) => ({ emoji: room.emoji, id: room.id, memberCount: room.members.length, name: room.name }))}
+        roomsStatus={roomsQuery.isPending ? 'loading' : roomsQuery.isError ? 'error' : 'ready'}
         signingOut={signOutMutation.isPending}
       />
       <ProfileNicknameModal
@@ -104,6 +110,10 @@ function confirmSignOut(onConfirm: () => void): void {
 
 function showNotificationsNotice(): void {
   Alert.alert('알림 설정은 준비 중이에요', '알림 권한과 일일 알림 기능을 연결하고 있어요.');
+}
+
+function showPrivacyNotice(): void {
+  Alert.alert('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.');
 }
 
 const styles = StyleSheet.create({

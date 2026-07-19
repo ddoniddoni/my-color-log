@@ -27,6 +27,7 @@ import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstr
 import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
 import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
 import { createRoom, createRoomInvite, endRoom, getRoomInvitePreview, joinRoomByCode, leaveRoom, revokeRoomInvites, transferRoomOwnership, updateRoomSettings } from '@/src/features/rooms/api/roomRepository';
+import { shareRoomInvite } from '@/src/features/rooms/api/roomInviteSharing';
 import { RoomManagementModal, type RoomManagementPendingAction } from '@/src/features/rooms/components/RoomManagementModal';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
 import { useRoom } from '@/src/features/rooms/hooks/useRoom';
@@ -60,6 +61,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   const [roomEmoji, setRoomEmoji] = useState('');
   const [invitePreview, setInvitePreview] = useState<RoomInvitePreview | null>(null);
   const [isRoomManagementVisible, setIsRoomManagementVisible] = useState(false);
+  const [isSharingInvite, setIsSharingInvite] = useState(false);
   const digitInputs = useRef<(TextInput | null)[]>([]);
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
@@ -222,6 +224,22 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
     joinRoomMutation.mutate(code, { onError: (error) => Alert.alert('방에 참여하지 못했어요', getRoomErrorMessage(error)) });
   };
 
+  const handleShareRoomInvite = async (room: ActiveRoom): Promise<void> => {
+    if (!room.inviteCode) {
+      Alert.alert('초대 준비 중', '새 초대 코드를 준비하지 못했어요. 잠시 뒤 다시 열어 주세요.');
+      return;
+    }
+
+    setIsSharingInvite(true);
+    try {
+      await shareRoomInvite({ inviteCode: room.inviteCode, roomName: room.name });
+    } catch {
+      Alert.alert('초대를 공유하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+    } finally {
+      setIsSharingInvite(false);
+    }
+  };
+
   if (sessionState.status === 'loading' || roomQuery.isPending) {
     return <RoomStatusCanvas message="친구방을 확인하고 있어요." />;
   }
@@ -231,6 +249,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   }
 
   if (roomQuery.data) {
+    const room = roomQuery.data;
     return (
       <>
         <ActiveRoomCanvas
@@ -242,10 +261,14 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
           isBoardError={roomTodayBoardQuery.isError}
           isBoardLoading={roomTodayBoardQuery.isPending}
           isBoardRefreshing={roomTodayBoardQuery.isFetching}
+          inviteShareAction={{
+            isSharing: isSharingInvite,
+            onShare: () => { void handleShareRoomInvite(room); },
+          }}
           onOpenManagement={() => setIsRoomManagementVisible(true)}
           onRefreshBoard={() => { void roomTodayBoardQuery.refetch(); }}
           onBack={() => router.back()}
-          room={roomQuery.data}
+          room={room}
           topInset={insets.top}
         />
         <RoomManagementModal
@@ -258,7 +281,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
           onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => Alert.alert('방장을 넘기지 못했어요', getRoomErrorMessage(error)) })}
           onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => Alert.alert('방 정보를 저장하지 못했어요', getRoomErrorMessage(error)) })}
           pendingAction={pendingRoomAction}
-          room={roomQuery.data}
+          room={room}
           visible={isRoomManagementVisible}
         />
       </>
@@ -443,6 +466,11 @@ function RoomStatusCanvas({ message }: { message: string }) {
   );
 }
 
+type InviteShareAction = {
+  isSharing: boolean;
+  onShare: () => void;
+};
+
 type ActiveRoomCanvasProps = {
   boldFont: string | undefined;
   board: RoomTodayBoard | null;
@@ -452,6 +480,7 @@ type ActiveRoomCanvasProps = {
   isBoardError: boolean;
   isBoardLoading: boolean;
   isBoardRefreshing: boolean;
+  inviteShareAction: InviteShareAction;
   onBack: () => void;
   onOpenManagement: () => void;
   onRefreshBoard: () => void;
@@ -459,21 +488,8 @@ type ActiveRoomCanvasProps = {
   topInset: number;
 };
 
-function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, room, topInset }: ActiveRoomCanvasProps) {
-  const remainingSeats = room.maxMembers - room.members.length;
+function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, room, topInset }: ActiveRoomCanvasProps) {
   const formattedDate = dateKey.replaceAll('-', '.');
-
-  const showInviteCode = (): void => {
-    if (!room.inviteCode) {
-      Alert.alert('초대 준비 중', '새 초대 코드를 준비하지 못했어요. 잠시 뒤 다시 열어 주세요.');
-      return;
-    }
-
-    Alert.alert(
-      '우리 방 초대 코드',
-      `${room.inviteCode}\n\n이 코드는 24시간 동안 사용할 수 있어요. 남은 ${remainingSeats}자리까지 함께할 수 있어요.`,
-    );
-  };
 
   return (
     <View style={styles.page}>
@@ -504,7 +520,7 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
           isError={isBoardError}
           isLoading={isBoardLoading}
           isRefreshing={isBoardRefreshing}
-          onInvite={showInviteCode}
+          inviteShareAction={inviteShareAction}
           onRetry={onRefreshBoard}
         />
       </ScrollView>
@@ -519,7 +535,7 @@ type RoomTodayBoardSectionProps = {
   isError: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
-  onInvite: () => void;
+  inviteShareAction: InviteShareAction;
   onRetry: () => void;
 };
 
@@ -528,7 +544,7 @@ type RoomBoardPhotoSelection = {
   photoId: string;
 };
 
-function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoading, isRefreshing, onInvite, onRetry }: RoomTodayBoardSectionProps) {
+function RoomTodayBoardSection({ board, boldFont, currentUserId, inviteShareAction, isError, isLoading, isRefreshing, onRetry }: RoomTodayBoardSectionProps) {
   const router = useRouter();
   const photoSource = usePhotoSourceSelection();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -591,9 +607,9 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, isError, isLoad
             <View style={styles.canvasToolbar}>
               <AppText style={styles.canvasLabel}>SHARED CANVAS</AppText>
               <View style={styles.canvasActions}>
-                <Pressable accessibilityLabel="우리 방 초대 코드 보기" accessibilityRole="button" onPress={onInvite} style={styles.canvasActionButton}>
+                <Pressable accessibilityLabel="우리 방 초대 공유" accessibilityRole="button" accessibilityState={{ busy: inviteShareAction.isSharing, disabled: inviteShareAction.isSharing }} disabled={inviteShareAction.isSharing} onPress={inviteShareAction.onShare} style={[styles.canvasActionButton, inviteShareAction.isSharing && styles.canvasActionButtonDisabled]}>
                   <PersonAddIcon />
-                  <AppText style={styles.canvasActionLabel}>Invite</AppText>
+                  <AppText style={styles.canvasActionLabel}>{inviteShareAction.isSharing ? 'Sharing…' : 'Invite'}</AppText>
                 </Pressable>
                 <Pressable accessibilityLabel="오늘의 미션 규칙 보기" accessibilityRole="button" onPress={showRules} style={styles.canvasActionButton}>
                   <TuneIcon />
@@ -837,6 +853,7 @@ const styles = StyleSheet.create({
   canvasLabel: { borderBottomColor: colors.black, borderBottomWidth: 2, color: colors.black, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8, paddingBottom: 4 },
   canvasActions: { flexDirection: 'row', gap: 8 },
   canvasActionButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', gap: 5, minHeight: 40, paddingHorizontal: 10, paddingVertical: 7 },
+  canvasActionButtonDisabled: { opacity: 0.52 },
   canvasActionLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 13 },
   modalOverlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 10, maxWidth: 380, padding: 22, width: '100%' },

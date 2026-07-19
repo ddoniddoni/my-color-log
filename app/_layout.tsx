@@ -21,6 +21,7 @@ export default function RootLayout() {
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="camera" />
             <Stack.Screen name="photo-review" />
+            <Stack.Screen name="invite" />
             <Stack.Screen name="room/[roomId]" />
             <Stack.Screen name="room-history" />
           </Stack>
