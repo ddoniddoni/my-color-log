@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -20,13 +19,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
 import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
-import { createRoom, createRoomInvite, endRoom, getRoomInvitePreview, joinRoomByCode, leaveRoom, revokeRoomInvites, transferRoomOwnership, updateRoomSettings } from '@/src/features/rooms/api/roomRepository';
+import { createRoom, createRoomInvite, endRoom, getRoomInvitePreview, joinRoomByCode, leaveRoom, removeRoomMember, revokeRoomInvites, transferRoomOwnership, updateRoomSettings } from '@/src/features/rooms/api/roomRepository';
 import { shareRoomInvite } from '@/src/features/rooms/api/roomInviteSharing';
 import { RoomManagementModal, type RoomManagementPendingAction } from '@/src/features/rooms/components/RoomManagementModal';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
@@ -41,7 +41,9 @@ import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
 const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_DIGIT_IDS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const;
 
-export function RoomSetupCanvas({ roomId }: { roomId: string }) {
+type RoomSetupDialog = { description: string; title: string };
+
+export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: string; roomId: string }) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -62,10 +64,12 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   const [invitePreview, setInvitePreview] = useState<RoomInvitePreview | null>(null);
   const [isRoomManagementVisible, setIsRoomManagementVisible] = useState(false);
   const [isSharingInvite, setIsSharingInvite] = useState(false);
+  const [dialog, setDialog] = useState<RoomSetupDialog | null>(null);
   const digitInputs = useRef<(TextInput | null)[]>([]);
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
+  const showNotice = (title: string, description: string): void => setDialog({ description, title });
 
   const createRoomMutation = useMutation({
     mutationFn: () => {
@@ -110,6 +114,10 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
       router.replace('/(tabs)/room');
     },
   });
+  const removeRoomMemberMutation = useMutation({
+    mutationFn: (memberUserId: string) => removeRoomMember(roomId, memberUserId),
+    onSuccess: invalidateActiveRoomData,
+  });
   const transferRoomOwnershipMutation = useMutation({
     mutationFn: (newOwnerId: string) => transferRoomOwnership(roomId, newOwnerId),
     onSuccess: async () => {
@@ -139,6 +147,8 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   });
   const pendingRoomAction: RoomManagementPendingAction | null = leaveRoomMutation.isPending
     ? 'leaving'
+    : removeRoomMemberMutation.isPending
+      ? 'removing_member'
     : transferRoomOwnershipMutation.isPending
       ? 'transferring'
       : endRoomMutation.isPending
@@ -190,28 +200,28 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
   const handleCreateRoom = (): void => {
     const nameValidation = validateRoomName(roomName);
     if (!nameValidation.isValid) {
-      Alert.alert('방 이름을 확인해 주세요', nameValidation.message);
+      showNotice('방 이름을 확인해 주세요', nameValidation.message);
       return;
     }
     const emojiValidation = validateRoomEmoji(roomEmoji);
     if (!emojiValidation.isValid) {
-      Alert.alert('방 이모지를 확인해 주세요', emojiValidation.message);
+      showNotice('방 이모지를 확인해 주세요', emojiValidation.message);
       return;
     }
-    createRoomMutation.mutate(undefined, { onError: (error) => Alert.alert('방을 만들지 못했어요', getRoomErrorMessage(error)) });
+    createRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 만들지 못했어요', getRoomErrorMessage(error)) });
   };
 
   const handlePreviewInvite = (): void => {
     const code = inviteCode.join('');
     if (!validateInviteCode(code)) {
-      Alert.alert('초대 코드를 확인해 주세요', '친구가 보낸 6자리 숫자를 모두 입력해 주세요.');
+      showNotice('초대 코드를 확인해 주세요', '친구가 보낸 6자리 숫자를 모두 입력해 주세요.');
       return;
     }
     previewInviteMutation.mutate(code, {
-      onError: (error) => Alert.alert('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
+      onError: (error) => showNotice('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
       onSuccess: (preview) => {
         if (!preview) {
-          Alert.alert('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
+          showNotice('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
           return;
         }
         setInvitePreview(preview);
@@ -221,12 +231,12 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
 
   const handleJoinRoom = (): void => {
     const code = inviteCode.join('');
-    joinRoomMutation.mutate(code, { onError: (error) => Alert.alert('방에 참여하지 못했어요', getRoomErrorMessage(error)) });
+    joinRoomMutation.mutate(code, { onError: (error) => showNotice('방에 참여하지 못했어요', getRoomErrorMessage(error)) });
   };
 
   const handleShareRoomInvite = async (room: ActiveRoom): Promise<void> => {
     if (!room.inviteCode) {
-      Alert.alert('초대 준비 중', '새 초대 코드를 준비하지 못했어요. 잠시 뒤 다시 열어 주세요.');
+      showNotice('초대 준비 중', '새 초대 코드를 준비하지 못했어요. 잠시 뒤 다시 열어 주세요.');
       return;
     }
 
@@ -234,7 +244,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
     try {
       await shareRoomInvite({ inviteCode: room.inviteCode, roomName: room.name });
     } catch {
-      Alert.alert('초대를 공유하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      showNotice('초대를 공유하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
       setIsSharingInvite(false);
     }
@@ -258,6 +268,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
           currentUserId={userId}
           dateKey={dateKey}
           heavyFont={heavyFont}
+          initialPhotoId={initialPhotoId}
           isBoardError={roomTodayBoardQuery.isError}
           isBoardLoading={roomTodayBoardQuery.isPending}
           isBoardRefreshing={roomTodayBoardQuery.isFetching}
@@ -267,6 +278,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
           }}
           onOpenManagement={() => setIsRoomManagementVisible(true)}
           onRefreshBoard={() => { void roomTodayBoardQuery.refetch(); }}
+          onShowNotice={showNotice}
           onBack={() => router.back()}
           room={room}
           topInset={insets.top}
@@ -274,16 +286,19 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
         <RoomManagementModal
           currentUserId={userId}
           onClose={() => setIsRoomManagementVisible(false)}
-          onEnd={() => endRoomMutation.mutate(undefined, { onError: (error) => Alert.alert('방을 종료하지 못했어요', getRoomErrorMessage(error)) })}
-          onLeave={() => leaveRoomMutation.mutate(undefined, { onError: (error) => Alert.alert('방에서 나가지 못했어요', getRoomErrorMessage(error)) })}
-          onReissueInvite={() => createRoomInviteMutation.mutate(undefined, { onError: (error) => Alert.alert('새 초대 코드를 만들지 못했어요', getRoomErrorMessage(error)) })}
-          onRevokeInvite={() => revokeRoomInvitesMutation.mutate(undefined, { onError: (error) => Alert.alert('초대 코드를 취소하지 못했어요', getRoomErrorMessage(error)) })}
-          onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => Alert.alert('방장을 넘기지 못했어요', getRoomErrorMessage(error)) })}
-          onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => Alert.alert('방 정보를 저장하지 못했어요', getRoomErrorMessage(error)) })}
+          onEnd={() => endRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 종료하지 못했어요', getRoomErrorMessage(error)) })}
+          onLeave={() => leaveRoomMutation.mutate(undefined, { onError: (error) => showNotice('방에서 나가지 못했어요', getRoomErrorMessage(error)) })}
+          onNotice={showNotice}
+          onRemoveMember={(memberUserId) => removeRoomMemberMutation.mutate(memberUserId, { onError: (error) => showNotice('멤버를 내보내지 못했어요', getRoomErrorMessage(error)) })}
+          onReissueInvite={() => createRoomInviteMutation.mutate(undefined, { onError: (error) => showNotice('새 초대 코드를 만들지 못했어요', getRoomErrorMessage(error)) })}
+          onRevokeInvite={() => revokeRoomInvitesMutation.mutate(undefined, { onError: (error) => showNotice('초대 코드를 취소하지 못했어요', getRoomErrorMessage(error)) })}
+          onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => showNotice('방장을 넘기지 못했어요', getRoomErrorMessage(error)) })}
+          onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => showNotice('방 정보를 저장하지 못했어요', getRoomErrorMessage(error)) })}
           pendingAction={pendingRoomAction}
           room={room}
           visible={isRoomManagementVisible}
         />
+        <AppConfirmationDialog confirmLabel="확인" description={dialog?.description ?? ''} onClose={() => setDialog(null)} onConfirm={() => setDialog(null)} title={dialog?.title ?? ''} visible={dialog !== null} />
       </>
     );
   }
@@ -363,6 +378,7 @@ export function RoomSetupCanvas({ roomId }: { roomId: string }) {
         onJoin={handleJoinRoom}
         preview={invitePreview}
       />
+      <AppConfirmationDialog confirmLabel="확인" description={dialog?.description ?? ''} onClose={() => setDialog(null)} onConfirm={() => setDialog(null)} title={dialog?.title ?? ''} visible={dialog !== null} />
     </View>
   );
 }
@@ -477,6 +493,7 @@ type ActiveRoomCanvasProps = {
   currentUserId: string;
   dateKey: string;
   heavyFont: string | undefined;
+  initialPhotoId: string | undefined;
   isBoardError: boolean;
   isBoardLoading: boolean;
   isBoardRefreshing: boolean;
@@ -484,11 +501,12 @@ type ActiveRoomCanvasProps = {
   onBack: () => void;
   onOpenManagement: () => void;
   onRefreshBoard: () => void;
+  onShowNotice: (title: string, description: string) => void;
   room: ActiveRoom;
   topInset: number;
 };
 
-function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, room, topInset }: ActiveRoomCanvasProps) {
+function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, initialPhotoId, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, onShowNotice, room, topInset }: ActiveRoomCanvasProps) {
   const formattedDate = dateKey.replaceAll('-', '.');
 
   return (
@@ -517,11 +535,13 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
           board={board}
           boldFont={boldFont}
           currentUserId={currentUserId}
+          initialPhotoId={initialPhotoId}
           isError={isBoardError}
           isLoading={isBoardLoading}
           isRefreshing={isBoardRefreshing}
           inviteShareAction={inviteShareAction}
           onRetry={onRefreshBoard}
+          onShowNotice={onShowNotice}
         />
       </ScrollView>
     </View>
@@ -532,11 +552,13 @@ type RoomTodayBoardSectionProps = {
   board: RoomTodayBoard | null;
   boldFont: string | undefined;
   currentUserId: string;
+  initialPhotoId: string | undefined;
   isError: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
   inviteShareAction: InviteShareAction;
   onRetry: () => void;
+  onShowNotice: (title: string, description: string) => void;
 };
 
 type RoomBoardPhotoSelection = {
@@ -544,16 +566,24 @@ type RoomBoardPhotoSelection = {
   photoId: string;
 };
 
-function RoomTodayBoardSection({ board, boldFont, currentUserId, inviteShareAction, isError, isLoading, isRefreshing, onRetry }: RoomTodayBoardSectionProps) {
+function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId, inviteShareAction, isError, isLoading, isRefreshing, onRetry, onShowNotice }: RoomTodayBoardSectionProps) {
   const router = useRouter();
   const photoSource = usePhotoSourceSelection();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [photoSelection, setPhotoSelection] = useState<RoomBoardPhotoSelection | null>(null);
+  const [dismissedInitialPhotoId, setDismissedInitialPhotoId] = useState<string | null>(null);
+  const initialPhotoMember = initialPhotoId && dismissedInitialPhotoId !== initialPhotoId
+    ? board?.members.find((candidate) => candidate.photos.some((photo) => photo.id === initialPhotoId)) ?? null
+    : null;
+  const effectivePhotoSelection = photoSelection ?? (initialPhotoMember && initialPhotoId
+    ? { memberId: initialPhotoMember.id, photoId: initialPhotoId }
+    : null);
   const selectedMember = board?.members.find((member) => member.id === selectedMemberId)
+    ?? initialPhotoMember
     ?? board?.members.find((member) => member.id === currentUserId)
     ?? board?.members[0]
     ?? null;
-  const selectedPhotoMember = board?.members.find((member) => member.id === photoSelection?.memberId) ?? null;
+  const selectedPhotoMember = board?.members.find((member) => member.id === effectivePhotoSelection?.memberId) ?? null;
   const captureSlot = selectedMember?.id === currentUserId
     ? getRoomPhotoMosaicSlots(selectedMember).find((slot) => slot.photo === null) ?? null
     : null;
@@ -572,10 +602,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, inviteShareActi
 
   const showRules = (): void => {
     if (!board) return;
-    Alert.alert(
-      `오늘의 ${board.mission.colorNameKo}`,
-      `${board.mission.promptKo}\n\n사진은 내 다이어리에 먼저 저장되고, 우리 방에서는 함께 볼 수 있어요.`,
-    );
+    onShowNotice(`오늘의 ${board.mission.colorNameKo}`, `${board.mission.promptKo}\n\n사진은 내 다이어리에 먼저 저장되고, 우리 방에서는 함께 볼 수 있어요.`);
   };
 
   return (
@@ -628,11 +655,16 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, inviteShareActi
         {!isLoading && !isError && board === null ? <View style={styles.boardState}><PaletteIcon /><AppText style={styles.boardStateText}>방에 참여하면 오늘의 사진 보드가 여기에 보여요.</AppText></View> : null}
       </View>
       <RoomMemberPhotoViewer
-        initialPhotoId={photoSelection?.photoId ?? null}
-        key={photoSelection ? `${photoSelection.memberId}:${photoSelection.photoId}` : 'closed'}
+        currentUserId={currentUserId}
+        initialPhotoId={effectivePhotoSelection?.photoId ?? null}
+        key={effectivePhotoSelection ? `${effectivePhotoSelection.memberId}:${effectivePhotoSelection.photoId}` : 'closed'}
         member={selectedPhotoMember}
         mission={board?.mission ?? null}
-        onClose={() => setPhotoSelection(null)}
+        onClose={() => {
+          if (photoSelection === null && initialPhotoId) setDismissedInitialPhotoId(initialPhotoId);
+          setPhotoSelection(null);
+        }}
+        roomId={board?.roomId ?? null}
       />
       <PhotoSourceModal
         errorMessage={photoSource.errorMessage}

@@ -1,18 +1,21 @@
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useRef } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
 
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors } from '@/src/design/tokens';
-import { type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
+import { getInviteExpiryLabel, type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomManagementState } from '@/src/features/rooms/model/roomLifecycle';
 
-export type RoomManagementPendingAction = 'ending' | 'leaving' | 'reissuing_invite' | 'revoking_invite' | 'transferring' | 'updating_settings';
+export type RoomManagementPendingAction = 'ending' | 'leaving' | 'removing_member' | 'reissuing_invite' | 'revoking_invite' | 'transferring' | 'updating_settings';
 
 type RoomManagementModalProps = {
   currentUserId: string;
   onClose: () => void;
   onEnd: () => void;
   onLeave: () => void;
+  onNotice: (title: string, description: string) => void;
+  onRemoveMember: (memberUserId: string) => void;
   onReissueInvite: () => void;
   onRevokeInvite: () => void;
   onTransfer: (newOwnerId: string) => void;
@@ -22,48 +25,40 @@ type RoomManagementModalProps = {
   visible: boolean;
 };
 
-export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, onReissueInvite, onRevokeInvite, onTransfer, onUpdateSettings, pendingAction, room, visible }: RoomManagementModalProps) {
+type RoomManagementConfirmation =
+  | { kind: 'end' }
+  | { kind: 'leave' }
+  | { hasActiveInvite: boolean; kind: 'reissue_invite' }
+  | { kind: 'remove_member'; member: RoomMember }
+  | { kind: 'revoke_invite' }
+  | { kind: 'transfer'; member: RoomMember };
+
+export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, onNotice, onRemoveMember, onReissueInvite, onRevokeInvite, onTransfer, onUpdateSettings, pendingAction, room, visible }: RoomManagementModalProps) {
   const managementState = getRoomManagementState(room, currentUserId);
   const isPending = pendingAction !== null;
+  const [confirmation, setConfirmation] = useState<RoomManagementConfirmation | null>(null);
 
-  const confirmLeave = (): void => {
-    Alert.alert(
-      '방에서 나갈까요?',
-      '내 개인 다이어리와 사진은 그대로 남아요. 다른 멤버 기록 접근과 앞으로의 자동 공유만 중단돼요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { onPress: onLeave, style: 'destructive', text: '방 나가기' },
-      ],
-    );
-  };
+  const confirm = (): void => {
+    if (!confirmation || isPending) return;
+    const target = confirmation;
+    setConfirmation(null);
 
-  const confirmTransfer = (member: RoomMember): void => {
-    Alert.alert(
-      '방장을 넘길까요?',
-      `${member.nickname} 님이 이 방의 새 방장이 돼요. 방은 계속 유지되고, 나는 일반 멤버가 돼요.`,
-      [
-        { text: '취소', style: 'cancel' },
-        { onPress: () => onTransfer(member.id), text: '방장 넘기기' },
-      ],
-    );
-  };
-
-  const confirmEnd = (): void => {
-    Alert.alert(
-      '이 친구방을 종료할까요?',
-      '모든 멤버의 상호 사진 접근과 초대가 중단돼요. 각자의 개인 다이어리와 사진은 삭제되지 않아요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { onPress: onEnd, style: 'destructive', text: '방 종료' },
-      ],
-    );
+    switch (target.kind) {
+      case 'end': onEnd(); break;
+      case 'leave': onLeave(); break;
+      case 'reissue_invite': onReissueInvite(); break;
+      case 'remove_member': onRemoveMember(target.member.id); break;
+      case 'revoke_invite': onRevokeInvite(); break;
+      case 'transfer': onTransfer(target.member.id); break;
+    }
   };
 
   return (
-    <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} statusBarTranslucent transparent visible={visible}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="친구방 관리 닫기" disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.card}>
+    <>
+      <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} statusBarTranslucent transparent visible={visible}>
+        <View style={styles.overlay}>
+          <Pressable accessibilityLabel="친구방 관리 닫기" disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
+          <View accessibilityViewIsModal style={styles.card}>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>PRIVATE ROOM SETTINGS</AppText>
@@ -78,19 +73,42 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
                 <>
                   <AppText style={styles.description}>방에서 나가도 내 개인 다이어리와 사진은 유지돼요.</AppText>
                   <View style={styles.notice}><AppText style={styles.noticeTitle}>나가면 바뀌는 점</AppText><AppText style={styles.noticeText}>다른 멤버의 과거·새 기록을 더 이상 볼 수 없고, 새 사진도 이 방에 자동 공유되지 않아요.</AppText></View>
-                  <DangerButton accessibilityLabel="친구방 나가기" disabled={isPending} label={pendingAction === 'leaving' ? '나가는 중' : '방 나가기'} onPress={confirmLeave} />
+                  <DangerButton accessibilityLabel="친구방 나가기" disabled={isPending} label={pendingAction === 'leaving' ? '나가는 중' : '방 나가기'} onPress={() => setConfirmation({ kind: 'leave' })} />
                 </>
               ) : (
                 <>
                   <AppText style={styles.description}>방 이름과 초대 코드는 방장만 바꿀 수 있어요.</AppText>
                   <RoomOwnerSettings
                     key={`${room.id}:${room.name}:${room.emoji ?? ''}:${visible ? 'open' : 'closed'}`}
-                    onReissueInvite={onReissueInvite}
-                    onRevokeInvite={onRevokeInvite}
+                    onNotice={onNotice}
+                    onRequestConfirmation={setConfirmation}
                     onUpdateSettings={onUpdateSettings}
                     pendingAction={pendingAction}
                     room={room}
                   />
+                  {managementState.removableMembers.length > 0 ? (
+                    <View style={styles.section}>
+                      <AppText style={styles.sectionLabel}>MEMBER CONTROL</AppText>
+                      <AppText style={styles.memberControlHint}>멤버를 내보내면 이 방의 사진 접근과 자동 공유가 중단돼요.</AppText>
+                      <View style={styles.memberList}>
+                        {managementState.removableMembers.map((member) => (
+                          <View key={member.id} style={styles.memberControlRow}>
+                            <View style={styles.memberAvatar}><AppText style={styles.memberInitial}>{member.nickname.slice(0, 1)}</AppText></View>
+                            <View style={styles.memberCopy}><AppText style={styles.memberName}>{member.nickname}</AppText><AppText style={styles.memberMeta}>일반 멤버</AppText></View>
+                            <Pressable
+                              accessibilityLabel={`${member.nickname} 님 내보내기`}
+                              accessibilityRole="button"
+                              disabled={isPending}
+                              onPress={() => setConfirmation({ kind: 'remove_member', member })}
+                              style={[styles.removeMemberButton, isPending && styles.buttonDisabled]}>
+                              <AppText style={styles.removeMemberText}>내보내기</AppText>
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                      {pendingAction === 'removing_member' ? <AppText accessibilityLiveRegion="polite" style={styles.pendingText}>멤버를 내보내고 있어요.</AppText> : null}
+                    </View>
+                  ) : null}
                   {managementState.successors.length > 0 ? (
                     <View style={styles.section}>
                       <AppText style={styles.sectionLabel}>새 방장 선택</AppText>
@@ -101,7 +119,7 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
                             accessibilityRole="button"
                             disabled={isPending}
                             key={member.id}
-                            onPress={() => confirmTransfer(member)}
+                            onPress={() => setConfirmation({ kind: 'transfer', member })}
                             style={styles.memberButton}>
                             <View style={styles.memberAvatar}><AppText style={styles.memberInitial}>{member.nickname.slice(0, 1)}</AppText></View>
                             <View style={styles.memberCopy}><AppText style={styles.memberName}>{member.nickname}</AppText><AppText style={styles.memberMeta}>방장으로 넘기기</AppText></View>
@@ -118,17 +136,19 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
             {managementState.canEndRoom ? (
               <View style={styles.ownerDangerFooter}>
                 <AppText style={styles.ownerDangerHint}>방을 닫으면 모든 멤버의 공유 접근과 초대가 중단돼요.</AppText>
-                <DangerButton accessibilityLabel="친구방 종료" disabled={isPending} label={pendingAction === 'ending' ? '종료하는 중' : '방 종료'} onPress={confirmEnd} />
+                <DangerButton accessibilityLabel="친구방 종료" disabled={isPending} label={pendingAction === 'ending' ? '종료하는 중' : '방 종료'} onPress={() => setConfirmation({ kind: 'end' })} />
               </View>
             ) : null}
           </View>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+      <RoomManagementConfirmationDialog confirmation={confirmation} isPending={isPending} onClose={() => setConfirmation(null)} onConfirm={confirm} />
+    </>
   );
 }
 
-function RoomOwnerSettings({ onReissueInvite, onRevokeInvite, onUpdateSettings, pendingAction, room }: Pick<RoomManagementModalProps, 'onReissueInvite' | 'onRevokeInvite' | 'onUpdateSettings' | 'pendingAction' | 'room'>) {
+function RoomOwnerSettings({ onNotice, onRequestConfirmation, onUpdateSettings, pendingAction, room }: Pick<RoomManagementModalProps, 'onNotice' | 'onUpdateSettings' | 'pendingAction' | 'room'> & { onRequestConfirmation: (confirmation: RoomManagementConfirmation) => void }) {
   const nameRef = useRef(room.name);
   const emojiRef = useRef(room.emoji ?? '');
   const isPending = pendingAction !== null;
@@ -137,13 +157,13 @@ function RoomOwnerSettings({ onReissueInvite, onRevokeInvite, onUpdateSettings, 
   const saveSettings = (): void => {
     const nameValidation = validateRoomName(nameRef.current);
     if (!nameValidation.isValid) {
-      Alert.alert('방 이름을 확인해 주세요', nameValidation.message);
+      onNotice('방 이름을 확인해 주세요', nameValidation.message);
       return;
     }
 
     const emojiValidation = validateRoomEmoji(emojiRef.current);
     if (!emojiValidation.isValid) {
-      Alert.alert('방 이모지를 확인해 주세요', emojiValidation.message);
+      onNotice('방 이모지를 확인해 주세요', emojiValidation.message);
       return;
     }
 
@@ -151,25 +171,11 @@ function RoomOwnerSettings({ onReissueInvite, onRevokeInvite, onUpdateSettings, 
   };
 
   const confirmReissue = (): void => {
-    Alert.alert(
-      hasActiveInvite ? '새 초대 코드를 만들까요?' : '새 초대 코드를 만들까요?',
-      hasActiveInvite ? '기존 초대 코드는 바로 사용할 수 없게 되고, 새 코드는 24시간 동안 유효해요.' : '새 코드는 24시간 동안 유효해요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { onPress: onReissueInvite, text: '새 코드 만들기' },
-      ],
-    );
+    onRequestConfirmation({ hasActiveInvite, kind: 'reissue_invite' });
   };
 
   const confirmRevoke = (): void => {
-    Alert.alert(
-      '초대 코드를 취소할까요?',
-      '지금 공유한 코드로는 더 이상 참여할 수 없어요. 원할 때 새 코드를 다시 만들 수 있어요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { onPress: onRevokeInvite, style: 'destructive', text: '코드 취소' },
-      ],
-    );
+    onRequestConfirmation({ kind: 'revoke_invite' });
   };
 
   return (
@@ -191,13 +197,49 @@ function RoomOwnerSettings({ onReissueInvite, onRevokeInvite, onUpdateSettings, 
         <AppText style={styles.sectionLabel}>INVITE CODE</AppText>
         <View style={styles.inviteCard}>
           <AppText style={styles.inviteCode}>{room.inviteCode ?? 'NO ACTIVE CODE'}</AppText>
-          <AppText style={styles.inviteMeta}>{hasActiveInvite ? '현재 초대 코드는 24시간 동안만 사용할 수 있어요.' : '현재 사용할 수 있는 초대 코드가 없어요.'}</AppText>
+          <AppText style={styles.inviteMeta}>{getInviteExpiryLabel(room.inviteExpiresAt)}</AppText>
         </View>
-        <SecondaryButton accessibilityLabel="새 초대 코드 만들기" disabled={isPending} label={pendingAction === 'reissuing_invite' ? '새 코드 만드는 중' : hasActiveInvite ? '새 초대 코드 만들기' : '초대 코드 만들기'} onPress={confirmReissue} />
+        <SecondaryButton accessibilityLabel="새 초대 코드 만들기" disabled={isPending} label={pendingAction === 'reissuing_invite' ? '새 코드 만드는 중' : hasActiveInvite ? '새 코드로 24시간 연장' : '초대 코드 만들기'} onPress={confirmReissue} />
         {hasActiveInvite ? <DangerButton accessibilityLabel="초대 코드 취소" disabled={isPending} label={pendingAction === 'revoking_invite' ? '코드 취소 중' : '현재 초대 코드 취소'} onPress={confirmRevoke} /> : null}
       </View>
     </>
   );
+}
+
+function RoomManagementConfirmationDialog({ confirmation, isPending, onClose, onConfirm }: { confirmation: RoomManagementConfirmation | null; isPending: boolean; onClose: () => void; onConfirm: () => void }) {
+  if (!confirmation) return null;
+  const copy = getConfirmationCopy(confirmation);
+
+  return (
+    <AppConfirmationDialog
+      cancelLabel="취소"
+      confirmLabel={copy.confirmLabel}
+      description={copy.description}
+      isBusy={isPending}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={copy.title}
+      tone={copy.tone}
+      visible
+    />
+  );
+}
+
+function getConfirmationCopy(confirmation: RoomManagementConfirmation): { confirmLabel: string; description: string; title: string; tone: 'default' | 'destructive' } {
+  switch (confirmation.kind) {
+    case 'end':
+      return { confirmLabel: '방 종료', description: '모든 멤버의 상호 사진 접근과 초대가 중단돼요. 각자의 개인 다이어리와 사진은 삭제되지 않아요.', title: '이 친구방을 종료할까요?', tone: 'destructive' };
+    case 'leave':
+      return { confirmLabel: '방 나가기', description: '내 개인 다이어리와 사진은 그대로 남아요. 다른 멤버 기록 접근과 앞으로의 자동 공유만 중단돼요.', title: '방에서 나갈까요?', tone: 'destructive' };
+    case 'reissue_invite':
+      return { confirmLabel: '새 코드 만들기', description: confirmation.hasActiveInvite ? '기존 초대 코드는 바로 사용할 수 없게 되고, 새 코드는 24시간 동안 유효해요.' : '새 코드는 24시간 동안 유효해요.', title: '새 초대 코드를 만들까요?', tone: 'default' };
+    case 'remove_member':
+      return { confirmLabel: '내보내기', description: '내보낸 멤버는 이 방의 사진을 더 이상 볼 수 없고, 현재 초대 코드도 함께 취소돼요. 각자의 개인 다이어리와 사진은 유지돼요.', title: `${confirmation.member.nickname} 님을 내보낼까요?`, tone: 'destructive' };
+    case 'revoke_invite':
+      return { confirmLabel: '코드 취소', description: '지금 공유한 코드로는 더 이상 참여할 수 없어요. 원할 때 새 코드를 다시 만들 수 있어요.', title: '초대 코드를 취소할까요?', tone: 'destructive' };
+    case 'transfer':
+      return { confirmLabel: '방장 넘기기', description: `${confirmation.member.nickname} 님이 이 방의 새 방장이 돼요. 방은 계속 유지되고, 나는 일반 멤버가 돼요.`, title: '방장을 넘길까요?', tone: 'default' };
+  }
 }
 
 function PrimaryButton({ accessibilityLabel, disabled, label, onPress }: { accessibilityLabel: string; disabled: boolean; label: string; onPress: () => void }) {
@@ -241,12 +283,16 @@ const styles = StyleSheet.create({
   inviteMeta: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 11, lineHeight: 16 },
   memberList: { borderColor: colors.black, borderWidth: 1.5 },
   memberButton: { alignItems: 'center', borderBottomColor: 'rgba(0, 0, 0, 0.2)', borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
+  memberControlHint: { color: 'rgba(0, 0, 0, 0.61)', fontSize: 11, lineHeight: 16 },
+  memberControlRow: { alignItems: 'center', borderBottomColor: 'rgba(0, 0, 0, 0.2)', borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
   memberAvatar: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 18, borderWidth: 1.5, height: 36, justifyContent: 'center', width: 36 },
   memberInitial: { color: colors.black, fontSize: 15, fontWeight: '700' },
   memberCopy: { flex: 1, gap: 1 },
   memberName: { color: colors.black, fontSize: 15, fontWeight: '700' },
   memberMeta: { color: 'rgba(0, 0, 0, 0.56)', fontFamily: 'monospace', fontSize: 9 },
   memberArrow: { color: colors.black, fontSize: 19 },
+  removeMemberButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1, justifyContent: 'center', minHeight: 34, paddingHorizontal: 9 },
+  removeMemberText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
   pendingText: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12 },
   ownerDangerFooter: { borderTopColor: 'rgba(210, 64, 61, 0.38)', borderTopWidth: 1, gap: 8, paddingTop: 14 },
   ownerDangerHint: { color: 'rgba(130, 32, 30, 0.8)', fontSize: 11, lineHeight: 16 },

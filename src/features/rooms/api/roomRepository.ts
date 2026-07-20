@@ -81,6 +81,11 @@ export async function leaveRoom(roomId: string): Promise<void> {
   if (error) throw toRoomError(error);
 }
 
+export async function removeRoomMember(roomId: string, memberUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_room_member', { p_member_user_id: memberUserId, p_room_id: roomId });
+  if (error) throw toRoomError(error);
+}
+
 export async function transferRoomOwnership(roomId: string, newOwnerId: string): Promise<void> {
   const { error } = await supabase.rpc('transfer_room_ownership', { p_new_owner_id: newOwnerId, p_room_id: roomId });
   if (error) throw toRoomError(error);
@@ -133,6 +138,8 @@ function toRoomError(error: RoomRpcError): Error {
   if (message.includes('room_owner_cannot_leave')) return new Error('room_owner_cannot_leave');
   if (message.includes('room_owner_required')) return new Error('room_owner_required');
   if (message.includes('room_owner_transfer_target_invalid')) return new Error('room_owner_transfer_target_invalid');
+  if (message.includes('room_member_remove_target_invalid')) return new Error('room_member_remove_target_invalid');
+  if (message.includes('room_member_remove_owner_forbidden')) return new Error('room_member_remove_owner_forbidden');
   return new Error('room_request_failed');
 }
 

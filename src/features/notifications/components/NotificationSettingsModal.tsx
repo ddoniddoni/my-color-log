@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import {
   getReminderPickerDate,
   getReminderTimeLabel,
+  updateRoomPhotoPushEnabled,
   updateReminderEnabled,
   updateReminderTime,
   type NotificationSettings,
@@ -22,14 +24,10 @@ type NotificationSettingsModalProps = {
 };
 
 export function NotificationSettingsModal({ isLoading, isSaving, onClose, onSave, settings, visible }: NotificationSettingsModalProps) {
-  return (
-    <Modal animationType="fade" onRequestClose={() => !isSaving && onClose()} statusBarTranslucent transparent visible={visible}>
-      {visible ? <NotificationSettingsForm key={getSettingsKey(settings)} isLoading={isLoading} isSaving={isSaving} onClose={onClose} onSave={onSave} settings={settings} /> : null}
-    </Modal>
-  );
+  return visible ? <NotificationSettingsForm key={getSettingsKey(settings)} isLoading={isLoading} isSaving={isSaving} onClose={onClose} onSave={onSave} settings={settings} visible={visible} /> : null;
 }
 
-function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settings }: Omit<NotificationSettingsModalProps, 'visible'>) {
+function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settings, visible }: NotificationSettingsModalProps) {
   const [draft, setDraft] = useState(settings);
   const [pickerKind, setPickerKind] = useState<ReminderKind | null>(null);
   const isBusy = isLoading || isSaving;
@@ -45,59 +43,74 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
   };
 
   return (
-    <View style={styles.overlay}>
-      <Pressable accessibilityLabel="알림 설정 닫기" disabled={isBusy} onPress={onClose} style={StyleSheet.absoluteFill} />
-      <View accessibilityViewIsModal style={styles.card}>
-          <View style={styles.titleRow}>
-            <View>
-              <AppText style={styles.eyebrow}>REMINDERS</AppText>
-              <AppText style={styles.title}>알림 설정</AppText>
-            </View>
-            <Pressable accessibilityLabel="알림 설정 닫기" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={styles.closeButton}>
-              <AppText style={styles.closeText}>×</AppText>
-            </Pressable>
-          </View>
-
-          <AppText style={styles.description}>필요한 시간에만 오늘의 색과 기록을 가볍게 알려드릴게요.</AppText>
-
-          <ReminderRow
-            description="오늘의 컬러가 열렸다는 알림"
-            disabled={isBusy}
-            kind="morning"
-            label="아침의 색"
-            onSelectTime={selectTime}
-            onToggle={(enabled) => setDraft((current) => updateReminderEnabled(current, 'morning', enabled))}
-            reminder={draft.morning}
-          />
-          {pickerKind === 'morning' ? <InlineTimePicker kind="morning" onChange={(date) => setDraft((current) => updateReminderTime(current, 'morning', date))} reminder={draft.morning} /> : null}
-          <ReminderRow
-            description="오늘의 한 장을 떠올리는 알림"
-            disabled={isBusy}
-            kind="evening"
-            label="저녁의 기록"
-            onSelectTime={selectTime}
-            onToggle={(enabled) => setDraft((current) => updateReminderEnabled(current, 'evening', enabled))}
-            reminder={draft.evening}
-          />
-          {pickerKind === 'evening' ? <InlineTimePicker kind="evening" onChange={(date) => setDraft((current) => updateReminderTime(current, 'evening', date))} reminder={draft.evening} /> : null}
-
-          <AppText style={styles.note}>알림을 켤 때만 기기 권한을 요청해요. 언제든 여기서 끌 수 있어요.</AppText>
-
-          <View style={styles.actions}>
-            <Pressable accessibilityLabel="알림 설정 취소" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
-              <AppText style={styles.cancelText}>취소</AppText>
-            </Pressable>
-            <Pressable accessibilityLabel="알림 설정 저장" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void save()} style={[styles.saveButton, isBusy && styles.disabledButton]}>
-              <AppText style={styles.saveText}>{isLoading ? '불러오는 중…' : isSaving ? '저장 중…' : '저장'}</AppText>
-            </Pressable>
-          </View>
+    <AppModal accessibilityLabel="알림 설정 닫기" contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
+      <View style={styles.titleRow}>
+        <View style={styles.titleCopy}>
+          <AppText style={styles.eyebrow}>REMINDERS</AppText>
+          <AppText accessibilityRole="header" style={styles.title}>알림 설정</AppText>
+        </View>
+        <Pressable accessibilityLabel="알림 설정 닫기" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={styles.closeButton}>
+          <AppText style={styles.closeText}>×</AppText>
+        </Pressable>
       </View>
-    </View>
+
+      <ScrollView contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
+        <AppText style={styles.description}>필요한 시간에만 오늘의 색과 기록을 가볍게 알려드릴게요.</AppText>
+
+        <ReminderRow
+          description="오늘의 컬러가 열렸다는 알림"
+          disabled={isBusy}
+          kind="morning"
+          label="아침의 색"
+          onSelectTime={selectTime}
+          onToggle={(enabled) => setDraft((current) => updateReminderEnabled(current, 'morning', enabled))}
+          reminder={draft.morning}
+        />
+        {pickerKind === 'morning' ? <InlineTimePicker kind="morning" onChange={(date) => setDraft((current) => updateReminderTime(current, 'morning', date))} reminder={draft.morning} /> : null}
+        <ReminderRow
+          description="오늘의 한 장을 떠올리는 알림"
+          disabled={isBusy}
+          kind="evening"
+          label="저녁의 기록"
+          onSelectTime={selectTime}
+          onToggle={(enabled) => setDraft((current) => updateReminderEnabled(current, 'evening', enabled))}
+          reminder={draft.evening}
+        />
+        {pickerKind === 'evening' ? <InlineTimePicker kind="evening" onChange={(date) => setDraft((current) => updateReminderTime(current, 'evening', date))} reminder={draft.evening} /> : null}
+
+        <View style={styles.reminderRow}>
+          <View style={styles.reminderCopy}>
+            <AppText style={styles.reminderLabel}>친구방 사진</AppText>
+            <AppText style={styles.reminderDescription}>친구가 오늘의 사진을 처음 올렸을 때 알려드려요.</AppText>
+          </View>
+          <Pressable
+            accessibilityLabel={`친구방 사진 알림 ${draft.roomPhotoPushEnabled ? '끄기' : '켜기'}`}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: draft.roomPhotoPushEnabled, disabled: isBusy }}
+            disabled={isBusy}
+            onPress={() => setDraft((current) => updateRoomPhotoPushEnabled(current, !current.roomPhotoPushEnabled))}
+            style={[styles.toggle, draft.roomPhotoPushEnabled && styles.toggleEnabled, isBusy && styles.disabledButton]}>
+            <View style={[styles.toggleKnob, draft.roomPhotoPushEnabled && styles.toggleKnobEnabled]} />
+          </Pressable>
+        </View>
+
+        <AppText style={styles.note}>알림을 켤 때만 기기 권한을 요청해요. 친구방 알림은 development build 또는 출시 앱에서 사용할 수 있어요.</AppText>
+      </ScrollView>
+
+      <View style={styles.actions}>
+        <Pressable accessibilityLabel="알림 설정 취소" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
+          <AppText style={styles.cancelText}>취소</AppText>
+        </Pressable>
+        <Pressable accessibilityLabel="알림 설정 저장" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void save()} style={[styles.saveButton, isBusy && styles.disabledButton]}>
+          <AppText style={styles.saveText}>{isLoading ? '불러오는 중…' : isSaving ? '저장 중…' : '저장'}</AppText>
+        </Pressable>
+      </View>
+    </AppModal>
   );
 }
 
 function getSettingsKey(settings: NotificationSettings): string {
-  return `${settings.morning.enabled}:${settings.morning.hour}:${settings.morning.minute}:${settings.evening.enabled}:${settings.evening.hour}:${settings.evening.minute}`;
+  return `${settings.morning.enabled}:${settings.morning.hour}:${settings.morning.minute}:${settings.evening.enabled}:${settings.evening.hour}:${settings.evening.minute}:${settings.roomPhotoPushEnabled}`;
 }
 
 function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggle, reminder }: {
@@ -160,13 +173,15 @@ function TimeAdjustButton({ label, onPress, symbol }: { label: string; onPress: 
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', flex: 1, justifyContent: 'center', padding: spacing[5] },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px rgba(0, 0, 0, 1)', gap: spacing[4], maxWidth: 440, padding: spacing[5], width: '100%' },
-  titleRow: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  card: { gap: 0, maxHeight: '90%', maxWidth: 440, padding: 0 },
+  titleRow: { alignItems: 'flex-start', borderBottomColor: 'rgba(0, 0, 0, 0.18)', borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingLeft: spacing[5], paddingRight: spacing[3], paddingVertical: spacing[4] },
+  titleCopy: { flex: 1, paddingRight: spacing[3] },
   eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 11, letterSpacing: 1.2, lineHeight: 15 },
   title: { color: colors.black, fontSize: 26, fontWeight: '800', lineHeight: 33, marginTop: 2 },
   closeButton: { alignItems: 'center', height: 44, justifyContent: 'center', marginRight: -8, marginTop: -8, width: 44 },
   closeText: { color: colors.black, fontSize: 32, fontWeight: '300', lineHeight: 34 },
+  scroll: { flexShrink: 1 },
+  content: { gap: spacing[4], padding: spacing[5] },
   description: { color: colors.textSecondary, fontSize: 14, lineHeight: 21 },
   reminderRow: { alignItems: 'center', borderColor: 'rgba(0, 0, 0, 0.16)', borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'space-between', paddingTop: spacing[4] },
   reminderCopy: { flex: 1, gap: 3 },
@@ -188,7 +203,7 @@ const styles = StyleSheet.create({
   timeValueText: { color: colors.black, fontFamily: 'monospace', fontSize: 14, fontWeight: '700', lineHeight: 19 },
   timeHint: { color: colors.textSecondary, fontSize: 10, lineHeight: 14 },
   note: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
-  actions: { flexDirection: 'row', gap: spacing[3], justifyContent: 'flex-end', marginTop: spacing[1] },
+  actions: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'flex-end', padding: spacing[4] },
   cancelButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 88, paddingHorizontal: spacing[3] },
   cancelText: { color: colors.black, fontSize: 14, fontWeight: '700' },
   saveButton: { alignItems: 'center', backgroundColor: colors.black, borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 100, paddingHorizontal: spacing[3] },

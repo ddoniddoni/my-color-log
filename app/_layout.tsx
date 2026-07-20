@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppErrorBoundary } from '@/src/components/feedback/AppErrorBoundary';
 import { GalleryImportRecovery } from '@/src/features/camera/components/GalleryImportRecovery';
+import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
+import { useRoomPhotoNotificationNavigation } from '@/src/features/notifications/hooks/useRoomPhotoNotificationNavigation';
 import { AppProviders } from '@/src/lib/providers/AppProviders';
 
 export default function RootLayout() {
@@ -25,8 +27,16 @@ export default function RootLayout() {
             <Stack.Screen name="room/[roomId]" />
             <Stack.Screen name="room-history" />
           </Stack>
+          <RoomPhotoNotificationNavigation />
         </AppProviders>
       </AppErrorBoundary>
     </SafeAreaProvider>
   );
+}
+
+function RoomPhotoNotificationNavigation() {
+  const sessionState = useSessionBootstrap();
+  const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  useRoomPhotoNotificationNavigation(userId);
+  return null;
 }

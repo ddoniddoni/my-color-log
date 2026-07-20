@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Image } from 'expo-image';
-import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { type PhotoMoveDirection } from '@/src/features/entries/model/photoManagement';
@@ -17,6 +20,10 @@ type TodayPhotoManagerModalProps = {
   visible: boolean;
 };
 
+type PhotoManagerDialog =
+  | { description: string; kind: 'notice'; title: string }
+  | { kind: 'delete_confirmation' };
+
 export function TodayPhotoManagerModal({
   moveAvailability,
   operation,
@@ -26,72 +33,78 @@ export function TodayPhotoManagerModal({
   selectedPhoto,
   visible,
 }: TodayPhotoManagerModalProps) {
+  const [dialog, setDialog] = useState<PhotoManagerDialog | null>(null);
   const isBusy = operation !== 'idle';
+  const isInteractionBlocked = isBusy || dialog !== null;
 
   const move = async (direction: PhotoMoveDirection): Promise<void> => {
     if (!selectedPhoto || isBusy) return;
     try {
       await onMove(selectedPhoto, direction);
     } catch {
-      Alert.alert('순서를 바꾸지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.');
+      setDialog({ description: '연결을 확인한 뒤 다시 시도해 주세요.', kind: 'notice', title: '순서를 바꾸지 못했어요' });
     }
+  };
+
+  const requestDelete = (): void => {
+    if (!selectedPhoto || isInteractionBlocked) return;
+    setDialog({ kind: 'delete_confirmation' });
   };
 
   const deletePhoto = (): void => {
     if (!selectedPhoto || isBusy) return;
-    Alert.alert(
-      '이 사진을 지울까요?',
-      '오늘 기록과 친구방 보드에서 바로 사라져요. 이 작업은 되돌릴 수 없어요.',
-      [
-        { style: 'cancel', text: '취소' },
-        {
-          style: 'destructive',
-          text: '사진 지우기',
-          onPress: () => {
-            void onDelete(selectedPhoto)
-              .then(({ storageCleanupPending }) => {
-                onClose();
-                if (storageCleanupPending) Alert.alert('사진을 삭제했어요', '표시와 접근 권한은 바로 정리됐어요. 파일 정리는 연결되면 다시 시도할게요.');
-              })
-              .catch(() => Alert.alert('사진을 지우지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.'));
-          },
-        },
-      ],
-    );
+    setDialog(null);
+    void onDelete(selectedPhoto)
+      .then(({ storageCleanupPending }) => {
+        onClose();
+        if (storageCleanupPending) {
+          setDialog({ description: '표시와 접근 권한은 바로 정리됐어요. 파일 정리는 연결되면 다시 시도할게요.', kind: 'notice', title: '사진을 삭제했어요' });
+        }
+      })
+      .catch(() => setDialog({ description: '연결을 확인한 뒤 다시 시도해 주세요.', kind: 'notice', title: '사진을 지우지 못했어요' }));
   };
 
   return (
-    <Modal animationType="fade" onRequestClose={() => !isBusy && onClose()} statusBarTranslucent transparent visible={visible && selectedPhoto !== null}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="사진 관리 닫기" onPress={() => !isBusy && onClose()} style={StyleSheet.absoluteFill} />
-        {selectedPhoto ? <View accessibilityViewIsModal style={styles.card}>
-          <View style={styles.heading}>
-            <View><AppText style={styles.eyebrow}>TODAY&apos;S PHOTO</AppText><AppText style={styles.title}>사진 관리</AppText></View>
-            <Pressable accessibilityLabel="사진 관리 닫기" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
-          </View>
+    <>
+      <AppModal accessibilityLabel="사진 관리 닫기" contentStyle={styles.card} isBusy={isInteractionBlocked} onClose={onClose} visible={visible && selectedPhoto !== null}>
+          {selectedPhoto ? <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.heading}>
+              <View><AppText style={styles.eyebrow}>TODAY&apos;S PHOTO</AppText><AppText accessibilityRole="header" style={styles.title}>사진 관리</AppText></View>
+              <Pressable accessibilityLabel="사진 관리 닫기" accessibilityRole="button" disabled={isInteractionBlocked} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
+            </View>
 
-          <View style={styles.photoFrame}>
-            <Image accessibilityLabel={`${selectedPhoto.position}번째 오늘의 사진`} cachePolicy="memory-disk" contentFit="cover" source={{ uri: selectedPhoto.uri }} style={styles.photo} />
-            <View style={styles.positionBadge}><AppText style={styles.positionText}>{selectedPhoto.position} / 9</AppText></View>
-          </View>
+            <View style={styles.photoFrame}>
+              <Image accessibilityLabel={`${selectedPhoto.position}번째 오늘의 사진`} cachePolicy="memory-disk" contentFit="cover" source={{ uri: selectedPhoto.uri }} style={styles.photo} />
+              <View style={styles.positionBadge}><AppText style={styles.positionText}>{selectedPhoto.position} / 9</AppText></View>
+            </View>
 
-          <View style={styles.descriptionBlock}>
-            <AppText style={styles.description}>길게 눌러 연 사진이에요. 앞·뒤 칸으로 옮겨 9칸 기록의 순서를 바꿀 수 있어요.</AppText>
-            {selectedPhoto.caption ? <AppText style={styles.memo}>“{selectedPhoto.caption}”</AppText> : null}
-          </View>
+            <View style={styles.descriptionBlock}>
+              <AppText style={styles.description}>길게 눌러 연 사진이에요. 앞·뒤 칸으로 옮겨 9칸 기록의 순서를 바꿀 수 있어요.</AppText>
+              {selectedPhoto.caption ? <AppText style={styles.memo}>“{selectedPhoto.caption}”</AppText> : null}
+            </View>
 
-          <View style={styles.moveRow}>
-            <MoveButton direction="backward" disabled={!moveAvailability.backward || isBusy} label="앞 칸" onPress={() => void move('backward')} />
-            <MoveButton direction="forward" disabled={!moveAvailability.forward || isBusy} label="뒤 칸" onPress={() => void move('forward')} />
-          </View>
+            <View style={styles.moveRow}>
+              <MoveButton direction="backward" disabled={!moveAvailability.backward || isInteractionBlocked} label="앞 칸" onPress={() => void move('backward')} />
+              <MoveButton direction="forward" disabled={!moveAvailability.forward || isInteractionBlocked} label="뒤 칸" onPress={() => void move('forward')} />
+            </View>
 
-          <Pressable accessibilityLabel="이 사진 지우기" accessibilityRole="button" disabled={isBusy} onPress={deletePhoto} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, isBusy && styles.disabled]}>
-            <TrashIcon />
-            <AppText style={styles.deleteText}>{operation === 'deleting' ? '사진을 지우는 중...' : '사진 지우기'}</AppText>
-          </Pressable>
-        </View> : null}
-      </View>
-    </Modal>
+            <Pressable accessibilityLabel="이 사진 지우기" accessibilityRole="button" disabled={isInteractionBlocked} onPress={requestDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, isInteractionBlocked && styles.disabled]}>
+              <TrashIcon />
+              <AppText style={styles.deleteText}>{operation === 'deleting' ? '사진을 지우는 중…' : '사진 지우기'}</AppText>
+            </Pressable>
+          </ScrollView> : null}
+      </AppModal>
+      <AppConfirmationDialog
+        cancelLabel={dialog?.kind === 'delete_confirmation' ? '취소' : undefined}
+        confirmLabel={dialog?.kind === 'delete_confirmation' ? '사진 지우기' : '확인'}
+        description={dialog?.kind === 'delete_confirmation' ? '오늘 기록과 친구방 보드에서 바로 사라져요. 이 작업은 되돌릴 수 없어요.' : dialog?.kind === 'notice' ? dialog.description : ''}
+        onClose={() => setDialog(null)}
+        onConfirm={dialog?.kind === 'delete_confirmation' ? deletePhoto : () => setDialog(null)}
+        title={dialog?.kind === 'delete_confirmation' ? '이 사진을 지울까요?' : dialog?.kind === 'notice' ? dialog.title : ''}
+        tone={dialog?.kind === 'delete_confirmation' ? 'destructive' : 'default'}
+        visible={dialog !== null}
+      />
+    </>
   );
 }
 
@@ -113,12 +126,13 @@ function TrashIcon() {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxWidth: 360, padding: spacing[4], width: '100%' },
+  card: { maxHeight: '90%', maxWidth: 360, padding: 0 },
+  scroll: { flexShrink: 1 },
+  content: { flexGrow: 1, padding: spacing[4] },
   heading: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[3] },
   eyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '800', lineHeight: 29, marginTop: 2 },
-  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   photoFrame: { backgroundColor: '#E4E4E4', borderColor: colors.ink, borderWidth: 1.5, height: 240, overflow: 'hidden', position: 'relative' },
   photo: { height: '100%', width: '100%' },
   positionBadge: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, bottom: 8, paddingHorizontal: 8, paddingVertical: 4, position: 'absolute', right: 8 },

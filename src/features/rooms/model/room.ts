@@ -59,6 +59,21 @@ export function validateInviteCode(value: string): boolean {
   return /^\d{6}$/.test(value);
 }
 
+export function getInviteExpiryLabel(expiresAt: string | null, now: Date = new Date()): string {
+  if (expiresAt === null) return '현재 사용할 수 있는 초대 코드가 없어요.';
+
+  const expiry = new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime()) || expiry.getTime() <= now.getTime()) {
+    return '초대 코드가 만료됐어요. 새 코드를 만들어 주세요.';
+  }
+
+  const remainingMinutes = Math.ceil((expiry.getTime() - now.getTime()) / 60_000);
+  if (remainingMinutes < 60) return `초대 코드가 약 ${remainingMinutes}분 뒤 만료돼요.`;
+
+  const remainingHours = Math.ceil(remainingMinutes / 60);
+  return `초대 코드가 약 ${remainingHours}시간 뒤 만료돼요.`;
+}
+
 export function parseActiveRoomRows(value: unknown): ActiveRoom | null {
   const rooms = parseRoomListRows(value);
   if (rooms.length === 0) return null;

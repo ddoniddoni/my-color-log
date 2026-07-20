@@ -8,5 +8,7 @@ export function getRoomErrorMessage(error: Error): string {
   if (error.message === 'room_invite_not_available') return '초대가 만료됐거나 사용 가능 횟수가 끝났어요.';
   if (error.message === 'room_invite_cannot_join_self') return '내가 만든 초대 코드로는 참여할 수 없어요.';
   if (error.message === 'room_member_limit_reached') return '이 방은 이미 6명으로 가득 찼어요.';
+  if (error.message === 'room_member_remove_target_invalid') return '내보낼 멤버를 다시 확인해 주세요.';
+  if (error.message === 'room_member_remove_owner_forbidden') return '방장은 내보낼 수 없어요. 먼저 방장을 넘겨 주세요.';
   return '연결을 확인한 뒤 다시 시도해 주세요.';
 }

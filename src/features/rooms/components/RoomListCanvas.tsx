@@ -1,10 +1,11 @@
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 
 import { AppText } from '@/src/components/ui/AppText';
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { createRoom, endRoom, getRoomInvitePreview, joinRoomByCode } from '@/src/features/rooms/api/roomRepository';
@@ -20,6 +21,10 @@ type RoomListCanvasProps = {
   initialInviteCode?: string | null;
 };
 
+type RoomListDialog =
+  | { kind: 'end_confirmation'; room: ActiveRoom }
+  | { description: string; kind: 'notice'; title: string };
+
 export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -32,7 +37,10 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
   const [roomEmoji, setRoomEmoji] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [invitePreview, setInvitePreview] = useState<RoomInvitePreview | null>(null);
+  const [dialog, setDialog] = useState<RoomListDialog | null>(null);
   const handledInitialInviteCode = useRef<string | null>(null);
+
+  const showNotice = (title: string, description: string): void => setDialog({ description, kind: 'notice', title });
 
   const openRoom = (roomId: string): void => {
     router.push({ pathname: '/room/[roomId]', params: { roomId } });
@@ -57,10 +65,10 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
   const previewInviteMutation = useMutation({
     mutationFn: getRoomInvitePreview,
-    onError: (error) => Alert.alert('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
+    onError: (error) => showNotice('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
     onSuccess: (preview) => {
       if (!preview) {
-        Alert.alert('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
+        showNotice('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
         return;
       }
       setInvitePreview(preview);
@@ -92,7 +100,6 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
     handledInitialInviteCode.current = initialInviteCode;
     setInviteCode(initialInviteCode);
     if (isAtRoomLimit) {
-      Alert.alert('친구방은 3개까지예요', '새 방에 참여하려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
       return;
     }
     requestInvitePreview(initialInviteCode);
@@ -100,7 +107,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
   const requestCreate = (): void => {
     if (isAtRoomLimit) {
-      Alert.alert('친구방은 3개까지예요', '새 방을 만들려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
+      showNotice('친구방은 3개까지예요', '새 방을 만들려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
       return;
     }
     setIsCreateVisible(true);
@@ -108,29 +115,25 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
   const previewInvite = (): void => {
     if (isAtRoomLimit) {
-      Alert.alert('친구방은 3개까지예요', '새 방에 참여하려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
+      showNotice('친구방은 3개까지예요', '새 방에 참여하려면 참여 중인 방 하나를 먼저 나가거나 종료해 주세요.');
       return;
     }
     if (!validateInviteCode(inviteCode)) {
-      Alert.alert('초대 코드를 확인해 주세요', '친구가 보낸 6자리 숫자를 모두 입력해 주세요.');
+      showNotice('초대 코드를 확인해 주세요', '친구가 보낸 6자리 숫자를 모두 입력해 주세요.');
       return;
     }
     requestInvitePreview(inviteCode);
   };
 
   const requestEndRoom = (room: ActiveRoom): void => {
-    Alert.alert(
-      `${room.name} 방을 종료할까요?`,
-      '모든 멤버의 상호 사진 접근과 초대가 중단돼요. 각자의 개인 다이어리와 사진은 삭제되지 않아요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          onPress: () => endRoomMutation.mutate(room.id, { onError: (error) => Alert.alert('방을 종료하지 못했어요', getRoomErrorMessage(error)) }),
-          style: 'destructive',
-          text: '방 종료',
-        },
-      ],
-    );
+    setDialog({ kind: 'end_confirmation', room });
+  };
+
+  const endSelectedRoom = (): void => {
+    if (dialog?.kind !== 'end_confirmation' || endRoomMutation.isPending) return;
+    const { room } = dialog;
+    setDialog(null);
+    endRoomMutation.mutate(room.id, { onError: (error) => showNotice('방을 종료하지 못했어요', getRoomErrorMessage(error)) });
   };
 
   if (sessionState.status === 'loading' || roomsQuery.isPending) {
@@ -219,7 +222,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
         emoji={roomEmoji}
         isPending={createRoomMutation.isPending}
         onClose={() => !createRoomMutation.isPending && setIsCreateVisible(false)}
-        onCreate={() => createRoomMutation.mutate(undefined, { onError: (error) => Alert.alert('방을 만들지 못했어요', getRoomErrorMessage(error)) })}
+        onCreate={() => createRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 만들지 못했어요', getRoomErrorMessage(error)) })}
         onEmojiChange={setRoomEmoji}
         onNameChange={setRoomName}
         roomName={roomName}
@@ -228,8 +231,19 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
       <JoinRoomModal
         isPending={joinRoomMutation.isPending}
         onClose={() => !joinRoomMutation.isPending && setInvitePreview(null)}
-        onJoin={() => joinRoomMutation.mutate(inviteCode, { onError: (error) => Alert.alert('방에 참여하지 못했어요', getRoomErrorMessage(error)) })}
+        onJoin={() => joinRoomMutation.mutate(inviteCode, { onError: (error) => showNotice('방에 참여하지 못했어요', getRoomErrorMessage(error)) })}
         preview={invitePreview}
+      />
+      <AppConfirmationDialog
+        cancelLabel={dialog?.kind === 'end_confirmation' ? '취소' : undefined}
+        confirmLabel={dialog?.kind === 'end_confirmation' ? '방 종료' : '확인'}
+        description={dialog?.kind === 'end_confirmation' ? '모든 멤버의 상호 사진 접근과 초대가 중단돼요. 각자의 개인 다이어리와 사진은 삭제되지 않아요.' : dialog?.kind === 'notice' ? dialog.description : ''}
+        isBusy={endRoomMutation.isPending}
+        onClose={() => setDialog(null)}
+        onConfirm={dialog?.kind === 'end_confirmation' ? endSelectedRoom : () => setDialog(null)}
+        title={dialog?.kind === 'end_confirmation' ? `${dialog.room.name} 방을 종료할까요?` : dialog?.kind === 'notice' ? dialog.title : ''}
+        tone={dialog?.kind === 'end_confirmation' ? 'destructive' : 'default'}
+        visible={dialog !== null}
       />
     </View>
   );

@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
 import { Image } from 'expo-image';
 
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { saveDiaryCollageToLibrary, shareDiaryCollage } from '@/src/features/diary/api/collageRepository';
@@ -17,6 +19,11 @@ type DiaryCollageModalProps = {
 
 type CollageAction = 'idle' | 'saving' | 'sharing';
 
+type CollageNotice = {
+  description: string;
+  title: string;
+};
+
 export function DiaryCollageModal({ entry, onClose, visible }: DiaryCollageModalProps) {
   if (!entry || !visible) return null;
 
@@ -29,6 +36,7 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
   const [loadedImageCount, setLoadedImageCount] = useState(0);
   const [failedImageCount, setFailedImageCount] = useState(0);
   const [action, setAction] = useState<CollageAction>('idle');
+  const [notice, setNotice] = useState<CollageNotice | null>(null);
   const exportablePhotos = useMemo(() => entry.photos.filter(hasSignedUrl), [entry.photos]);
   const rowCounts = useMemo(() => exportablePhotos.length > 0 ? getDiaryCollageRowCounts(exportablePhotos.length) : [], [exportablePhotos.length]);
   const imagesAreReady = exportablePhotos.length > 0 && exportablePhotos.length === entry.photos.length && loadedImageCount === exportablePhotos.length;
@@ -50,9 +58,12 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
     try {
       setAction('saving');
       await saveDiaryCollageToLibrary(await captureCollage());
-      Alert.alert('갤러리에 저장했어요', `${formatDate(entry.dateKey)}의 ${entry.color.nameKo} 기록을 기기에 남겼어요.`);
+      setNotice({
+        description: `${formatDate(entry.dateKey)}의 ${entry.color.nameKo} 기록을 기기에 남겼어요.`,
+        title: '갤러리에 저장했어요',
+      });
     } catch (error) {
-      Alert.alert('저장하지 못했어요', getCollageErrorMessage(error, 'save'));
+      setNotice({ description: getCollageErrorMessage(error, 'save'), title: '저장하지 못했어요' });
     } finally {
       setAction('idle');
     }
@@ -63,7 +74,7 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
       setAction('sharing');
       await shareDiaryCollage(await captureCollage());
     } catch (error) {
-      Alert.alert('공유하지 못했어요', getCollageErrorMessage(error, 'share'));
+      setNotice({ description: getCollageErrorMessage(error, 'share'), title: '공유하지 못했어요' });
     } finally {
       setAction('idle');
     }
@@ -74,65 +85,70 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
   };
 
   return (
-    <Modal animationType="fade" onRequestClose={close} statusBarTranslucent transparent visible>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="콜라주 내보내기 닫기" disabled={isWorking} onPress={close} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.headerCopy}>
-              <AppText style={styles.eyebrow}>MY COLOR LOG</AppText>
-              <AppText style={styles.title}>오늘의 기록 내보내기</AppText>
-              <AppText style={styles.description}>내 사진만 한 장의 콜라주로 만들어요.</AppText>
-            </View>
-            <Pressable accessibilityLabel="콜라주 내보내기 닫기" accessibilityRole="button" disabled={isWorking} onPress={close} style={styles.closeButton}>
-              <AppText style={styles.closeButtonText}>×</AppText>
-            </Pressable>
+    <>
+      <AppModal accessibilityLabel="콜라주 내보내기 닫기" contentStyle={styles.card} isBusy={isWorking} onClose={close} visible>
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <AppText style={styles.eyebrow}>MY COLOR LOG</AppText>
+            <AppText style={styles.title}>오늘의 기록 내보내기</AppText>
+            <AppText style={styles.description}>내 사진만 한 장의 콜라주로 만들어요.</AppText>
           </View>
-
-          <ScrollView contentContainerStyle={styles.previewScroll} showsVerticalScrollIndicator={false}>
-            <ViewShot
-              options={{
-                fileName: getDiaryCollageFilename(entry.dateKey, entry.color.slug),
-                format: 'jpg',
-                height: 1350,
-                quality: 0.96,
-                width: 1080,
-              }}
-              ref={viewShotRef}
-              style={styles.viewShot}>
-              <View style={[styles.collage, { backgroundColor: entry.color.accentTint }]}>
-                <View style={styles.collageHeader}>
-                  <View style={styles.collageTitleWrap}>
-                    <AppText style={styles.collageEyebrow}>{entry.dateKey.replaceAll('-', '.')}</AppText>
-                    <AppText numberOfLines={1} style={styles.collageColorName}>{entry.color.nameKo}</AppText>
-                    <AppText style={styles.collageColorEnglish}>{entry.color.nameEn.toUpperCase()}</AppText>
-                  </View>
-                  <View accessibilityLabel={`${entry.color.nameKo} 색`} style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
-                </View>
-                <CollagePhotoGrid onImageSettled={markImageSettled} photos={exportablePhotos} rowCounts={rowCounts} />
-                <View style={styles.collageFooter}>
-                  <AppText style={styles.collageFooterText}>COLOR LOG · {exportablePhotos.length} PHOTO{exportablePhotos.length === 1 ? '' : 'S'}</AppText>
-                  <View style={styles.footerLine} />
-                </View>
-              </View>
-            </ViewShot>
-
-            <View accessibilityLiveRegion="polite" style={styles.readyNotice}>
-              <AppText style={styles.readyNoticeText}>{imagesAreReady ? '콜라주가 준비됐어요.' : failedImageCount > 0 ? '사진을 불러오지 못했어요. 다이어리를 다시 열어 주세요.' : entry.photos.length === 0 ? '내보낼 사진을 기다리고 있어요.' : '사진을 콜라주로 준비하고 있어요.'}</AppText>
-            </View>
-          </ScrollView>
-
-          <View style={styles.actions}>
-            <Pressable accessibilityLabel="콜라주를 갤러리에 저장" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void saveToLibrary()} style={[styles.saveButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
-              <AppText style={styles.saveButtonText}>{action === 'saving' ? '저장하는 중...' : '갤러리에 저장'}</AppText>
-            </Pressable>
-            <Pressable accessibilityLabel="콜라주 공유하기" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void share()} style={[styles.shareButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
-              <AppText style={styles.shareButtonText}>{action === 'sharing' ? '공유 여는 중...' : '공유하기'}</AppText>
-            </Pressable>
-          </View>
+          <Pressable accessibilityLabel="콜라주 내보내기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isWorking }} disabled={isWorking} onPress={close} style={[styles.closeButton, isWorking && styles.disabledButton]}>
+            <AppText style={styles.closeButtonText}>×</AppText>
+          </Pressable>
         </View>
-      </View>
-    </Modal>
+
+        <ScrollView contentContainerStyle={styles.previewScroll} showsVerticalScrollIndicator={false}>
+          <ViewShot
+            options={{
+              fileName: getDiaryCollageFilename(entry.dateKey, entry.color.slug),
+              format: 'jpg',
+              height: 1350,
+              quality: 0.96,
+              width: 1080,
+            }}
+            ref={viewShotRef}
+            style={styles.viewShot}>
+            <View style={[styles.collage, { backgroundColor: entry.color.accentTint }]}>
+              <View style={styles.collageHeader}>
+                <View style={styles.collageTitleWrap}>
+                  <AppText style={styles.collageEyebrow}>{entry.dateKey.replaceAll('-', '.')}</AppText>
+                  <AppText numberOfLines={1} style={styles.collageColorName}>{entry.color.nameKo}</AppText>
+                  <AppText style={styles.collageColorEnglish}>{entry.color.nameEn.toUpperCase()}</AppText>
+                </View>
+                <View accessibilityLabel={`${entry.color.nameKo} 색`} style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
+              </View>
+              <CollagePhotoGrid onImageSettled={markImageSettled} photos={exportablePhotos} rowCounts={rowCounts} />
+              <View style={styles.collageFooter}>
+                <AppText style={styles.collageFooterText}>COLOR LOG · {exportablePhotos.length} PHOTO{exportablePhotos.length === 1 ? '' : 'S'}</AppText>
+                <View style={styles.footerLine} />
+              </View>
+            </View>
+          </ViewShot>
+
+          <View accessibilityLiveRegion="polite" style={styles.readyNotice}>
+            <AppText style={styles.readyNoticeText}>{imagesAreReady ? '콜라주가 준비됐어요.' : failedImageCount > 0 ? '사진을 불러오지 못했어요. 다이어리를 다시 열어 주세요.' : entry.photos.length === 0 ? '내보낼 사진을 기다리고 있어요.' : '사진을 콜라주로 준비하고 있어요.'}</AppText>
+          </View>
+        </ScrollView>
+
+        <View style={styles.actions}>
+          <Pressable accessibilityLabel="콜라주를 갤러리에 저장" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void saveToLibrary()} style={[styles.saveButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
+            <AppText style={styles.saveButtonText}>{action === 'saving' ? '저장하는 중...' : '갤러리에 저장'}</AppText>
+          </Pressable>
+          <Pressable accessibilityLabel="콜라주 공유하기" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void share()} style={[styles.shareButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
+            <AppText style={styles.shareButtonText}>{action === 'sharing' ? '공유 여는 중...' : '공유하기'}</AppText>
+          </Pressable>
+        </View>
+      </AppModal>
+      <AppConfirmationDialog
+        confirmLabel="확인"
+        description={notice?.description ?? ''}
+        onClose={() => setNotice(null)}
+        onConfirm={() => setNotice(null)}
+        title={notice?.title ?? ''}
+        visible={notice !== null}
+      />
+    </>
   );
 }
 
@@ -175,14 +191,13 @@ function getCollageErrorMessage(error: unknown, action: 'save' | 'share'): strin
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxHeight: '90%', maxWidth: 390, width: '100%' },
+  card: { maxHeight: '90%' },
   header: { alignItems: 'flex-start', borderBottomColor: colors.black, borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', padding: spacing[4] },
   headerCopy: { flex: 1, paddingRight: spacing[3] },
   eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
   title: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 28, marginTop: 2 },
   description: { color: 'rgba(0, 0, 0, 0.66)', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
+  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
   closeButtonText: { color: colors.black, fontSize: 27, fontWeight: '300', lineHeight: 30 },
   previewScroll: { gap: spacing[3], padding: spacing[4] },
   viewShot: { alignSelf: 'center', aspectRatio: 4 / 5, maxWidth: 330, width: '100%' },

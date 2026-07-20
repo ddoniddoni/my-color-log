@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
@@ -30,12 +31,11 @@ export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto,
   const previousPhoto = selectedIndex > 0 && entry ? entry.photos[selectedIndex - 1] : null;
   const nextPhoto = entry && selectedIndex >= 0 && selectedIndex < entry.photos.length - 1 ? entry.photos[selectedIndex + 1] : null;
 
+  if (!photo || !entry) return null;
+
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={photo !== null}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="사진 전체 보기 닫기" onPress={onClose} style={StyleSheet.absoluteFill} />
-        {photo && entry ? (
-          <View accessibilityViewIsModal style={styles.card}>
+    <AppModal accessibilityLabel="사진 전체 보기 닫기" contentStyle={styles.card} onClose={onClose} visible>
+      <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.photoSection}>
               <Image accessibilityLabel={`${entry.color.nameKo} 사진`} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
               <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" hitSlop={10} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
@@ -61,10 +61,8 @@ export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto,
                 <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" onPress={onClose} style={styles.closeAction}><AppText style={styles.closeActionText}>CLOSE</AppText></Pressable>
               </View>
             </View>
-          </View>
-        ) : null}
-      </View>
-    </Modal>
+      </ScrollView>
+    </AppModal>
   );
 }
 
@@ -82,14 +80,15 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxHeight: '86%', maxWidth: 360, width: '100%' },
+  card: { maxHeight: '86%', maxWidth: 360, padding: 0 },
+  scroll: { flexShrink: 1 },
+  content: { flexGrow: 1 },
   photoSection: { alignItems: 'center', backgroundColor: '#F2F2EE', borderBottomColor: colors.ink, borderBottomWidth: 1.5, height: 224, justifyContent: 'center', padding: spacing[5], position: 'relative' },
   photo: { height: '100%', width: '100%' },
-  closeButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, height: 32, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 32 },
-  photoNav: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1.5, height: 38, justifyContent: 'center', position: 'absolute', top: '46%', width: 38 },
-  previousButton: { left: -20 },
-  nextButton: { right: -20 },
+  closeButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 44 },
+  photoNav: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', position: 'absolute', top: '44%', width: 44 },
+  previousButton: { left: 10 },
+  nextButton: { right: 10 },
   metaSection: { padding: spacing[4] },
   metaHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   metaLabel: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },

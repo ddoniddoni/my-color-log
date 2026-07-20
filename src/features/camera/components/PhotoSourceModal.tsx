@@ -1,6 +1,7 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 
@@ -15,14 +16,11 @@ type PhotoSourceModalProps = {
 
 export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose, onGallery, visible }: PhotoSourceModalProps) {
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="사진 추가 방법 닫기" disabled={isImporting} onPress={onClose} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.card}>
+    <AppModal accessibilityLabel="사진 추가 방법 닫기" contentStyle={styles.card} isBusy={isImporting} onClose={onClose} visible={visible}>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>ADD TO TODAY</AppText>
-              <AppText style={styles.title}>오늘의 장면 추가</AppText>
+              <AppText accessibilityRole="header" style={styles.title}>오늘의 장면 추가</AppText>
               <AppText style={styles.description}>새로 찍거나, 이미 발견한 사진을 골라 보세요.</AppText>
             </View>
             <Pressable accessibilityLabel="사진 추가 방법 닫기" accessibilityRole="button" disabled={isImporting} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeButtonText}>×</AppText></Pressable>
@@ -36,14 +34,12 @@ export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose,
 
           <Pressable accessibilityLabel="갤러리에서 사진 선택" accessibilityRole="button" accessibilityState={{ busy: isImporting, disabled: isImporting }} disabled={isImporting} onPress={onGallery} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
             <View style={styles.sourceIcon}><GalleryIcon /></View>
-            <View style={styles.sourceCopy}><AppText style={styles.sourceTitle}>{isImporting ? '사진 불러오는 중...' : '갤러리에서 선택'}</AppText><AppText style={styles.sourceDescription}>선택 후 정사각형 구도를 다시 맞춰요.</AppText></View>
+            <View style={styles.sourceCopy}><AppText style={styles.sourceTitle}>{isImporting ? '사진 불러오는 중…' : '갤러리에서 선택'}</AppText><AppText style={styles.sourceDescription}>선택 후 정사각형 구도를 다시 맞춰요.</AppText></View>
             <AppText style={styles.sourceArrow}>→</AppText>
           </Pressable>
 
           {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{errorMessage}</AppText> : null}
-        </View>
-      </View>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -56,13 +52,12 @@ function GalleryIcon() {
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: spacing[4] },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxWidth: 390, padding: spacing[4], width: '100%' },
+  card: { padding: spacing[4] },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[3] },
   eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.85 },
   title: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 29, marginTop: 1 },
   description: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12, lineHeight: 18, marginTop: 2 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', marginLeft: spacing[2], width: 38 },
+  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', marginLeft: spacing[2], width: 44 },
   closeButtonText: { color: colors.black, fontSize: 27, fontWeight: '300', lineHeight: 30 },
   sourceButton: { alignItems: 'center', borderColor: colors.black, borderTopWidth: 1.5, flexDirection: 'row', minHeight: 78, paddingVertical: spacing[2] },
   sourceIcon: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },

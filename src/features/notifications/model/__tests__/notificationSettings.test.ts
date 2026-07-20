@@ -5,6 +5,7 @@ import {
   normalizeNotificationSettings,
   updateReminderEnabled,
   updateReminderTime,
+  updateRoomPhotoPushEnabled,
 } from '@/src/features/notifications/model/notificationSettings';
 
 describe('notificationSettings', () => {
@@ -31,5 +32,13 @@ describe('notificationSettings', () => {
   it('detects whether notification permission is needed for an enabled reminder', () => {
     expect(hasEnabledReminder(DEFAULT_NOTIFICATION_SETTINGS)).toBe(false);
     expect(hasEnabledReminder(updateReminderEnabled(DEFAULT_NOTIFICATION_SETTINGS, 'evening', true))).toBe(true);
+  });
+
+  it('keeps friend-room push notifications opt-in and persists the setting', () => {
+    const enabled = updateRoomPhotoPushEnabled(DEFAULT_NOTIFICATION_SETTINGS, true);
+
+    expect(enabled.roomPhotoPushEnabled).toBe(true);
+    expect(hasEnabledReminder(enabled)).toBe(true);
+    expect(normalizeNotificationSettings({ evening: DEFAULT_NOTIFICATION_SETTINGS.evening, morning: DEFAULT_NOTIFICATION_SETTINGS.morning, roomPhotoPushEnabled: true })).toEqual(enabled);
   });
 });

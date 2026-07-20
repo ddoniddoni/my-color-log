@@ -4,7 +4,8 @@ import {
   BricolageGrotesque_800ExtraBold,
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -14,6 +15,7 @@ import { NinePhotoMosaic } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
 import { type DailyMission } from '@/src/features/missions/model/dailyMission';
 import { formatKstCountdown } from '@/src/features/missions/model/countdown';
+import { getTodayJournalLayout } from '@/src/features/missions/model/todayJournalLayout';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 
 type TodayJournalProps = {
@@ -38,6 +40,14 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const [contentSize, setContentSize] = useState({ height: 0, width: 0 });
+  const journalLayout = getTodayJournalLayout({
+    contentHeight: contentSize.height || Math.max(0, windowHeight - 180),
+    contentWidth: contentSize.width || windowWidth,
+  });
+  const isCompact = journalLayout.isCompact;
+  const mosaicStyle = { height: journalLayout.mosaicSize, width: journalLayout.mosaicSize };
 
   return (
     <View style={styles.page}>
@@ -53,52 +63,59 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View
+        onLayout={({ nativeEvent }) => {
+          const { height, width } = nativeEvent.layout;
+          setContentSize((current) => current.height === height && current.width === width ? current : { height, width });
+        }}
+        style={[styles.content, { paddingHorizontal: journalLayout.horizontalPadding }, isCompact && styles.contentCompact]}>
         <View style={styles.titleGroup}>
-          <AppText style={[styles.title, { fontFamily: heavyFont }]}>{photos.length === 9 ? '오늘의 색을 가득 채웠어요.' : `오늘의 ${mission.color.nameKo}을\n찾아봐요.`}</AppText>
-          <AppText style={[styles.weekday, { fontFamily: bodyFont }]}>KST · {mission.challengeDate}</AppText>
+          <AppText numberOfLines={2} style={[styles.title, { fontFamily: heavyFont }, isCompact && styles.titleCompact]}>{photos.length === 9 ? '오늘의 색을 가득 채웠어요.' : `오늘의 ${mission.color.nameKo}을\n찾아봐요.`}</AppText>
+          <AppText style={[styles.weekday, { fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>KST · {mission.challengeDate}</AppText>
         </View>
 
         {photos.length === 0
-          ? <EmptyJournalCanvas mission={mission} bodyFont={bodyFont} boldFont={boldFont} />
-          : <NinePhotoMosaic
-              accessibilityLabel={`오늘의 사진 ${photos.length}장, 9칸 기록판`}
-              onPhotoLongPress={(photo) => {
-                const todayPhoto = photos.find((item) => item.id === photo.id);
-                if (todayPhoto) onPhotoLongPress(todayPhoto);
-              }}
-              onPhotoPress={(photo) => {
-                const todayPhoto = photos.find((item) => item.id === photo.id);
-                if (todayPhoto) onPhotoPress(todayPhoto);
-              }}
-              onEmptyPress={photos.length < 9 ? onAddPhotoPress : undefined}
-              photos={photos}
-            />}
+          ? <EmptyJournalCanvas bodyFont={bodyFont} boldFont={boldFont} mission={mission} size={journalLayout.mosaicSize} />
+          : <View style={[styles.mosaicFrame, mosaicStyle]}>
+              <NinePhotoMosaic
+                accessibilityLabel={`오늘의 사진 ${photos.length}장, 9칸 기록판`}
+                onPhotoLongPress={(photo) => {
+                  const todayPhoto = photos.find((item) => item.id === photo.id);
+                  if (todayPhoto) onPhotoLongPress(todayPhoto);
+                }}
+                onPhotoPress={(photo) => {
+                  const todayPhoto = photos.find((item) => item.id === photo.id);
+                  if (todayPhoto) onPhotoPress(todayPhoto);
+                }}
+                onEmptyPress={photos.length < 9 ? onAddPhotoPress : undefined}
+                photos={photos}
+              />
+            </View>}
 
-        <View style={styles.noteSection}>
-          <AppText style={[styles.note, { fontFamily: bodyFont }]}>{mission.promptKo}</AppText>
+        <View style={[styles.noteSection, isCompact && styles.noteSectionCompact]}>
+          <AppText numberOfLines={isCompact ? 1 : 2} style={[styles.note, { fontFamily: bodyFont }, isCompact && styles.noteCompact]}>{mission.promptKo}</AppText>
           <AppText style={[styles.countdown, { fontFamily: bodyFont }]}>자정까지 {formatKstCountdown(millisecondsUntilMidnight)}</AppText>
         </View>
 
-        <View style={styles.tags}>
+        {!isCompact ? <View style={styles.tags}>
           <Tag label={`#${mission.color.nameEn.replaceAll(' ', '').toUpperCase()}`} />
           <Tag label="#DAILYLOG" />
-        </View>
+        </View> : null}
 
-        <View style={styles.actionArea}>
-          <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onAddPhotoPress} />
+        <View style={[styles.actionArea, isCompact && styles.actionAreaCompact]}>
+          <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onAddPhotoPress} style={isCompact ? styles.actionButtonCompact : undefined} />
           {hasSyncFailure
             ? <Pressable accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={styles.retryText}>업로드 다시 시도</AppText></Pressable>
-            : <AppText accessibilityLiveRegion="polite" style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요. 사진을 길게 눌러 순서를 바꿀 수 있어요.`}</AppText>}
+            : <AppText accessibilityLiveRegion="polite" numberOfLines={isCompact ? 1 : 2} style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요. 사진을 길게 눌러 순서를 바꿀 수 있어요.`}</AppText>}
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
-function EmptyJournalCanvas({ bodyFont, boldFont, mission }: { bodyFont: string | undefined; boldFont: string | undefined; mission: DailyMission }) {
+function EmptyJournalCanvas({ bodyFont, boldFont, mission, size }: { bodyFont: string | undefined; boldFont: string | undefined; mission: DailyMission; size: number }) {
   return (
-    <View accessibilityLabel={`아직 ${mission.color.nameKo} 사진이 없는 기록 영역`} style={styles.canvas}>
+    <View accessibilityLabel={`아직 ${mission.color.nameKo} 사진이 없는 기록 영역`} style={[styles.canvas, { height: size, width: size }]}>
       <View pointerEvents="none" style={styles.canvasGuide}>
         <View style={[styles.guideLine, { backgroundColor: mission.color.accent }]} />
         <View style={[styles.guideLine, styles.guideLineShort, { backgroundColor: mission.color.accent }]} />
@@ -143,11 +160,15 @@ const styles = StyleSheet.create({
   profileMark: { height: 32, width: 32 },
   headerDate: { color: colors.ink, fontSize: 13, fontWeight: '700', letterSpacing: -0.15, lineHeight: 17 },
   settingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  content: { gap: spacing[6], paddingBottom: 132, paddingHorizontal: spacing[4], paddingTop: 16 },
+  content: { flex: 1, justifyContent: 'space-between', paddingBottom: 12, paddingTop: 12 },
+  contentCompact: { paddingBottom: 8, paddingTop: 8 },
   titleGroup: { gap: 6 },
   title: { color: colors.ink, fontSize: 32, fontWeight: '800', letterSpacing: -1.2, lineHeight: 37 },
+  titleCompact: { fontSize: 27, lineHeight: 32 },
   weekday: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1.1, lineHeight: 14, textTransform: 'uppercase' },
-  canvas: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, height: 230, justifyContent: 'center', overflow: 'hidden', position: 'relative' },
+  weekdayCompact: { fontSize: 9, lineHeight: 12 },
+  mosaicFrame: { alignSelf: 'center' },
+  canvas: { alignItems: 'center', alignSelf: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, justifyContent: 'center', overflow: 'hidden', position: 'relative' },
   canvasGuide: { left: 16, position: 'absolute', top: 16 },
   guideLine: { height: 3, transform: [{ rotate: '-3deg' }], width: 78 },
   guideLineShort: { marginLeft: 6, marginTop: 7, opacity: 0.5, transform: [{ rotate: '2deg' }], width: 42 },
@@ -158,12 +179,16 @@ const styles = StyleSheet.create({
   canvasDescription: { color: '#5D5F5F', fontSize: 13, lineHeight: 18, marginTop: 6, textAlign: 'center' },
   canvasDoodle: { bottom: -18, opacity: 0.7, position: 'absolute', right: -6, transform: [{ rotate: '-14deg' }] },
   noteSection: { borderBottomColor: colors.ink, borderBottomWidth: 1, gap: 8, paddingBottom: spacing[4] },
+  noteSectionCompact: { gap: 2, paddingBottom: spacing[2] },
   note: { color: colors.ink, fontSize: 17, fontStyle: 'italic', lineHeight: 26 },
+  noteCompact: { fontSize: 14, lineHeight: 19 },
   countdown: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.4, lineHeight: 14 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: { borderColor: colors.ink, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5 },
   tagText: { color: colors.ink, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
   actionArea: { gap: 10, marginTop: 4 },
+  actionAreaCompact: { gap: 5, marginTop: 0 },
+  actionButtonCompact: { minHeight: 48 },
   actionHint: { color: '#5D5F5F', fontSize: 12, lineHeight: 17, textAlign: 'center' },
   retryButton: { alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   retryText: { color: colors.danger, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },

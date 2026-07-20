@@ -10,6 +10,7 @@ export const queryKeys = {
   roomHistory: (userId: string, roomId: string) => ['roomHistory', userId, roomId] as const,
   roomHistoryBoards: (userId: string) => ['roomHistoryBoard', userId] as const,
   roomHistoryBoard: (userId: string, roomId: string, dateKey: string) => ['roomHistoryBoard', userId, roomId, dateKey] as const,
+  roomPhotoReactions: (userId: string, roomId: string, photoId: string) => ['roomPhotoReactions', userId, roomId, photoId] as const,
   diaryMonth: (userId: string, monthKey: string) => ['diaryMonth', userId, monthKey] as const,
   pendingPhotos: (userId: string, dateKey: string) => ['pendingPhotos', userId, dateKey] as const,
   queuedPhoto: (photoId: string) => ['queuedPhoto', photoId] as const,

@@ -3,15 +3,19 @@ import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react
 
 import { OfflineBanner } from '@/src/components/feedback/OfflineBanner';
 import { useAuthAutoRefresh } from '@/src/features/auth/hooks/useAuthAutoRefresh';
+import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { configureLocalNotificationPresentation } from '@/src/features/notifications/api/localNotificationRepository';
+import { useRoomPhotoPushRegistration } from '@/src/features/notifications/hooks/useRoomPhotoPushRegistration';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 
 const STALE_TIME_MS = 60_000;
 
 export function AppProviders({ children }: PropsWithChildren) {
   useAuthAutoRefresh();
+  const sessionState = useSessionBootstrap();
   const networkStatus = useNetworkStatus();
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: STALE_TIME_MS, retry: 1 } } }));
+  useRoomPhotoPushRegistration(sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null);
 
   useEffect(() => {
     void configureLocalNotificationPresentation();

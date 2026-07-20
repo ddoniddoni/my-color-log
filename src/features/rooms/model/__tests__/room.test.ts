@@ -1,4 +1,4 @@
-import { parseActiveRoomRows, parseRoomInvitePreview, parseRoomListRows, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
+import { getInviteExpiryLabel, parseActiveRoomRows, parseRoomInvitePreview, parseRoomListRows, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 
 describe('room input validation', () => {
   it('normalizes and validates room names', () => {
@@ -11,6 +11,13 @@ describe('room input validation', () => {
     expect(validateInviteCode('012345')).toBe(true);
     expect(validateInviteCode('12345')).toBe(false);
     expect(validateInviteCode('abc123')).toBe(false);
+  });
+
+  it('describes an invite expiry without exposing a raw timestamp', () => {
+    const now = new Date('2026-07-20T00:00:00.000Z');
+    expect(getInviteExpiryLabel('2026-07-20T00:30:00.000Z', now)).toBe('초대 코드가 약 30분 뒤 만료돼요.');
+    expect(getInviteExpiryLabel('2026-07-20T02:00:00.000Z', now)).toBe('초대 코드가 약 2시간 뒤 만료돼요.');
+    expect(getInviteExpiryLabel('2026-07-19T23:59:59.000Z', now)).toBe('초대 코드가 만료됐어요. 새 코드를 만들어 주세요.');
   });
 
   it('normalizes an optional room emoji', () => {

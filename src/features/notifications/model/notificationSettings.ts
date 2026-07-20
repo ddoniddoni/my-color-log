@@ -9,11 +9,13 @@ export type DailyReminder = {
 export type NotificationSettings = {
   evening: DailyReminder;
   morning: DailyReminder;
+  roomPhotoPushEnabled: boolean;
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   evening: { enabled: false, hour: 20, minute: 0 },
   morning: { enabled: false, hour: 9, minute: 0 },
+  roomPhotoPushEnabled: false,
 };
 
 export function normalizeNotificationSettings(value: unknown): NotificationSettings {
@@ -22,6 +24,7 @@ export function normalizeNotificationSettings(value: unknown): NotificationSetti
   return {
     evening: normalizeReminder(value.evening, DEFAULT_NOTIFICATION_SETTINGS.evening),
     morning: normalizeReminder(value.morning, DEFAULT_NOTIFICATION_SETTINGS.morning),
+    roomPhotoPushEnabled: typeof value.roomPhotoPushEnabled === 'boolean' ? value.roomPhotoPushEnabled : false,
   };
 }
 
@@ -39,6 +42,10 @@ export function updateReminderTime(settings: NotificationSettings, kind: Reminde
   };
 }
 
+export function updateRoomPhotoPushEnabled(settings: NotificationSettings, enabled: boolean): NotificationSettings {
+  return { ...settings, roomPhotoPushEnabled: enabled };
+}
+
 export function getReminderTimeLabel(reminder: DailyReminder): string {
   const period = reminder.hour < 12 ? '오전' : '오후';
   const hour = reminder.hour % 12 || 12;
@@ -52,13 +59,14 @@ export function getReminderPickerDate(reminder: DailyReminder): Date {
 }
 
 export function hasEnabledReminder(settings: NotificationSettings): boolean {
-  return settings.morning.enabled || settings.evening.enabled;
+  return settings.morning.enabled || settings.evening.enabled || settings.roomPhotoPushEnabled;
 }
 
 function createDefaultNotificationSettings(): NotificationSettings {
   return {
     evening: { ...DEFAULT_NOTIFICATION_SETTINGS.evening },
     morning: { ...DEFAULT_NOTIFICATION_SETTINGS.morning },
+    roomPhotoPushEnabled: DEFAULT_NOTIFICATION_SETTINGS.roomPhotoPushEnabled,
   };
 }
 

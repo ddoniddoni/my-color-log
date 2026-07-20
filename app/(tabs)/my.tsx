@@ -1,16 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Redirect, useRouter } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { Screen } from '@/src/components/layout/Screen';
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { deleteCurrentAccount } from '@/src/features/auth/api/accountRepository';
 import { signOutCurrentSession } from '@/src/features/auth/api/authRepository';
 import { AccountDeletionModal } from '@/src/features/auth/components/AccountDeletionModal';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { NotificationSettingsModal } from '@/src/features/notifications/components/NotificationSettingsModal';
+import { syncRoomPhotoPushNotifications } from '@/src/features/notifications/api/roomPushNotificationRepository';
 import { useNotificationSettings } from '@/src/features/notifications/hooks/useNotificationSettings';
 import { MyProfileCanvas } from '@/src/features/profile/components/MyProfileCanvas';
 import { ProfileNicknameModal } from '@/src/features/profile/components/ProfileNicknameModal';
@@ -18,6 +20,10 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useUpdateProfileNickname } from '@/src/features/profile/hooks/useUpdateProfileNickname';
 import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
 import { spacing } from '@/src/design/tokens';
+
+type MyDialog =
+  | { description: string; kind: 'notice'; title: string }
+  | { kind: 'sign_out_confirmation' };
 
 export default function MyScreen() {
   const router = useRouter();
@@ -29,11 +35,13 @@ export default function MyScreen() {
   const [isAccountDeletionVisible, setIsAccountDeletionVisible] = useState(false);
   const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
+  const [dialog, setDialog] = useState<MyDialog | null>(null);
   const updateNicknameMutation = useUpdateProfileNickname(userId ?? '');
   const notificationSettings = useNotificationSettings();
+  const showNotice = (title: string, description: string): void => setDialog({ description, kind: 'notice', title });
   const signOutMutation = useMutation({
     mutationFn: signOutCurrentSession,
-    onError: () => Alert.alert('로그아웃하지 못했어요', '잠시 후 다시 시도해 주세요.'),
+    onError: () => showNotice('로그아웃하지 못했어요', '잠시 후 다시 시도해 주세요.'),
     onSuccess: () => {
       queryClient.clear();
       router.replace('/(onboarding)/email');
@@ -44,7 +52,7 @@ export default function MyScreen() {
       if (!userId) throw new Error('account_delete_failed');
       await deleteCurrentAccount(userId);
     },
-    onError: () => Alert.alert('계정을 삭제하지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.'),
+    onError: () => showNotice('계정을 삭제하지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.'),
     onSuccess: () => {
       queryClient.clear();
       setIsAccountDeletionVisible(false);
@@ -70,9 +78,9 @@ export default function MyScreen() {
         onDeleteAccountPress={() => setIsAccountDeletionVisible(true)}
         onNotificationsPress={() => setIsNotificationSettingsVisible(true)}
         onProfileEditPress={() => setIsProfileEditVisible(true)}
-        onPrivacyPress={showPrivacyNotice}
+        onPrivacyPress={() => showNotice('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.')}
         onRoomsPress={() => router.push('/(tabs)/room')}
-        onSignOutPress={() => confirmSignOut(signOutMutation.mutate)}
+        onSignOutPress={() => setDialog({ kind: 'sign_out_confirmation' })}
         rooms={(roomsQuery.data ?? []).map((room) => ({ emoji: room.emoji, id: room.id, memberCount: room.members.length, name: room.name }))}
         roomsStatus={roomsQuery.isPending ? 'loading' : roomsQuery.isError ? 'error' : 'ready'}
         signingOut={signOutMutation.isPending}
@@ -82,7 +90,7 @@ export default function MyScreen() {
         nickname={profileQuery.data.nickname}
         onClose={() => setIsProfileEditVisible(false)}
         onSave={(nickname) => updateNicknameMutation.mutate(nickname, {
-          onError: () => Alert.alert('닉네임을 저장하지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.'),
+          onError: () => showNotice('닉네임을 저장하지 못했어요', '연결을 확인한 뒤 다시 시도해 주세요.'),
           onSuccess: () => setIsProfileEditVisible(false),
         })}
         visible={isProfileEditVisible}
@@ -100,20 +108,45 @@ export default function MyScreen() {
         onSave={async (settings) => {
           try {
             const result = await notificationSettings.save(settings);
-            if (result === 'saved') return true;
+            if (result === 'saved') {
+              try {
+                const pushResult = await syncRoomPhotoPushNotifications(settings.roomPhotoPushEnabled);
+                if (pushResult === 'project_id_missing') {
+                  showNotice('친구방 푸시 준비 중', '친구방 사진 알림은 EAS 프로젝트 연결과 development build 설치 후 사용할 수 있어요. 아침·저녁 알림 설정은 저장됐어요.');
+                } else if (pushResult === 'unavailable') {
+                  showNotice('앱 업데이트가 필요해요', '친구방 사진 알림을 사용하려면 최신 development build를 다시 설치해 주세요.');
+                } else if (pushResult === 'permission_denied') {
+                  showNotice('알림 권한이 필요해요', '기기 설정에서 Color Log의 알림을 허용한 뒤 다시 켜 주세요.');
+                }
+              } catch {
+                showNotice('친구방 알림을 연결하지 못했어요', '알림 설정은 저장됐어요. 잠시 뒤 앱을 다시 열면 한 번 더 연결할게요.');
+              }
+              return true;
+            }
             if (result === 'unavailable') {
-              Alert.alert('앱 업데이트가 필요해요', '알림 기능을 사용하려면 최신 development build를 다시 설치해 주세요.');
+              showNotice('앱 업데이트가 필요해요', '알림 기능을 사용하려면 최신 development build를 다시 설치해 주세요.');
               return false;
             }
-            Alert.alert('알림 권한이 필요해요', '기기 설정에서 Color Log의 알림을 허용한 뒤 다시 켜 주세요.');
+            showNotice('알림 권한이 필요해요', '기기 설정에서 Color Log의 알림을 허용한 뒤 다시 켜 주세요.');
             return false;
           } catch {
-            Alert.alert('알림을 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            showNotice('알림을 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
             return false;
           }
         }}
         settings={notificationSettings.settings}
         visible={isNotificationSettingsVisible}
+      />
+      <AppConfirmationDialog
+        cancelLabel={dialog?.kind === 'sign_out_confirmation' ? '취소' : undefined}
+        confirmLabel={dialog?.kind === 'sign_out_confirmation' ? '로그아웃' : '확인'}
+        description={dialog?.kind === 'sign_out_confirmation' ? '이 기기에서만 로그아웃돼요.' : dialog?.kind === 'notice' ? dialog.description : ''}
+        isBusy={signOutMutation.isPending}
+        onClose={() => setDialog(null)}
+        onConfirm={dialog?.kind === 'sign_out_confirmation' ? () => signOutMutation.mutate() : () => setDialog(null)}
+        title={dialog?.kind === 'sign_out_confirmation' ? '로그아웃할까요?' : dialog?.kind === 'notice' ? dialog.title : ''}
+        tone={dialog?.kind === 'sign_out_confirmation' ? 'destructive' : 'default'}
+        visible={dialog !== null}
       />
     </>
   );
@@ -125,17 +158,6 @@ function MyLoadingScreen() {
 
 function MyProfileError({ onRetry }: { onRetry: () => void }) {
   return <Screen contentContainerStyle={styles.error}><View style={styles.errorCopy}><AppText variant="title2">내 정보를 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요.</AppText></View><AppText accessibilityRole="button" onPress={onRetry} style={styles.retry}>다시 시도</AppText></Screen>;
-}
-
-function confirmSignOut(onConfirm: () => void): void {
-  Alert.alert('로그아웃할까요?', '이 기기에서만 로그아웃돼요.', [
-    { style: 'cancel', text: '취소' },
-    { onPress: onConfirm, style: 'destructive', text: '로그아웃' },
-  ]);
-}
-
-function showPrivacyNotice(): void {
-  Alert.alert('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.');
 }
 
 const styles = StyleSheet.create({

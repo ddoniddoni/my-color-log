@@ -19,6 +19,7 @@ describe('getRoomManagementState', () => {
     expect(getRoomManagementState(room, 'owner-1')).toEqual({
       canEndRoom: true,
       canLeaveRoom: false,
+      removableMembers: [expect.objectContaining({ id: 'member-1' })],
       successors: [expect.objectContaining({ id: 'member-1' })],
     });
   });
@@ -27,6 +28,7 @@ describe('getRoomManagementState', () => {
     expect(getRoomManagementState(room, 'member-1')).toEqual({
       canEndRoom: false,
       canLeaveRoom: true,
+      removableMembers: [],
       successors: [],
     });
   });

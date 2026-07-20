@@ -40,7 +40,7 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
   weekday: 'short',
 });
 
-export function RoomHistoryCanvas({ roomId }: { roomId: string }) {
+export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { initialDateKey?: string; initialPhotoId?: string; roomId: string }) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -51,21 +51,29 @@ export function RoomHistoryCanvas({ roomId }: { roomId: string }) {
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const historyQuery = useRoomHistory(userId, roomId);
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(initialDateKey ?? null);
   const effectiveDateKey = selectedDateKey ?? historyQuery.data?.[0]?.dateKey ?? null;
   const boardQuery = useRoomDayBoard(userId, roomId, effectiveDateKey);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [photoSelection, setPhotoSelection] = useState<RoomBoardPhotoSelection | null>(null);
+  const [dismissedInitialPhotoId, setDismissedInitialPhotoId] = useState<string | null>(null);
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
 
   const board = boardQuery.data ?? null;
+  const initialPhotoMember = initialPhotoId && dismissedInitialPhotoId !== initialPhotoId
+    ? board?.members.find((candidate) => candidate.photos.some((photo) => photo.id === initialPhotoId)) ?? null
+    : null;
+  const effectivePhotoSelection = photoSelection ?? (initialPhotoMember && initialPhotoId
+    ? { memberId: initialPhotoMember.id, photoId: initialPhotoId }
+    : null);
   const selectedMember = board?.members.find((member) => member.id === selectedMemberId)
+    ?? initialPhotoMember
     ?? board?.members.find((member) => member.id === userId)
     ?? board?.members[0]
     ?? null;
-  const selectedPhotoMember = board?.members.find((member) => member.id === photoSelection?.memberId) ?? null;
+  const selectedPhotoMember = board?.members.find((member) => member.id === effectivePhotoSelection?.memberId) ?? null;
   const handleSelectDate = useCallback((dateKey: string): void => {
     setSelectedDateKey(dateKey);
     setSelectedMemberId(null);
@@ -164,11 +172,16 @@ export function RoomHistoryCanvas({ roomId }: { roomId: string }) {
       ) : null}
 
       <RoomMemberPhotoViewer
-        initialPhotoId={photoSelection?.photoId ?? null}
-        key={photoSelection ? `${photoSelection.memberId}:${photoSelection.photoId}` : 'closed'}
+        currentUserId={userId}
+        initialPhotoId={effectivePhotoSelection?.photoId ?? null}
+        key={effectivePhotoSelection ? `${effectivePhotoSelection.memberId}:${effectivePhotoSelection.photoId}` : 'closed'}
         member={selectedPhotoMember}
         mission={board?.mission ?? null}
-        onClose={() => setPhotoSelection(null)}
+        onClose={() => {
+          if (photoSelection === null && initialPhotoId) setDismissedInitialPhotoId(initialPhotoId);
+          setPhotoSelection(null);
+        }}
+        roomId={roomId}
       />
     </View>
   );

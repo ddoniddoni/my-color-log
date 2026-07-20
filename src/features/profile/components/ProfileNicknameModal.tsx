@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { colors } from '@/src/design/tokens';
 import { validateNickname } from '@/src/features/profile/model/profile';
@@ -15,12 +16,9 @@ type ProfileNicknameModalProps = {
 
 export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visible }: ProfileNicknameModalProps) {
   return (
-    <Modal animationType="fade" onRequestClose={() => !isSaving && onClose()} statusBarTranslucent transparent visible={visible}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel="닉네임 수정 닫기" disabled={isSaving} onPress={onClose} style={StyleSheet.absoluteFill} />
-        <NicknameForm key={`${nickname}:${visible ? 'open' : 'closed'}`} isSaving={isSaving} nickname={nickname} onClose={onClose} onSave={onSave} />
-      </View>
-    </Modal>
+    <AppModal accessibilityLabel="닉네임 수정 닫기" contentStyle={styles.card} isBusy={isSaving} onClose={onClose} visible={visible}>
+      <NicknameForm key={`${nickname}:${visible ? 'open' : 'closed'}`} isSaving={isSaving} nickname={nickname} onClose={onClose} onSave={onSave} />
+    </AppModal>
   );
 }
 
@@ -40,11 +38,11 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
   };
 
   return (
-    <View accessibilityViewIsModal style={styles.card}>
+    <>
       <View style={styles.header}>
         <View>
           <AppText style={styles.eyebrow}>PROFILE EDIT</AppText>
-          <AppText style={styles.title}>나를 부를 이름</AppText>
+          <AppText accessibilityRole="header" style={styles.title}>나를 부를 이름</AppText>
         </View>
         <Pressable accessibilityLabel="닉네임 수정 닫기" accessibilityRole="button" disabled={isSaving} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
       </View>
@@ -70,17 +68,16 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
         <AppText style={styles.saveButtonText}>{isSaving ? '저장 중…' : '저장하기'}</AppText>
       </Pressable>
       {Platform.OS === 'ios' ? <AppText style={styles.hint}>완료를 누르거나 저장하기를 눌러 반영할 수 있어요.</AppText> : null}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 14, maxWidth: 390, padding: 20, width: '100%' },
+  card: { gap: 14, padding: 20 },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
   title: { color: colors.black, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
+  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
   closeText: { color: colors.black, fontSize: 28, fontWeight: '300', lineHeight: 31 },
   description: { color: 'rgba(0, 0, 0, 0.68)', fontSize: 14, lineHeight: 21 },
   input: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 18, minHeight: 52, paddingHorizontal: 13, paddingVertical: 10 },

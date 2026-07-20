@@ -113,6 +113,7 @@ function cloneDefaultSettings(): NotificationSettings {
   return {
     evening: { ...DEFAULT_NOTIFICATION_SETTINGS.evening },
     morning: { ...DEFAULT_NOTIFICATION_SETTINGS.morning },
+    roomPhotoPushEnabled: DEFAULT_NOTIFICATION_SETTINGS.roomPhotoPushEnabled,
   };
 }
 
