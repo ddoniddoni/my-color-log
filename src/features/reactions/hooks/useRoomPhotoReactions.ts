@@ -5,7 +5,7 @@ import { useCallback, useEffect } from 'react';
 import { getRoomPhotoReactions, toggleRoomPhotoReaction } from '@/src/features/reactions/api/roomPhotoReactionRepository';
 import { type RoomPhotoReactionEmoji } from '@/src/features/reactions/model/roomPhotoReaction';
 import { queryKeys } from '@/src/lib/query/queryKeys';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 export function useRoomPhotoReactions({ photoId, roomId, userId }: { photoId: string | null; roomId: string | null; userId: string | null }) {
   const queryClient = useQueryClient();
@@ -27,6 +27,7 @@ export function useRoomPhotoReactions({ photoId, roomId, userId }: { photoId: st
   useEffect(() => {
     if (!userId || !roomId || !photoId) return undefined;
 
+    const supabase = getSupabaseClient();
     const channel = supabase
       .channel(`room-photo-reactions:${roomId}:${photoId}`)
       .on('postgres_changes', {

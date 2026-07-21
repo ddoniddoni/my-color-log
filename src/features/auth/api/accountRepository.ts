@@ -1,6 +1,6 @@
 import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoRepository';
 import { getPhotoQueue, removeUserPhotoQueue } from '@/src/features/sync/queue/photoQueue';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 type DeletedAccountResponse = {
   deleted: true;
@@ -8,6 +8,7 @@ type DeletedAccountResponse = {
 
 export async function deleteCurrentAccount(userId: string): Promise<void> {
   if (!userId) throw new Error('account_delete_failed');
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.functions.invoke('delete-my-account', { method: 'POST' });
   if (error || !isDeletedAccountResponse(data)) throw new Error('account_delete_failed');

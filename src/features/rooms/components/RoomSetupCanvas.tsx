@@ -54,6 +54,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
   const queryClient = useQueryClient();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  const accessToken = sessionState.status === 'ready' ? sessionState.session?.access_token ?? null : null;
   const dateKey = useKstDateKey();
   const roomQuery = useRoom(userId, roomId);
   const roomTodayBoardQuery = useRoomTodayBoard(userId, dateKey, roomId);
@@ -126,7 +127,10 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
     },
   });
   const endRoomMutation = useMutation({
-    mutationFn: () => endRoom(roomId),
+    mutationFn: () => {
+      if (!accessToken) throw new Error('authentication_required');
+      return endRoom(roomId, accessToken);
+    },
     onSuccess: async () => {
       setIsRoomManagementVisible(false);
       await invalidateActiveRoomData();

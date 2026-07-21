@@ -31,6 +31,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
   const queryClient = useQueryClient();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  const accessToken = sessionState.status === 'ready' ? sessionState.session?.access_token ?? null : null;
   const roomsQuery = useMyRooms(userId);
   const [isCreateVisible, setIsCreateVisible] = useState(false);
   const [roomName, setRoomName] = useState('');
@@ -85,7 +86,10 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
     },
   });
   const endRoomMutation = useMutation({
-    mutationFn: endRoom,
+    mutationFn: (roomId: string) => {
+      if (!accessToken) throw new Error('authentication_required');
+      return endRoom(roomId, accessToken);
+    },
     onSuccess: async () => {
       if (userId) await queryClient.invalidateQueries({ queryKey: queryKeys.rooms(userId) });
     },

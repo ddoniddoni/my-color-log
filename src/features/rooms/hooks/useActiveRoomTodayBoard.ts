@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 import { getRoomTodayBoard } from '@/src/features/rooms/api/roomRepository';
 import { queryKeys } from '@/src/lib/query/queryKeys';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 export function useRoomTodayBoard(userId: string | null, dateKey: string, roomId: string | null) {
   const queryClient = useQueryClient();
@@ -21,6 +21,7 @@ export function useRoomTodayBoard(userId: string | null, dateKey: string, roomId
     if (!userId || !roomId) return;
 
     void refetch();
+    const supabase = getSupabaseClient();
     const channel = supabase
       .channel(`active-room-board:${roomId}:${dateKey}`)
       .on('postgres_changes', {

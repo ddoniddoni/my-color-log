@@ -3,7 +3,7 @@ import { NativeModulesProxy } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 import { getPublicEnv } from '@/src/lib/env/publicEnv';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 const ROOM_PUSH_TOKEN_STORAGE_KEY = '@mycolorlog/room-push-token/v1';
 const ROOM_ACTIVITY_CHANNEL_ID = 'room-activity';
@@ -37,7 +37,7 @@ export async function syncRoomPhotoPushNotifications(enabled: boolean): Promise<
     return 'unavailable';
   }
 
-  const { error } = await supabase.rpc('register_my_push_device', {
+  const { error } = await getSupabaseClient().rpc('register_my_push_device', {
     p_expo_push_token: expoPushToken,
     p_platform: Platform.OS,
   });
@@ -48,7 +48,7 @@ export async function syncRoomPhotoPushNotifications(enabled: boolean): Promise<
 }
 
 export async function notifyRoomPhotoUploaded(photoId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('notify-room-photo', { body: { photoId } });
+  const { error } = await getSupabaseClient().functions.invoke('notify-room-photo', { body: { photoId } });
   if (error) throw new Error('room_photo_push_enqueue_failed');
 }
 
@@ -56,7 +56,7 @@ async function disableStoredRoomPushToken(): Promise<void> {
   const token = await AsyncStorage.getItem(ROOM_PUSH_TOKEN_STORAGE_KEY);
   if (!token) return;
 
-  const { error } = await supabase.rpc('disable_my_push_device', { p_expo_push_token: token });
+  const { error } = await getSupabaseClient().rpc('disable_my_push_device', { p_expo_push_token: token });
   if (error) throw new Error('room_push_disable_failed');
   await AsyncStorage.removeItem(ROOM_PUSH_TOKEN_STORAGE_KEY);
 }

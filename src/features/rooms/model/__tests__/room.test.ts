@@ -1,4 +1,6 @@
 import { getInviteExpiryLabel, parseActiveRoomRows, parseRoomInvitePreview, parseRoomListRows, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
+import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
+import { toRoomError } from '@/src/features/rooms/model/roomRpcError';
 
 describe('room input validation', () => {
   it('normalizes and validates room names', () => {
@@ -51,5 +53,26 @@ describe('room RPC parsers', () => {
 
   it('parses the room preview before joining', () => {
     expect(parseRoomInvitePreview([{ room_id: 'room-1', room_name: '색수집단', room_emoji: null, owner_nickname: '도니', member_count: 1, max_members: 6, expires_at: '2026-07-18T00:00:00.000Z' }])).toEqual(expect.objectContaining({ memberCount: 1, roomName: '색수집단' }));
+  });
+});
+
+describe('room RPC errors', () => {
+  it('keeps the owner-only error distinct from a missing session', () => {
+    expect(toRoomError({ code: '42501', message: 'room_owner_required' }).message).toBe('room_owner_required');
+    expect(getRoomErrorMessage(new Error('room_owner_required'))).toBe('방장만 방을 종료할 수 있어요. 방장 권한을 다시 확인해 주세요.');
+  });
+
+  it('maps a real authentication error after known room errors', () => {
+    expect(toRoomError({ code: '42501', message: 'authentication_required' }).message).toBe('authentication_required');
+  });
+
+  it('explains when the selected room is no longer active', () => {
+    expect(toRoomError({ code: 'P0001', message: 'room_not_found' }).message).toBe('room_not_found');
+    expect(getRoomErrorMessage(new Error('room_not_found'))).toBe('이 방을 더 이상 찾을 수 없어요. 친구방 목록에서 다시 확인해 주세요.');
+  });
+
+  it('keeps a missing end-room execute grant distinct from a missing session', () => {
+    expect(toRoomError({ code: '42501', message: 'permission denied for function end_room' }).message).toBe('room_end_execute_forbidden');
+    expect(getRoomErrorMessage(new Error('room_end_execute_forbidden'))).toBe('방 종료 권한을 준비하지 못했어요. 앱을 다시 연 뒤 한 번 더 시도해 주세요.');
   });
 });

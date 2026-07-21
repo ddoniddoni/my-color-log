@@ -1,33 +1,40 @@
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { type Session } from '@supabase/supabase-js';
 
-import { getStoredSession } from '@/src/features/auth/api/authRepository';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 type SessionState = { status: 'loading' } | { status: 'ready'; session: Session | null } | { status: 'error' };
 type SessionBootstrap = SessionState & { retry: () => void };
 
+const SessionBootstrapContext = createContext<SessionBootstrap | null>(null);
+
+export function SessionBootstrapProvider({ children }: PropsWithChildren) {
+  const sessionBootstrap = useSessionBootstrapState();
+
+  return createElement(SessionBootstrapContext.Provider, { value: sessionBootstrap }, children);
+}
+
 export function useSessionBootstrap(): SessionBootstrap {
+  const sessionBootstrap = useContext(SessionBootstrapContext);
+  if (!sessionBootstrap) throw new Error('session_bootstrap_provider_missing');
+  return sessionBootstrap;
+}
+
+function useSessionBootstrapState(): SessionBootstrap {
   const [state, setState] = useState<SessionState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let isMounted = true;
-    const loadSession = async (): Promise<void> => {
-      try {
-        const session = await getStoredSession();
-        if (isMounted) setState({ status: 'ready', session });
-      } catch {
-        if (isMounted) setState({ status: 'error' });
-      }
-    };
+    let isCancelled = false;
+    const supabase = getSupabaseClient();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) setState({ status: 'ready', session });
+      if (!isCancelled) {
+        setState({ status: 'ready', session });
+      }
     });
 
-    void loadSession();
     return () => {
-      isMounted = false;
+      isCancelled = true;
       listener.subscription.unsubscribe();
     };
   }, [attempt]);

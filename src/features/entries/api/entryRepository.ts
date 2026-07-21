@@ -5,10 +5,11 @@ import { notifyRoomPhotoUploaded } from '@/src/features/notifications/api/roomPu
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { getQueuedPhoto } from '@/src/features/sync/queue/photoQueue';
 import { shareEntryToActiveRoom } from '@/src/features/rooms/api/roomRepository';
-import { supabase } from '@/src/lib/supabase/client';
+import { getSupabaseClient } from '@/src/lib/supabase/client';
 import { ENTRY_PHOTO_BUCKET, getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 
 export async function getDailyEntry(userId: string, dateKey: string): Promise<DailyEntry | null> {
+  const supabase = getSupabaseClient();
   const { data: entry, error: entryError } = await supabase
     .from('daily_entries')
     .select('id, user_id, mission_id, date_key, note')
@@ -38,6 +39,7 @@ type SyncPendingPhotoResult = {
 };
 
 export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPendingPhotoResult> {
+  const supabase = getSupabaseClient();
   const localFile = new File(photo.localUri);
   if (!localFile.exists) throw new Error('local_photo_missing');
 
@@ -94,19 +96,19 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
 }
 
 export async function deleteMyEntryPhotoRecord(photoId: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('delete_my_entry_photo', { p_photo_id: photoId });
+  const { data, error } = await getSupabaseClient().rpc('delete_my_entry_photo', { p_photo_id: photoId });
   if (error) throw new Error('entry_photo_delete_failed');
   return readDeletedStoragePath(data);
 }
 
 export async function removeEntryPhotoObject(storagePath: string): Promise<void> {
-  const { error } = await supabase.storage.from(ENTRY_PHOTO_BUCKET).remove([storagePath]);
+  const { error } = await getSupabaseClient().storage.from(ENTRY_PHOTO_BUCKET).remove([storagePath]);
   if (error) throw new Error('entry_photo_storage_delete_failed');
 }
 
 export async function reorderMyEntryPhotos(updates: readonly { photoId: string; position: number }[]): Promise<void> {
   if (updates.length === 0) return;
-  const { error } = await supabase.rpc('reorder_my_entry_photos', {
+  const { error } = await getSupabaseClient().rpc('reorder_my_entry_photos', {
     p_photo_ids: updates.map((update) => update.photoId),
     p_positions: updates.map((update) => update.position),
   });
