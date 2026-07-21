@@ -14,6 +14,7 @@ import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
 import { type ActiveRoom, type RoomInvitePreview, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { queryKeys } from '@/src/lib/query/queryKeys';
+import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 
 const MAX_ACTIVE_ROOMS = 3;
 
@@ -32,6 +33,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const accessToken = sessionState.status === 'ready' ? sessionState.session?.access_token ?? null : null;
+  const timeZone = useDeviceTimeZone();
   const roomsQuery = useMyRooms(userId);
   const [isCreateVisible, setIsCreateVisible] = useState(false);
   const [roomName, setRoomName] = useState('');
@@ -53,7 +55,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
       if (!nameValidation.isValid) throw new Error('room_name_invalid');
       const emojiValidation = validateRoomEmoji(roomEmoji);
       if (!emojiValidation.isValid) throw new Error('room_emoji_invalid');
-      return createRoom(nameValidation.value, emojiValidation.value);
+      return createRoom(nameValidation.value, emojiValidation.value, timeZone);
     },
     onSuccess: async (room) => {
       setIsCreateVisible(false);

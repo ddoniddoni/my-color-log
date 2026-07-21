@@ -1,3 +1,5 @@
+import { isValidTimeZone } from '@/src/utils/dates/timezone';
+
 export type Profile = {
   id: string;
   nickname: string;
@@ -20,6 +22,7 @@ export function parseProfile(value: unknown): Profile {
 
   const nickname = validateNickname(value.nickname);
   if (!nickname.isValid) throw new Error('Invalid profile nickname');
+  if (!isValidTimeZone(value.timezone)) throw new Error('Invalid profile timezone');
 
   return { id: value.id, nickname: nickname.value, timezone: value.timezone, isOnboarded: value.is_onboarded };
 }

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -9,15 +9,6 @@ import { colors } from '@/src/design/tokens';
 import { RoomPhotoReactionBar } from '@/src/features/reactions/components/RoomPhotoReactionBar';
 import { type RoomBoardMember, type RoomBoardMission } from '@/src/features/rooms/model/roomTodayBoard';
 
-const photoDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: '2-digit',
-  hour: '2-digit',
-  hour12: false,
-  minute: '2-digit',
-  month: '2-digit',
-  timeZone: 'Asia/Seoul',
-});
-
 type RoomMemberPhotoViewerProps = {
   currentUserId: string | null;
   initialPhotoId: string | null;
@@ -25,9 +16,18 @@ type RoomMemberPhotoViewerProps = {
   mission: RoomBoardMission | null;
   onClose: () => void;
   roomId: string | null;
+  timeZone: string;
 };
 
-export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, mission, onClose, roomId }: RoomMemberPhotoViewerProps) {
+export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, mission, onClose, roomId, timeZone }: RoomMemberPhotoViewerProps) {
+  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat('ko-KR', {
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    month: '2-digit',
+    timeZone,
+  }), [timeZone]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(() => (
     member?.photos.some((photo) => photo.id === initialPhotoId) ? initialPhotoId : member?.photos[0]?.id ?? null
   ));
@@ -63,7 +63,7 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
             <View style={styles.colorLine}><View style={[styles.colorDot, { backgroundColor: mission.colorHex }]} /><AppText numberOfLines={2} style={styles.colorName}>{mission.colorNameKo} · {mission.colorNameEn}</AppText></View>
             <AppText style={styles.position}>{selectedIndex + 1} / {member.photos.length}</AppText>
           </View>
-          <AppText style={styles.date}>{photoDateFormatter.format(new Date(photo.capturedAt)).replace(/\.$/, '')}</AppText>
+          <AppText style={styles.date}>{formatPhotoDate(photo.capturedAt, photoDateFormatter)}</AppText>
           <View style={styles.divider} />
           <AppText style={styles.memoLabel}>MEMO</AppText>
           <AppText style={styles.memo}>{photo.caption ?? '남긴 메모가 없어요.'}</AppText>
@@ -73,6 +73,10 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
       </ScrollView>
     </AppModal>
   );
+}
+
+function formatPhotoDate(value: string, formatter: Intl.DateTimeFormat): string {
+  return formatter.format(new Date(value)).replace(/\.$/, '');
 }
 
 function CloseIcon() {

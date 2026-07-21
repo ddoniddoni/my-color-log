@@ -14,13 +14,13 @@ import { getSupabaseClient } from '@/src/lib/supabase/client';
 import { getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 
 export async function getMyRooms(): Promise<ActiveRoom[]> {
-  const { data, error } = await getSupabaseClient().rpc('get_my_rooms');
+  const { data, error } = await getSupabaseClient().rpc('get_my_rooms_v2');
   if (error) throw new Error('room_list_fetch_failed');
   return parseRoomListRows(data);
 }
 
 export async function getRoom(roomId: string): Promise<ActiveRoom | null> {
-  const { data, error } = await getSupabaseClient().rpc('get_room', { p_room_id: roomId });
+  const { data, error } = await getSupabaseClient().rpc('get_room_v2', { p_room_id: roomId });
   if (error) throw new Error('room_fetch_failed');
   const rooms = parseRoomListRows(data);
   if (rooms.length > 1) throw new Error('room_fetch_failed');
@@ -50,9 +50,12 @@ export async function getRoomDayBoard(roomId: string, dateKey: string): Promise<
   return parseRoomTodayBoardRows(data, signedUrlByPath);
 }
 
-export async function createRoom(name: string, emoji: string | null): Promise<CreatedRoom> {
-  const parameters = emoji === null ? { p_name: name } : { p_emoji: emoji, p_name: name };
-  const { data, error } = await getSupabaseClient().rpc('create_room_with_invite', parameters);
+export async function createRoom(name: string, emoji: string | null, timeZone: string): Promise<CreatedRoom> {
+  const { data, error } = await getSupabaseClient().rpc('create_room_with_invite_v2', {
+    p_emoji: emoji,
+    p_name: name,
+    p_timezone: timeZone,
+  });
   if (error) {
     logError('room_create_failed', {
       code: error.code,

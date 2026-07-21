@@ -32,18 +32,18 @@ describe('room input validation', () => {
 describe('room RPC parsers', () => {
   it('groups active room member rows into one room', () => {
     const room = parseActiveRoomRows([
-      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-17T00:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
-      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', max_members: 6, member_user_id: 'user-2', member_nickname: '친구', member_role: 'member', member_joined_at: '2026-07-17T01:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
+      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-17T00:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
+      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-2', member_nickname: '친구', member_role: 'member', member_joined_at: '2026-07-17T01:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
     ]);
 
-    expect(room).toEqual(expect.objectContaining({ id: 'room-1', inviteCode: '012345', members: [expect.objectContaining({ nickname: '도니' }), expect.objectContaining({ nickname: '친구' })] }));
+    expect(room).toEqual(expect.objectContaining({ id: 'room-1', inviteCode: '012345', members: [expect.objectContaining({ nickname: '도니' }), expect.objectContaining({ nickname: '친구' })], timeZone: 'Asia/Seoul' }));
   });
 
   it('groups multiple rooms for the friend room list', () => {
     const rooms = parseRoomListRows([
-      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-17T00:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
-      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', max_members: 6, member_user_id: 'user-2', member_nickname: '친구', member_role: 'member', member_joined_at: '2026-07-17T01:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
-      { room_id: 'room-2', room_name: '주말 산책', room_emoji: null, room_status: 'draft', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-18T00:00:00.000Z', invite_code: '987654', invite_expires_at: '2026-07-19T00:00:00.000Z' },
+      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-17T00:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
+      { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-2', member_nickname: '친구', member_role: 'member', member_joined_at: '2026-07-17T01:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
+      { room_id: 'room-2', room_name: '주말 산책', room_emoji: null, room_status: 'draft', room_timezone: 'America/Los_Angeles', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-18T00:00:00.000Z', invite_code: '987654', invite_expires_at: '2026-07-19T00:00:00.000Z' },
     ]);
 
     expect(rooms).toHaveLength(2);

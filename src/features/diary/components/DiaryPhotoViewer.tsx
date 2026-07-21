@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -7,25 +8,27 @@ import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
 
-const photoDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: '2-digit',
-  hour: '2-digit',
-  hour12: false,
-  minute: '2-digit',
-  month: '2-digit',
-  timeZone: 'Asia/Seoul',
-  year: 'numeric',
-});
-
 type DiaryPhotoViewerProps = {
   entry: DiaryEntry | null;
+  isDeleting: boolean;
   selectedPhotoId: string | null;
   onClose: () => void;
+  onDeletePhoto: (photo: DiaryPhoto) => void;
   onEditPhoto: (photo: DiaryPhoto) => void;
   onSelectPhoto: (photoId: string) => void;
+  timeZone: string;
 };
 
-export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto, onSelectPhoto }: DiaryPhotoViewerProps) {
+export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, onDeletePhoto, onEditPhoto, onSelectPhoto, timeZone }: DiaryPhotoViewerProps) {
+  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat('ko-KR', {
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    month: '2-digit',
+    timeZone,
+    year: 'numeric',
+  }), [timeZone]);
   const selectedIndex = entry?.photos.findIndex((photo) => photo.id === selectedPhotoId) ?? -1;
   const photo = selectedIndex >= 0 && entry ? entry.photos[selectedIndex] : null;
   const previousPhoto = selectedIndex > 0 && entry ? entry.photos[selectedIndex - 1] : null;
@@ -38,16 +41,16 @@ export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto,
       <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.photoSection}>
               <Image accessibilityLabel={`${entry.color.nameKo} 사진`} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
-              <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" hitSlop={10} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
-              {previousPhoto ? <Pressable accessibilityLabel="이전 사진" accessibilityRole="button" onPress={() => onSelectPhoto(previousPhoto.id)} style={[styles.photoNav, styles.previousButton]}><Chevron direction="left" /></Pressable> : null}
-              {nextPhoto ? <Pressable accessibilityLabel="다음 사진" accessibilityRole="button" onPress={() => onSelectPhoto(nextPhoto.id)} style={[styles.photoNav, styles.nextButton]}><Chevron direction="right" /></Pressable> : null}
+              <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} hitSlop={10} onPress={onClose} style={[styles.closeButton, isDeleting && styles.disabledAction]}><CloseIcon /></Pressable>
+              {previousPhoto ? <Pressable accessibilityLabel="이전 사진" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(previousPhoto.id)} style={[styles.photoNav, styles.previousButton, isDeleting && styles.disabledAction]}><Chevron direction="left" /></Pressable> : null}
+              {nextPhoto ? <Pressable accessibilityLabel="다음 사진" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(nextPhoto.id)} style={[styles.photoNav, styles.nextButton, isDeleting && styles.disabledAction]}><Chevron direction="right" /></Pressable> : null}
             </View>
 
             <View style={styles.metaSection}>
               <View style={styles.metaHeader}>
                 <View>
                   <AppText style={styles.metaLabel}>DATE & TIME</AppText>
-                  <AppText style={styles.dateValue}>{formatPhotoDate(photo.capturedAt)}</AppText>
+                  <AppText style={styles.dateValue}>{formatPhotoDate(photo.capturedAt, photoDateFormatter)}</AppText>
                 </View>
                 <AppText style={styles.positionValue}>{selectedIndex + 1} / {entry.photos.length}</AppText>
               </View>
@@ -57,8 +60,8 @@ export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto,
               <View style={styles.divider} />
               <View style={styles.colorRow}><View style={[styles.colorDot, { backgroundColor: entry.color.accent }]} /><AppText style={styles.colorText}>{entry.color.nameKo} · {entry.color.nameEn}</AppText></View>
               <View style={styles.actions}>
-                <Pressable accessibilityLabel="사진 메모 수정" accessibilityRole="button" onPress={() => onEditPhoto(photo)} style={styles.editAction}><AppText style={styles.editActionText}>메모 수정</AppText></Pressable>
-                <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" onPress={onClose} style={styles.closeAction}><AppText style={styles.closeActionText}>CLOSE</AppText></Pressable>
+                <Pressable accessibilityLabel="사진 메모 수정" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onEditPhoto(photo)} style={[styles.editAction, isDeleting && styles.disabledAction]}><AppText style={styles.editActionText}>메모 수정</AppText></Pressable>
+                <Pressable accessibilityLabel="이 사진 삭제" accessibilityRole="button" accessibilityState={{ busy: isDeleting, disabled: isDeleting }} disabled={isDeleting} onPress={() => onDeletePhoto(photo)} style={[styles.deleteAction, isDeleting && styles.disabledAction]}><AppText style={styles.deleteActionText}>{isDeleting ? '삭제 중…' : '사진 삭제'}</AppText></Pressable>
               </View>
             </View>
       </ScrollView>
@@ -66,8 +69,8 @@ export function DiaryPhotoViewer({ entry, selectedPhotoId, onClose, onEditPhoto,
   );
 }
 
-function formatPhotoDate(value: string): string {
-  return photoDateFormatter.format(new Date(value)).replace(/\.$/, '').replace(/\s/g, ' ');
+function formatPhotoDate(value: string, formatter: Intl.DateTimeFormat): string {
+  return formatter.format(new Date(value)).replace(/\.$/, '').replace(/\s/g, ' ');
 }
 
 function CloseIcon() {
@@ -103,6 +106,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   editAction: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 46 },
   editActionText: { color: colors.ink, fontSize: 12, fontWeight: '700' },
-  closeAction: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', flex: 1, justifyContent: 'center', minHeight: 46 },
-  closeActionText: { color: colors.white, fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
+  deleteAction: { alignItems: 'center', backgroundColor: '#FFF7F6', borderColor: colors.danger, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 46 },
+  deleteActionText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
+  disabledAction: { opacity: 0.42 },
 });

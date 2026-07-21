@@ -1,4 +1,4 @@
-import { getDiaryEntryMemo, parseDiaryMonthRows } from '@/src/features/diary/model/diaryMonth';
+import { getDiaryEntryMemo, parseDiaryMonthRows, removeDiaryPhoto } from '@/src/features/diary/model/diaryMonth';
 
 const colorFields = {
   color_id: 'color-id',
@@ -16,10 +16,12 @@ describe('parseDiaryMonthRows', () => {
     const rows = [
       {
         entry_id: 'entry-1', mission_id: 'mission-1', date_key: '2026-07-17', note: null, ...colorFields,
+        shared_rooms: [{ can_open: true, emoji: '🎨', id: 'room-1', name: '퇴근길 색수집단' }],
         photo_id: 'photo-1', storage_path: 'user/2026-07-17/photo-1.jpg', photo_position: 1, photo_caption: '첫 장면', captured_at: '2026-07-17T01:00:00.000Z', width: 1200, height: 900, byte_size: 1024,
       },
       {
         entry_id: 'entry-1', mission_id: 'mission-1', date_key: '2026-07-17', note: null, ...colorFields,
+        shared_rooms: [{ can_open: true, emoji: '🎨', id: 'room-1', name: '퇴근길 색수집단' }],
         photo_id: 'photo-2', storage_path: 'user/2026-07-17/photo-2.jpg', photo_position: 2, photo_caption: null, captured_at: '2026-07-17T02:00:00.000Z', width: 1200, height: 900, byte_size: 1024,
       },
     ];
@@ -30,7 +32,11 @@ describe('parseDiaryMonthRows', () => {
     ]));
 
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ dateKey: '2026-07-17', color: { nameKo: '살구 오렌지' } });
+    expect(entries[0]).toMatchObject({
+      dateKey: '2026-07-17',
+      color: { nameKo: '살구 오렌지' },
+      sharedRooms: [{ canOpen: true, emoji: '🎨', id: 'room-1', name: '퇴근길 색수집단' }],
+    });
     expect(entries[0].photos).toEqual([
       expect.objectContaining({ id: 'photo-1', signedUrl: 'https://signed.example/photo-1', caption: '첫 장면' }),
       expect.objectContaining({ id: 'photo-2', signedUrl: 'https://signed.example/photo-2' }),
@@ -41,6 +47,7 @@ describe('parseDiaryMonthRows', () => {
   it('keeps an entry without a remote photo row as an empty day', () => {
     const rows = [{
       entry_id: 'entry-2', mission_id: 'mission-2', date_key: '2026-07-16', note: '아직 업로드 대기', ...colorFields,
+      shared_rooms: [],
       photo_id: null, storage_path: null, photo_position: null, photo_caption: null, captured_at: null, width: null, height: null, byte_size: null,
     }];
 
@@ -48,5 +55,21 @@ describe('parseDiaryMonthRows', () => {
 
     expect(entries).toEqual([expect.objectContaining({ dateKey: '2026-07-16', note: '아직 업로드 대기', photos: [] })]);
     expect(getDiaryEntryMemo(entries[0])).toBe('아직 업로드 대기');
+  });
+
+  it('removes a diary photo and compacts the remaining positions', () => {
+    const rows = [1, 2, 3].map((position) => ({
+      entry_id: 'entry-1', mission_id: 'mission-1', date_key: '2026-07-17', note: null, ...colorFields,
+      shared_rooms: [],
+      photo_id: `photo-${position}`, storage_path: `user/2026-07-17/photo-${position}.jpg`, photo_position: position, photo_caption: null, captured_at: '2026-07-17T01:00:00.000Z', width: 1200, height: 900, byte_size: 1024,
+    }));
+    const [entry] = parseDiaryMonthRows(rows, new Map());
+
+    const result = removeDiaryPhoto(entry, 'photo-2');
+
+    expect(result.photos.map(({ id, position }) => ({ id, position }))).toEqual([
+      { id: 'photo-1', position: 1 },
+      { id: 'photo-3', position: 2 },
+    ]);
   });
 });

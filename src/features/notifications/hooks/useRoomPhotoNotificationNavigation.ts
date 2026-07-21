@@ -3,7 +3,8 @@ import { useRootNavigationState, useRouter } from 'expo-router';
 import { NativeModulesProxy } from 'expo-modules-core';
 
 import { parseRoomPhotoNotificationRoute } from '@/src/features/notifications/model/roomPhotoNotificationRoute';
-import { getKstDateKey } from '@/src/utils/dates/kst';
+import { getRoom } from '@/src/features/rooms/api/roomRepository';
+import { getDateKeyInTimeZone } from '@/src/utils/dates/timezone';
 
 type ExpoNotifications = typeof import('expo-notifications');
 type NotificationResponse = import('expo-notifications').NotificationResponse;
@@ -29,7 +30,8 @@ export function useRoomPhotoNotificationNavigation(userId: string | null): void 
       await notifications.clearLastNotificationResponseAsync();
       if (!isActive) return;
 
-      if (route.dateKey === getKstDateKey()) {
+      const room = await getRoom(route.roomId).catch(() => null);
+      if (room && route.dateKey === getDateKeyInTimeZone(new Date(), room.timeZone)) {
         router.push({ pathname: '/room/[roomId]', params: { photoId: route.photoId, roomId: route.roomId } });
         return;
       }

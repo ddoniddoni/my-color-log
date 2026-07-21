@@ -9,14 +9,26 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data ? parseProfile(data) : null;
 }
 
-export async function completeProfile(userId: string, nickname: string): Promise<Profile> {
+export async function completeProfile(userId: string, nickname: string, timeZone: string): Promise<Profile> {
   const { data, error } = await getSupabaseClient()
     .from('profiles')
-    .upsert({ id: userId, nickname, timezone: 'Asia/Seoul', is_onboarded: true }, { onConflict: 'id' })
+    .upsert({ id: userId, nickname, timezone: timeZone, is_onboarded: true }, { onConflict: 'id' })
     .select(profileColumns)
     .single();
 
   if (error) throw new Error('profile_save_failed');
+  return parseProfile(data);
+}
+
+export async function updateProfileTimeZone(userId: string, timeZone: string): Promise<Profile> {
+  const { data, error } = await getSupabaseClient()
+    .from('profiles')
+    .update({ timezone: timeZone })
+    .eq('id', userId)
+    .select(profileColumns)
+    .maybeSingle();
+
+  if (error || !data) throw new Error('profile_timezone_update_failed');
   return parseProfile(data);
 }
 

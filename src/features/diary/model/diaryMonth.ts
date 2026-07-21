@@ -19,6 +19,13 @@ export type DiaryPhoto = {
   signedUrl: string | null;
 };
 
+export type DiarySharedRoom = {
+  canOpen: boolean;
+  emoji: string | null;
+  id: string;
+  name: string;
+};
+
 export type DiaryEntry = {
   id: string;
   missionId: string;
@@ -26,10 +33,20 @@ export type DiaryEntry = {
   note: string | null;
   color: DiaryColor;
   photos: DiaryPhoto[];
+  sharedRooms: DiarySharedRoom[];
 };
 
 export function getDiaryEntryMemo(entry: DiaryEntry): string {
   return entry.note ?? entry.photos.find((photo) => photo.caption)?.caption ?? `${entry.color.nameKo}을 발견한 오늘의 장면이에요.`;
+}
+
+export function removeDiaryPhoto(entry: DiaryEntry, photoId: string): DiaryEntry {
+  const photos = entry.photos
+    .filter((photo) => photo.id !== photoId)
+    .sort((left, right) => left.position - right.position)
+    .map((photo, index) => ({ ...photo, position: index + 1 }));
+
+  return { ...entry, photos };
 }
 
 export function parseDiaryMonthRows(value: unknown, signedUrlByPath: Map<string, string>): DiaryEntry[] {
@@ -46,6 +63,7 @@ export function parseDiaryMonthRows(value: unknown, signedUrlByPath: Map<string,
       note: row.note,
       color: row.color,
       photos: [],
+      sharedRooms: row.sharedRooms,
     };
     if (!existing) entriesById.set(entry.id, entry);
     if (row.photo) entry.photos.push({ ...row.photo, signedUrl: signedUrlByPath.get(row.photo.storagePath) ?? null });
@@ -61,6 +79,7 @@ type ParsedEntryRow = {
   note: string | null;
   color: DiaryColor;
   photo: Omit<DiaryPhoto, 'signedUrl'> | null;
+  sharedRooms: DiarySharedRoom[];
 };
 
 function parseEntryRow(value: unknown): ParsedEntryRow {
@@ -81,7 +100,21 @@ function parseEntryRow(value: unknown): ParsedEntryRow {
       onAccent: readString(value, 'color_on_color_hex'),
     },
     photo: parsePhoto(value),
+    sharedRooms: parseSharedRooms(value.shared_rooms),
   };
+}
+
+function parseSharedRooms(value: unknown): DiarySharedRoom[] {
+  if (!Array.isArray(value)) throw new Error('invalid_diary_month_response');
+  return value.map((item) => {
+    if (!isRecord(item) || typeof item.can_open !== 'boolean') throw new Error('invalid_diary_month_response');
+    return {
+      canOpen: item.can_open,
+      emoji: readNullableString(item, 'emoji'),
+      id: readString(item, 'id'),
+      name: readString(item, 'name'),
+    };
+  });
 }
 
 function parsePhoto(value: Record<string, unknown>): Omit<DiaryPhoto, 'signedUrl'> | null {

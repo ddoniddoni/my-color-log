@@ -5,7 +5,7 @@ import { getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 export async function getDiaryMonth(monthKey: string): Promise<DiaryEntry[]> {
   if (!/^\d{4}-\d{2}$/.test(monthKey)) throw new Error('invalid_diary_month');
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase.rpc('get_diary_month', { p_month_start: `${monthKey}-01` });
+  const { data, error } = await supabase.rpc('get_diary_month_v2', { p_month_start: `${monthKey}-01` });
   if (error || !Array.isArray(data)) throw new Error('diary_month_fetch_failed');
 
   const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));

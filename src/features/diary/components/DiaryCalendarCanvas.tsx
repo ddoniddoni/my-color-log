@@ -10,11 +10,13 @@ import {
   BricolageGrotesque_800ExtraBold,
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
-import { useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
+import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
@@ -24,12 +26,32 @@ import { DiaryEditModal, type DiaryEditTarget } from '@/src/features/diary/compo
 import { DiaryPhotoViewer } from '@/src/features/diary/components/DiaryPhotoViewer';
 import { useDiaryEdits } from '@/src/features/diary/hooks/useDiaryEdits';
 import { useDiaryMonth } from '@/src/features/diary/hooks/useDiaryMonth';
-import { getDiaryEntryMemo, type DiaryEntry } from '@/src/features/diary/model/diaryMonth';
+import { getDiaryEntryMemo, type DiaryEntry, type DiaryPhoto, type DiarySharedRoom } from '@/src/features/diary/model/diaryMonth';
 import { getCalendarCells, getSelectedDiaryDateKey, moveMonth, type MonthCursor } from '@/src/features/diary/model/calendar';
-import { getKstDateKey, isFutureKstDate } from '@/src/utils/dates/kst';
+import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
+import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { getTimeZoneDisplayName, isFutureDateInTimeZone } from '@/src/utils/dates/timezone';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+type DiaryNotice = {
+  description: string;
+  title: string;
+};
+
+type DiaryPhotoDeleteTarget = {
+  dateKey: string;
+  entryId: string;
+  photo: DiaryPhoto;
+};
+
+type DiaryOverlay =
+  | { kind: 'none' }
+  | { kind: 'photo'; photoId: string }
+  | { kind: 'edit'; target: DiaryEditTarget }
+  | { kind: 'delete'; target: DiaryPhotoDeleteTarget }
+  | { kind: 'notice'; notice: DiaryNotice };
 
 export function DiaryCalendarCanvas() {
   const [fontsLoaded] = useFonts({
@@ -38,15 +60,17 @@ export function DiaryCalendarCanvas() {
     BricolageGrotesque_800ExtraBold,
   });
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const sessionState = useSessionBootstrap();
-  const todayKey = getKstDateKey();
+  const timeZone = useDeviceTimeZone();
+  const todayKey = useTimeZoneDateKey(timeZone);
   const [todayYear, todayMonth, todayDay] = todayKey.split('-').map(Number);
   const [cursor, setCursor] = useState<MonthCursor>({ month: todayMonth, year: todayYear });
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
-  const [editTarget, setEditTarget] = useState<DiaryEditTarget | null>(null);
+  const [overlay, setOverlay] = useState<DiaryOverlay>({ kind: 'none' });
   const scrollViewRef = useRef<ScrollView>(null);
   const diarySectionTop = useRef(0);
+  const isMountedRef = useRef(true);
   const monthKey = `${cursor.year}-${String(cursor.month).padStart(2, '0')}`;
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const diaryQuery = useDiaryMonth(userId, monthKey);
@@ -61,18 +85,51 @@ export function DiaryCalendarCanvas() {
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
 
+  useEffect(() => () => {
+    isMountedRef.current = false;
+  }, []);
+
   const moveDiaryMonth = (offset: number): void => {
     setCursor((current) => moveMonth(current, offset));
     setSelectedDateKey(null);
-    setSelectedPhotoId(null);
-    setEditTarget(null);
+    setOverlay({ kind: 'none' });
   };
 
   const selectDiaryDate = (dateKey: string): void => {
     setSelectedDateKey(dateKey);
-    setSelectedPhotoId(null);
-    setEditTarget(null);
+    setOverlay({ kind: 'none' });
     scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, diarySectionTop.current - 12) });
+  };
+
+  const deleteDiaryPhoto = async (): Promise<void> => {
+    if (overlay.kind !== 'delete') return;
+    const deleteTarget = overlay.target;
+    try {
+      const result = await diaryEdits.deletePhoto(deleteTarget);
+      if (!isMountedRef.current) return;
+      if (result.storageCleanupPending) {
+        setOverlay({
+          kind: 'notice',
+          notice: {
+            description: result.willRetryStorageCleanup
+              ? '다이어리와 친구방에서는 바로 사라졌어요. 비공개 파일 정리는 연결이 안정되면 자동으로 다시 시도해요.'
+              : '다이어리와 친구방에서는 바로 사라졌지만 비공개 파일 정리를 완료하지 못했어요. 앱을 다시 연 뒤 상태를 확인해 주세요.',
+            title: '사진을 삭제했어요',
+          },
+        });
+      } else {
+        setOverlay({ kind: 'none' });
+      }
+    } catch {
+      if (!isMountedRef.current) return;
+      setOverlay({
+        kind: 'notice',
+        notice: {
+          description: '연결을 확인한 뒤 다시 시도해 주세요.',
+          title: '사진을 삭제하지 못했어요',
+        },
+      });
+    }
   };
 
   return (
@@ -147,34 +204,71 @@ export function DiaryCalendarCanvas() {
             : sessionState.status === 'error' || diaryQuery.isError
               ? <DiaryErrorCard onRetry={() => void diaryQuery.refetch()} />
               : selectedEntry
-                ? <DiaryEntryCard bodyFont={bodyFont} boldFont={boldFont} entry={selectedEntry} key={selectedEntry.id} onEditNote={() => setEditTarget({ entry: selectedEntry, kind: 'note' })} onPhotoPress={setSelectedPhotoId} />
-                : <EmptyDiaryCard bodyFont={bodyFont} boldFont={boldFont} dateKey={selectedCalendarDate} isFuture={selectedCalendarDate ? isFutureKstDate(selectedCalendarDate) : false} />}
+                ? <DiaryEntryCard
+                    bodyFont={bodyFont}
+                    boldFont={boldFont}
+                    entry={selectedEntry}
+                    key={selectedEntry.id}
+                    onEditNote={() => setOverlay({ kind: 'edit', target: { entry: selectedEntry, kind: 'note' } })}
+                    onOpenSharedRoom={(room) => {
+                      if (!room.canOpen) return;
+                      router.push({ pathname: '/room-history', params: { dateKey: selectedEntry.dateKey, roomId: room.id } });
+                    }}
+                    onPhotoPress={(photoId) => setOverlay({ kind: 'photo', photoId })}
+                    timeZone={timeZone}
+                  />
+                : <EmptyDiaryCard bodyFont={bodyFont} boldFont={boldFont} dateKey={selectedCalendarDate} isFuture={selectedCalendarDate ? isFutureDateInTimeZone(selectedCalendarDate, timeZone) : false} timeZone={timeZone} />}
         </View>
       </ScrollView>
 
       <DiaryPhotoViewer
         entry={selectedEntry}
-        onClose={() => setSelectedPhotoId(null)}
+        isDeleting={diaryEdits.isDeleting}
+        onClose={() => setOverlay({ kind: 'none' })}
+        onDeletePhoto={(photo) => {
+          if (!selectedEntry) return;
+          setOverlay({ kind: 'delete', target: { dateKey: selectedEntry.dateKey, entryId: selectedEntry.id, photo } });
+        }}
         onEditPhoto={(photo) => {
           if (!selectedEntry) return;
-          setSelectedPhotoId(null);
-          setEditTarget({ entry: selectedEntry, kind: 'caption', photo });
+          setOverlay({ kind: 'edit', target: { entry: selectedEntry, kind: 'caption', photo } });
         }}
-        onSelectPhoto={setSelectedPhotoId}
-        selectedPhotoId={selectedPhotoId}
+        onSelectPhoto={(photoId) => setOverlay({ kind: 'photo', photoId })}
+        selectedPhotoId={overlay.kind === 'photo' ? overlay.photoId : null}
+        timeZone={timeZone}
       />
       <DiaryEditModal
         isSaving={diaryEdits.isSaving}
-        onClose={() => setEditTarget(null)}
+        onClose={() => setOverlay({ kind: 'none' })}
         onSave={async (value) => {
-          if (!editTarget) return;
+          if (overlay.kind !== 'edit') return;
+          const editTarget = overlay.target;
           if (editTarget.kind === 'note') {
             await diaryEdits.updateNote({ dateKey: editTarget.entry.dateKey, entryId: editTarget.entry.id, value });
           } else {
             await diaryEdits.updateCaption({ dateKey: editTarget.entry.dateKey, entryId: editTarget.entry.id, photoId: editTarget.photo.id, value });
           }
         }}
-        target={editTarget}
+        target={overlay.kind === 'edit' ? overlay.target : null}
+      />
+      <AppConfirmationDialog
+        cancelLabel="취소"
+        confirmLabel="사진 삭제"
+        description="내 다이어리와 이 사진을 함께 본 친구방 기록에서 바로 사라져요. 이 작업은 되돌릴 수 없어요."
+        isBusy={diaryEdits.isDeleting}
+        onClose={() => setOverlay({ kind: 'none' })}
+        onConfirm={() => { void deleteDiaryPhoto(); }}
+        title="이 사진을 삭제할까요?"
+        tone="destructive"
+        visible={overlay.kind === 'delete'}
+      />
+      <AppConfirmationDialog
+        confirmLabel="확인"
+        description={overlay.kind === 'notice' ? overlay.notice.description : ''}
+        onClose={() => setOverlay({ kind: 'none' })}
+        onConfirm={() => setOverlay({ kind: 'none' })}
+        title={overlay.kind === 'notice' ? overlay.notice.title : ''}
+        visible={overlay.kind === 'notice'}
       />
     </View>
   );
@@ -193,7 +287,7 @@ function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; 
   );
 }
 
-function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onPhotoPress: (photoId: string) => void }) {
+function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoom, onPhotoPress, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onOpenSharedRoom: (room: DiarySharedRoom) => void; onPhotoPress: (photoId: string) => void; timeZone: string }) {
   const photoCount = entry.photos.length;
   const [isCollageVisible, setIsCollageVisible] = useState(false);
   const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
@@ -210,7 +304,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
   return (
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
-        <AppText style={styles.timestamp}>{entry.dateKey} · KST</AppText>
+        <AppText style={styles.timestamp}>{entry.dateKey} · {getTimeZoneDisplayName(timeZone)}</AppText>
         <View accessible accessibilityLabel={`${entry.color.nameKo} 색`} accessibilityRole="image" style={[styles.colorBadge, { backgroundColor: entry.color.accent }]} />
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{entry.color.nameKo}</AppText>
@@ -230,6 +324,33 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
         <View style={styles.tag}><AppText style={styles.tagLabel}>#{entry.color.nameEn.replaceAll(' ', '').toLowerCase()}</AppText></View>
         <View style={styles.tag}><AppText style={styles.tagLabel}>#{photoCount}photos</AppText></View>
       </View>
+      {entry.sharedRooms.length > 0 ? (
+        <View style={styles.sharedRoomsSection}>
+          <AppText style={styles.sharedRoomsEyebrow}>SHARED ROOM</AppText>
+          <AppText style={[styles.sharedRoomsTitle, { fontFamily: boldFont }]}>친구방에서 함께 본 이날</AppText>
+          <View style={styles.sharedRoomsList}>
+            {entry.sharedRooms.map((room) => (
+              <Pressable
+                accessibilityLabel={`${room.name}${room.canOpen ? '의 이날 기록 보기' : ', 지금은 열 수 없는 친구방'}`}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !room.canOpen }}
+                disabled={!room.canOpen}
+                key={room.id}
+                onPress={() => onOpenSharedRoom(room)}
+                style={({ pressed }) => [styles.sharedRoomItem, !room.canOpen && styles.sharedRoomItemDisabled, pressed && styles.sharedRoomItemPressed]}>
+                <View style={styles.sharedRoomCopy}>
+                  <AppText style={styles.sharedRoomEmoji}>{room.emoji ?? '○'}</AppText>
+                  <View style={styles.sharedRoomTextGroup}>
+                    <AppText numberOfLines={1} style={styles.sharedRoomName}>{room.name}</AppText>
+                    <AppText style={styles.sharedRoomStatus}>{room.canOpen ? '함께 기록한 사진 보기' : '공유가 종료된 방'}</AppText>
+                  </View>
+                </View>
+                <AppText style={[styles.sharedRoomArrow, !room.canOpen && styles.sharedRoomArrowDisabled]}>{room.canOpen ? '→' : '—'}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <Pressable accessibilityLabel="오늘의 메모 수정" accessibilityRole="button" onPress={onEditNote} style={styles.noteEditAction}>
         <AppText style={styles.noteEditActionText}>{entry.note ? '오늘의 메모 수정' : '오늘의 메모 쓰기'}</AppText>
         <AppText style={styles.noteEditArrow}>→</AppText>
@@ -239,7 +360,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
   );
 }
 
-function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture }: { bodyFont: string | undefined; boldFont: string | undefined; dateKey: string | null; isFuture: boolean }) {
+function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; dateKey: string | null; isFuture: boolean; timeZone: string }) {
   const title = dateKey ? isFuture ? '아직 오지 않은 날이에요' : '아직 기록이 없어요' : '이번 달 첫 기록';
   const description = dateKey
     ? isFuture
@@ -250,7 +371,7 @@ function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture }: { bodyFont: s
   return (
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
-        <AppText style={styles.timestamp}>{dateKey ? `${dateKey} · KST` : 'EMPTY PAGE'}</AppText>
+        <AppText style={styles.timestamp}>{dateKey ? `${dateKey} · ${getTimeZoneDisplayName(timeZone)}` : 'EMPTY PAGE'}</AppText>
         <View accessible accessibilityLabel="기록 별표" accessibilityRole="image"><StarIcon /></View>
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{title}</AppText>
@@ -375,6 +496,20 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', gap: 8, marginTop: 14 },
   tag: { borderColor: colors.black, borderWidth: 1.5, paddingHorizontal: 11, paddingVertical: 5 },
   tagLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
+  sharedRoomsSection: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, gap: 8, marginTop: 16, paddingTop: 16 },
+  sharedRoomsEyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.8, lineHeight: 12 },
+  sharedRoomsTitle: { color: colors.black, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  sharedRoomsList: { gap: 8 },
+  sharedRoomItem: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 62, paddingHorizontal: 12, paddingVertical: 9 },
+  sharedRoomItemDisabled: { backgroundColor: '#F7F7F5', borderColor: '#B8B8B3', borderStyle: 'dashed' },
+  sharedRoomItemPressed: { opacity: 0.68 },
+  sharedRoomCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10 },
+  sharedRoomEmoji: { color: colors.black, fontSize: 20, lineHeight: 26, textAlign: 'center', width: 28 },
+  sharedRoomTextGroup: { flex: 1 },
+  sharedRoomName: { color: colors.black, fontSize: 12, fontWeight: '800', lineHeight: 17 },
+  sharedRoomStatus: { color: '#5D5F5F', fontSize: 10, lineHeight: 15 },
+  sharedRoomArrow: { color: colors.black, fontSize: 18, lineHeight: 22, marginLeft: 8 },
+  sharedRoomArrowDisabled: { color: '#858585' },
   collageExportAction: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, marginTop: 16, minHeight: 62, paddingHorizontal: 12 },
   collageExportTitle: { color: colors.black, fontSize: 13, fontWeight: '800' },
   collageExportDescription: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 10, lineHeight: 15, marginTop: 2 },
