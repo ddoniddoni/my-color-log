@@ -57,8 +57,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:db:account-deletion": "npx supabase db query --linked --file supabase/tests/account_deletion_contract.sql",
-    "test:db:security": "npx supabase db query --linked --file supabase/tests/rls_security_contract.sql",
+    "test:db:account-deletion": "npx --yes supabase@latest db query --linked --file supabase/tests/account_deletion_contract.sql",
+    "test:db:diary-management": "npx --yes supabase@latest db query --linked --file supabase/tests/diary_management_contract.sql",
+    "test:db:security": "npx --yes supabase@latest db query --linked --file supabase/tests/rls_security_contract.sql",
+    "test:db:timezones": "npx --yes supabase@latest db query --linked --file supabase/tests/global_timezones_contract.sql",
     "test:watch": "jest --watch",
     "check": "npm run typecheck && npm run lint && npm test"
   },

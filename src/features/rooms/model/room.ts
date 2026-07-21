@@ -1,3 +1,5 @@
+import { isValidTimeZone } from '@/src/utils/dates/timezone';
+
 export type RoomMember = {
   id: string;
   nickname: string;
@@ -10,6 +12,7 @@ export type ActiveRoom = {
   name: string;
   emoji: string | null;
   status: 'active' | 'draft';
+  timeZone: string;
   maxMembers: number;
   members: RoomMember[];
   inviteCode: string | null;
@@ -92,6 +95,7 @@ export function parseRoomListRows(value: unknown): ActiveRoom[] {
         existing.name !== row.roomName
         || existing.emoji !== row.roomEmoji
         || existing.status !== row.roomStatus
+        || existing.timeZone !== row.roomTimeZone
         || existing.maxMembers !== row.maxMembers
         || existing.inviteCode !== row.inviteCode
         || existing.inviteExpiresAt !== row.inviteExpiresAt
@@ -122,6 +126,7 @@ export function parseRoomListRows(value: unknown): ActiveRoom[] {
       }],
       name: row.roomName,
       status: row.roomStatus,
+      timeZone: row.roomTimeZone,
     });
   }
 
@@ -160,6 +165,7 @@ type ActiveRoomRow = {
   roomName: string;
   roomEmoji: string | null;
   roomStatus: 'active' | 'draft';
+  roomTimeZone: string;
   maxMembers: number;
   memberId: string;
   memberNickname: string;
@@ -188,6 +194,7 @@ function parseActiveRoomRow(value: unknown): ActiveRoomRow {
     roomId: readString(row, 'room_id'),
     roomName: readString(row, 'room_name'),
     roomStatus,
+    roomTimeZone: readTimeZone(row, 'room_timezone'),
   };
 }
 
@@ -207,6 +214,12 @@ function readNullableString(value: Record<string, unknown>, key: string): string
   if (field === null) return null;
   if (typeof field !== 'string') throw new Error('invalid_room_response');
   return field;
+}
+
+function readTimeZone(value: Record<string, unknown>, key: string): string {
+  const timeZone = readString(value, key);
+  if (!isValidTimeZone(timeZone)) throw new Error('invalid_room_response');
+  return timeZone;
 }
 
 function readMemberLimit(value: Record<string, unknown>, key: string): number {

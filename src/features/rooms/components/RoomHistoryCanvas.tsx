@@ -25,9 +25,11 @@ import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstr
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
 import { useRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoard';
 import { useRoomHistory } from '@/src/features/rooms/hooks/useActiveRoomHistory';
+import { useRoom } from '@/src/features/rooms/hooks/useRoom';
 import { type RoomHistoryDay } from '@/src/features/rooms/model/roomHistory';
 import { type RoomBoardMember, type RoomBoardPhoto } from '@/src/features/rooms/model/roomTodayBoard';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
+import { DEFAULT_TIME_ZONE } from '@/src/utils/dates/timezone';
 
 type RoomBoardPhotoSelection = {
   memberId: string;
@@ -37,7 +39,7 @@ type RoomBoardPhotoSelection = {
 const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
   day: 'numeric',
   month: 'short',
-  timeZone: 'Asia/Seoul',
+  timeZone: 'UTC',
   weekday: 'short',
 });
 
@@ -51,6 +53,8 @@ export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { 
   const router = useRouter();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  const roomQuery = useRoom(userId, roomId);
+  const roomTimeZone = roomQuery.data?.timeZone ?? DEFAULT_TIME_ZONE;
   const historyQuery = useRoomHistory(userId, roomId);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(initialDateKey ?? null);
   const effectiveDateKey = selectedDateKey ?? historyQuery.data?.[0]?.dateKey ?? null;
@@ -183,6 +187,7 @@ export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { 
           setPhotoSelection(null);
         }}
         roomId={roomId}
+        timeZone={roomTimeZone}
       />
     </View>
   );
@@ -263,7 +268,7 @@ function HistoryState({ message }: { message: string }) {
 }
 
 function formatDate(dateKey: string): string {
-  return dateFormatter.format(new Date(`${dateKey}T00:00:00+09:00`)).replace(/\s/g, ' ');
+  return dateFormatter.format(new Date(`${dateKey}T12:00:00Z`)).replace(/\s/g, ' ');
 }
 
 function BackIcon() {

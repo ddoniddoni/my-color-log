@@ -12,6 +12,7 @@ const room = {
   ],
   name: '색수집단',
   status: 'active' as const,
+  timeZone: 'Asia/Seoul',
 };
 
 describe('getRoomManagementState', () => {

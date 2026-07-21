@@ -14,10 +14,11 @@ import { Button } from '@/src/components/ui/Button';
 import { NinePhotoMosaic } from '@/src/components/ui/NinePhotoMosaic';
 import { colors, spacing } from '@/src/design/tokens';
 import { type DailyMission } from '@/src/features/missions/model/dailyMission';
-import { formatKstCountdown } from '@/src/features/missions/model/countdown';
+import { formatCountdown } from '@/src/features/missions/model/countdown';
 import { getTodayJournalLayout } from '@/src/features/missions/model/todayJournalLayout';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
+import { getTimeZoneDisplayName } from '@/src/utils/dates/timezone';
 
 type TodayJournalProps = {
   mission: DailyMission;
@@ -29,9 +30,10 @@ type TodayJournalProps = {
   onPhotoLongPress: (photo: TodayPhoto) => void;
   onPhotoPress: (photo: TodayPhoto) => void;
   onRetrySync: () => void;
+  timeZone: string;
 };
 
-export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync }: TodayJournalProps) {
+export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, timeZone }: TodayJournalProps) {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -72,7 +74,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         style={[styles.content, { paddingHorizontal: journalLayout.horizontalPadding }, isCompact && styles.contentCompact]}>
         <View style={styles.titleGroup}>
           <AppText numberOfLines={2} style={[styles.title, { fontFamily: heavyFont }, isCompact && styles.titleCompact]}>{photos.length === 9 ? '오늘의 색을 가득 채웠어요.' : `오늘의 ${mission.color.nameKo}을\n찾아봐요.`}</AppText>
-          <AppText style={[styles.weekday, { fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>KST · {mission.challengeDate}</AppText>
+          <AppText numberOfLines={1} style={[styles.weekday, { fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>{getTimeZoneDisplayName(timeZone)} · {mission.challengeDate}</AppText>
         </View>
 
         {photos.length === 0
@@ -103,7 +105,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
         <View style={[styles.noteSection, isCompact && styles.noteSectionCompact]}>
           <AppText numberOfLines={isCompact ? 1 : 2} style={[styles.note, { fontFamily: bodyFont }, isCompact && styles.noteCompact]}>{mission.promptKo}</AppText>
-          <AppText style={[styles.countdown, { fontFamily: bodyFont }]}>자정까지 {formatKstCountdown(millisecondsUntilMidnight)}</AppText>
+          <AppText style={[styles.countdown, { fontFamily: bodyFont }]}>자정까지 {formatCountdown(millisecondsUntilMidnight)}</AppText>
         </View>
 
         {!isCompact ? <View style={styles.tags}>

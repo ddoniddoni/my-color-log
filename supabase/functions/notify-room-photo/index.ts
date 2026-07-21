@@ -9,6 +9,7 @@ type PhotoRecord = {
 type RoomRecord = {
   name: string;
   status: 'active' | 'draft' | 'ended';
+  timezone: string;
 };
 
 type MembershipRecord = {
@@ -27,13 +28,7 @@ type ExpoPushTicket = {
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const ROOM_ACTIVITY_CHANNEL_ID = 'room-activity';
-const KST_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  day: '2-digit',
-  month: '2-digit',
-  timeZone: 'Asia/Seoul',
-  year: 'numeric',
-});
-
+const DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405);
 
@@ -81,7 +76,7 @@ async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord
   for (const share of shares ?? []) {
     if (!isRoomShare(share)) continue;
 
-    const { data: room } = await adminClient.from('rooms').select('name, status').eq('id', share.room_id).maybeSingle<RoomRecord>();
+    const { data: room } = await adminClient.from('rooms').select('name, status, timezone').eq('id', share.room_id).maybeSingle<RoomRecord>();
     if (!room || (room.status !== 'draft' && room.status !== 'active')) continue;
 
     const { data: sourceMembership } = await adminClient
@@ -91,7 +86,7 @@ async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord
       .eq('user_id', sourceUserId)
       .eq('status', 'active')
       .maybeSingle<MembershipRecord>();
-    if (!sourceMembership || getKstDateKey(sourceMembership.joined_at) > photo.date_key) continue;
+    if (!sourceMembership || getDateKey(sourceMembership.joined_at, room.timezone) > photo.date_key) continue;
 
     const { data: memberships, error: membershipError } = await adminClient
       .from('room_members')
@@ -103,7 +98,7 @@ async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord
     const recipients = (memberships ?? []).filter((membership): membership is MembershipRecord => (
       isMembership(membership)
       && membership.user_id !== sourceUserId
-      && getKstDateKey(membership.joined_at) <= photo.date_key
+      && getDateKey(membership.joined_at, room.timezone) <= photo.date_key
     ));
     await Promise.all(recipients.map((recipient) => notifyRecipient({
       adminClient,
@@ -222,8 +217,18 @@ function getBearerToken(authorization: string | null): string | null {
   return scheme?.toLowerCase() === 'bearer' && token ? token : null;
 }
 
-function getKstDateKey(value: string): string {
-  const parts = KST_DATE_FORMATTER.formatToParts(new Date(value));
+function getDateKey(value: string, timeZone: string): string {
+  let formatter = DATE_FORMATTERS.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      day: '2-digit',
+      month: '2-digit',
+      timeZone,
+      year: 'numeric',
+    });
+    DATE_FORMATTERS.set(timeZone, formatter);
+  }
+  const parts = formatter.formatToParts(new Date(value));
   const byType = new Map(parts.map((part) => [part.type, part.value]));
   return `${byType.get('year')}-${byType.get('month')}-${byType.get('day')}`;
 }

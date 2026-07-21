@@ -16,17 +16,19 @@ import { TodayPhotoManagerModal } from '@/src/features/entries/components/TodayP
 import { canMovePhoto } from '@/src/features/entries/model/photoManagement';
 import { getNextPhotoPosition, mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
 import { useDailyMission } from '@/src/features/missions/hooks/useDailyMission';
-import { useKstCountdown } from '@/src/features/missions/hooks/useKstCountdown';
-import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
+import { useTimeZoneCountdown } from '@/src/features/missions/hooks/useTimeZoneCountdown';
+import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
 import { useMissionReveal } from '@/src/features/missions/hooks/useMissionReveal';
 import { useMissionRevealPalette } from '@/src/features/missions/hooks/useMissionRevealPalette';
 import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
 import { useDayPhotoQueue } from '@/src/features/sync/hooks/useDayPhotoQueue';
 import { usePhotoSync } from '@/src/features/sync/hooks/usePhotoSync';
 import { radius, spacing } from '@/src/design/tokens';
+import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 
 export default function TodayScreen() {
-  const dateKey = useKstDateKey();
+  const timeZone = useDeviceTimeZone();
+  const dateKey = useTimeZoneDateKey(timeZone);
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const missionQuery = useDailyMission(dateKey);
@@ -35,7 +37,7 @@ export default function TodayScreen() {
   const reveal = useMissionReveal(dateKey);
   const revealPaletteQuery = useMissionRevealPalette(dateKey, !reveal.isRevealed);
   const reduceMotion = useReducedMotion();
-  const millisecondsUntilMidnight = useKstCountdown();
+  const millisecondsUntilMidnight = useTimeZoneCountdown(timeZone);
   const photoSync = usePhotoSync(dateKey);
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export default function TodayScreen() {
         onPhotoPress={(photo) => setSelectedPhotoId(photo.id)}
         onRetrySync={() => void photoSync.retryFailed()}
         photos={photos}
+        timeZone={timeZone}
       />
       <TodayPhotoManagerModal
         moveAvailability={{

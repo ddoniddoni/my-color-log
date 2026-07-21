@@ -6,6 +6,7 @@ import { useAuthAutoRefresh } from '@/src/features/auth/hooks/useAuthAutoRefresh
 import { SessionBootstrapProvider, useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { configureLocalNotificationPresentation } from '@/src/features/notifications/api/localNotificationRepository';
 import { useRoomPhotoPushRegistration } from '@/src/features/notifications/hooks/useRoomPhotoPushRegistration';
+import { useProfileTimeZoneSync } from '@/src/features/profile/hooks/useProfileTimeZoneSync';
 import { PhotoSyncProvider } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 
@@ -26,8 +27,6 @@ function AppProviderContent({ children }: PropsWithChildren) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: STALE_TIME_MS, retry: 1 } } }));
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const previousUserIdRef = useRef<string | null | undefined>(undefined);
-  useRoomPhotoPushRegistration(userId);
-
   useEffect(() => {
     void configureLocalNotificationPresentation();
   }, []);
@@ -46,10 +45,21 @@ function AppProviderContent({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PhotoSyncProvider userId={userId}>
+      <AppRuntime networkStatus={networkStatus} userId={userId}>
         {children}
-        <OfflineBanner visible={networkStatus === 'offline'} />
-      </PhotoSyncProvider>
+      </AppRuntime>
     </QueryClientProvider>
+  );
+}
+
+function AppRuntime({ children, networkStatus, userId }: PropsWithChildren<{ networkStatus: 'offline' | 'online' | 'unknown'; userId: string | null }>) {
+  useRoomPhotoPushRegistration(userId);
+  useProfileTimeZoneSync(userId);
+
+  return (
+    <PhotoSyncProvider userId={userId}>
+      {children}
+      <OfflineBanner visible={networkStatus === 'offline'} />
+    </PhotoSyncProvider>
   );
 }

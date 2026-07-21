@@ -17,6 +17,7 @@ import { completeProfile } from '@/src/features/profile/api/profileRepository';
 import { validateNickname } from '@/src/features/profile/model/profile';
 import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
 import { queryKeys } from '@/src/lib/query/queryKeys';
+import { getDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 
 export default function NicknameScreen() {
   const [nickname, setNickname] = useState('');
@@ -37,7 +38,7 @@ export default function NicknameScreen() {
       if (!validation.isValid) throw new Error('invalid_nickname');
       const session = await getStoredSession();
       if (!session?.user) throw new Error('missing_authenticated_session');
-      return completeProfile(session.user.id, validation.value);
+      return completeProfile(session.user.id, validation.value, getDeviceTimeZone());
     },
     onSuccess: async (profile) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile(profile.id) });

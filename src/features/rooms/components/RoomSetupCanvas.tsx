@@ -36,7 +36,9 @@ import { type ActiveRoom, type RoomInvitePreview, validateInviteCode, validateRo
 import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { getRoomPhotoMosaicSlots, type RoomBoardMember, type RoomBoardPhoto, type RoomTodayBoard } from '@/src/features/rooms/model/roomTodayBoard';
 import { queryKeys } from '@/src/lib/query/queryKeys';
-import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
+import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
+import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { DEFAULT_TIME_ZONE, getTimeZoneDisplayName } from '@/src/utils/dates/timezone';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 const INVITE_CODE_LENGTH = 6;
@@ -56,8 +58,10 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const accessToken = sessionState.status === 'ready' ? sessionState.session?.access_token ?? null : null;
-  const dateKey = useKstDateKey();
   const roomQuery = useRoom(userId, roomId);
+  const deviceTimeZone = useDeviceTimeZone();
+  const roomTimeZone = roomQuery.data?.timeZone ?? DEFAULT_TIME_ZONE;
+  const dateKey = useTimeZoneDateKey(roomTimeZone);
   const roomTodayBoardQuery = useRoomTodayBoard(userId, dateKey, roomId);
   const [inviteCode, setInviteCode] = useState<string[]>(() => Array.from({ length: INVITE_CODE_LENGTH }, () => ''));
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
@@ -79,7 +83,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
       if (!nameValidation.isValid) throw new Error('room_name_invalid');
       const emojiValidation = validateRoomEmoji(roomEmoji);
       if (!emojiValidation.isValid) throw new Error('room_emoji_invalid');
-      return createRoom(nameValidation.value, emojiValidation.value);
+      return createRoom(nameValidation.value, emojiValidation.value, deviceTimeZone);
     },
     onSuccess: async () => {
       setIsCreateModalVisible(false);
@@ -524,7 +528,10 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
           <View accessible accessibilityLabel="우리 방 아이콘" accessibilityRole="image" style={styles.roomMark}>
             <AppText style={[styles.roomMarkText, { fontFamily: boldFont }]}>{room.emoji ?? room.name.slice(0, 1)}</AppText>
           </View>
-          <AppText style={[styles.roomDate, { fontFamily: boldFont }]}>{formattedDate}</AppText>
+          <View style={styles.roomDateCopy}>
+            <AppText style={[styles.roomDate, { fontFamily: boldFont }]}>{formattedDate}</AppText>
+            <AppText numberOfLines={1} style={styles.roomTimeZone}>{getTimeZoneDisplayName(room.timeZone)}</AppText>
+          </View>
         </View>
         <Pressable accessibilityLabel="친구방 관리 열기" accessibilityRole="button" onPress={onOpenManagement} style={styles.roomSettingsMark}><GearIcon /></Pressable>
       </View>
@@ -547,6 +554,7 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
           inviteShareAction={inviteShareAction}
           onRetry={onRefreshBoard}
           onShowNotice={onShowNotice}
+          timeZone={room.timeZone}
         />
       </ScrollView>
     </View>
@@ -564,6 +572,7 @@ type RoomTodayBoardSectionProps = {
   inviteShareAction: InviteShareAction;
   onRetry: () => void;
   onShowNotice: (title: string, description: string) => void;
+  timeZone: string;
 };
 
 type RoomBoardPhotoSelection = {
@@ -571,7 +580,7 @@ type RoomBoardPhotoSelection = {
   photoId: string;
 };
 
-function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId, inviteShareAction, isError, isLoading, isRefreshing, onRetry, onShowNotice }: RoomTodayBoardSectionProps) {
+function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId, inviteShareAction, isError, isLoading, isRefreshing, onRetry, onShowNotice, timeZone }: RoomTodayBoardSectionProps) {
   const router = useRouter();
   const photoSource = usePhotoSourceSelection();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -670,6 +679,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
           setPhotoSelection(null);
         }}
         roomId={board?.roomId ?? null}
+        timeZone={timeZone}
       />
       <PhotoSourceModal
         errorMessage={photoSource.errorMessage}
@@ -867,9 +877,11 @@ const styles = StyleSheet.create({
   roomBackButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   roomBackText: { color: colors.black, fontSize: 42, fontWeight: '300', lineHeight: 42 },
   roomDateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  roomDateCopy: { maxWidth: 160 },
   roomMark: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 20, borderWidth: 2, height: 40, justifyContent: 'center', overflow: 'hidden', width: 40 },
   roomMarkText: { color: colors.black, fontSize: 18, fontWeight: '700' },
   roomDate: { color: colors.black, fontSize: 19, fontWeight: '700', letterSpacing: -0.35, lineHeight: 24 },
+  roomTimeZone: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.35, lineHeight: 11 },
   roomSettingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   activeRoomContent: { gap: 40, paddingBottom: 40, paddingHorizontal: 16, paddingTop: 24 },
   roomBannerWrap: { alignItems: 'center' },

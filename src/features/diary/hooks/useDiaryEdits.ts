@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoRepository';
 import { updateDiaryEntryNote, updateDiaryPhotoCaption } from '@/src/features/diary/api/diaryRepository';
-import { type DiaryEntry } from '@/src/features/diary/model/diaryMonth';
+import { removeDiaryPhoto, type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
 import { normalizeDiaryNote, normalizeDiaryPhotoCaption } from '@/src/features/diary/model/diaryEdits';
-import { updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
+import { deleteMyEntryPhotoRecord, removeEntryPhotoObject } from '@/src/features/entries/api/entryRepository';
+import { getQueuedPhoto, removePendingPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
 type UseDiaryEditsInput = {
@@ -22,6 +24,17 @@ type CaptionUpdateInput = {
   entryId: string;
   photoId: string;
   value: string;
+};
+
+type DeletePhotoInput = {
+  dateKey: string;
+  entryId: string;
+  photo: DiaryPhoto;
+};
+
+type DeletePhotoResult = {
+  storageCleanupPending: boolean;
+  willRetryStorageCleanup: boolean;
 };
 
 export function useDiaryEdits({ monthKey, userId }: UseDiaryEditsInput) {
@@ -72,7 +85,40 @@ export function useDiaryEdits({ monthKey, userId }: UseDiaryEditsInput) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async ({ photo }: DeletePhotoInput): Promise<DeletePhotoResult> => {
+      const [queuedPhoto, deletedStoragePath] = await Promise.all([
+        getQueuedPhoto(photo.id).catch(() => null),
+        deleteMyEntryPhotoRecord(photo.id),
+      ]);
+      let storageCleanupPending = false;
+      try {
+        await removeEntryPhotoObject(deletedStoragePath ?? photo.storagePath);
+      } catch {
+        storageCleanupPending = true;
+      }
+
+      if (queuedPhoto) {
+        if (storageCleanupPending) {
+          await updatePendingPhoto(photo.id, { lastErrorCode: 'entry_photo_storage_delete_failed', status: 'cancelled' });
+        } else {
+          await removePendingPhoto(photo.id);
+          await removeLocalPhotoFile(queuedPhoto.localUri);
+        }
+      }
+
+      return { storageCleanupPending, willRetryStorageCleanup: storageCleanupPending && queuedPhoto !== null };
+    },
+    onSuccess: async (_result, { dateKey, entryId, photo }) => {
+      if (!userId) return;
+      updateDiaryEntryInCache(queryClient, userId, monthKey, entryId, (entry) => removeDiaryPhoto(entry, photo.id));
+      await updateSharedPhotoCaches(dateKey);
+    },
+  });
+
   return {
+    deletePhoto: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
     isSaving: noteMutation.isPending || captionMutation.isPending,
     updateCaption: captionMutation.mutateAsync,
     updateNote: noteMutation.mutateAsync,

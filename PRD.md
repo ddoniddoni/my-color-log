@@ -21,7 +21,7 @@
 4. MVP에서 한 사용자는 동시에 하나의 활성 친구방에만 참여할 수 있다.
 5. 한 친구방에는 방장을 포함해 최소 2명, 최대 6명의 활성 멤버가 참여할 수 있다.
 6. 친구방은 하루가 끝나도 사라지지 않는다. 같은 멤버가 다음 날에도 새 미션을 함께 받는다.
-7. 매일 `Asia/Seoul` 날짜를 기준으로 서버가 오늘의 미션을 확정하고, 같은 방의 모든 멤버에게 동일한 미션을 보여준다.
+7. 개인 기록은 사용자의 IANA 타임존, 친구방은 방 생성 시 고정한 IANA 타임존의 날짜를 기준으로 서버가 오늘의 미션을 확정하며, 같은 방의 모든 멤버에게 동일한 미션을 보여준다.
 8. MVP의 미션 타입은 `color` 하나이며, 예시는 “오늘의 체리 레드를 찾아 1~9장 기록하기”다.
 9. MVP에서는 솔로 사용자와 모든 친구방이 같은 전역 일일 컬러를 참조한다. 따라서 낮에 혼자 찍은 기록을 저녁에 방에 들어가도 같은 오늘 미션에 자연스럽게 연결할 수 있다.
 10. 데이터 모델에는 `room_daily_missions`를 둬서 향후 방마다 다른 미션이나 커스텀 미션으로 확장할 수 있게 한다.
@@ -198,7 +198,7 @@
 
 | 용어 | 정의 |
 |---|---|
-| 오늘의 미션 | 해당 KST 날짜에 수행하는 일일 과제. MVP에서는 특정 컬러를 발견해 촬영하는 미션 |
+| 오늘의 미션 | 사용자 또는 친구방에 적용되는 현지 날짜에 수행하는 일일 과제. MVP에서는 특정 컬러를 발견해 촬영하는 미션 |
 | 전역 일일 미션 | 솔로 사용자와 모든 친구방이 MVP에서 공통으로 참조하는 날짜별 미션 |
 | 방 일일 미션 | 특정 친구방과 날짜에 바인딩된 미션 레코드. MVP에서는 전역 일일 미션을 참조 |
 | 컬러 공개 | 룰렛 애니메이션으로 이미 결정된 오늘의 컬러 미션을 보여주는 과정 |
@@ -404,7 +404,7 @@
 
 ### 10.5 친구방에서 매일 같은 미션 수행
 
-1. KST 날짜가 바뀌면 서버가 해당 방의 `room_daily_missions`를 준비
+1. 방에 저장된 IANA 타임존의 날짜가 바뀌면 서버가 해당 방의 `room_daily_missions`를 준비
 2. 모든 활성 멤버가 같은 컬러 이름과 안내 문구를 확인
 3. 방 화면에 멤버별 `0/6`, `3/6`, `6장 완성`, `9장 가득` 상태 표시
 4. 사용자가 방 화면의 카메라 CTA를 탭
@@ -438,7 +438,7 @@
 
 ### 10.8 날짜 변경
 
-1. 앱이 포그라운드로 돌아올 때 KST 날짜 키 확인
+1. 앱이 포그라운드로 돌아올 때 기기의 IANA 타임존과 개인 날짜 키를 확인하고, 친구방은 각 방의 타임존 날짜 키를 확인
 2. 날짜가 바뀌었으면 새 전역 일일 미션 조회
 3. 활성 친구방의 `room_daily_missions`를 조회하거나 서버에서 idempotent하게 생성
 4. 전날 업로드 대기 사진은 전날 개인 기록으로 계속 업로드
@@ -482,7 +482,7 @@
 
 - 오늘의 컬러 미션은 서버의 `daily_missions.challenge_date`로 결정한다.
 - 클라이언트가 임의로 랜덤 색이나 미션을 확정해서는 안 된다.
-- 같은 KST 날짜에는 모든 솔로 사용자와 친구방이 동일한 전역 미션을 참조한다.
+- 같은 `date_key`에는 모든 솔로 사용자와 친구방이 동일한 전역 미션을 참조한다. 타임존이 다르면 같은 순간에도 서로 다른 날짜의 미션을 볼 수 있다.
 - 같은 친구방과 날짜에는 하나의 `room_daily_missions.mission_id`만 존재해야 한다.
 
 #### FR-MISSION-002 — 룰렛 공개
@@ -521,9 +521,12 @@
 
 #### FR-MISSION-004 — 날짜 경계
 
-- MVP 기준 `Asia/Seoul` 자정을 사용한다.
+- 개인 기록은 기기의 유효한 IANA 타임존을 프로필에 동기화하고 그 타임존의 자정을 사용한다.
+- 친구방은 생성 시 방장의 IANA 타임존을 저장하며, 이후 모든 멤버에게 그 방 타임존의 자정을 사용한다.
+- 타임존은 IANA 이름으로 저장하고 고정 UTC offset을 사용하지 않는다.
 - DB에는 `date` 타입의 `challenge_date`를 저장한다.
-- 사진의 촬영 시각은 UTC timestamp와 KST date key를 함께 유지한다.
+- 사진의 촬영 시각은 UTC timestamp와 해당 개인/방 타임존으로 확정한 date key를 함께 유지한다.
+- 타임존이 변경되어도 이미 저장된 기록의 date key는 다시 계산하거나 이동하지 않는다.
 
 ### 11.3 일일 기록
 
@@ -968,7 +971,7 @@ invite: active → expired/revoked/exhausted
 
 - 방 생성 직후 멤버가 한 명이어도 `draft` 또는 준비 상태를 허용한다.
 - 첫 친구가 참여하면 `active`로 전환한다.
-- KST 날짜가 바뀌면 이전 방 날짜는 `archived`, 새 날짜는 `open` 상태가 된다.
+- 방 타임존의 날짜가 바뀌면 이전 방 날짜는 `archived`, 새 날짜는 `open` 상태가 된다.
 - 방이 종료되어도 개인 일일 기록과 사진 상태는 변경하지 않는다.
 
 ## 15. 데이터 모델
@@ -982,7 +985,7 @@ invite: active → expired/revoked/exhausted
 | id | uuid PK | `auth.users.id`와 동일 |
 | nickname | text | 2~12자 |
 | avatar_path | text nullable | 추후 사용 |
-| timezone | text | MVP 기본 `Asia/Seoul` |
+| timezone | text | 사용자의 유효한 IANA 타임존. 기존/미확인 값의 안전한 기본은 `Asia/Seoul` |
 | is_onboarded | boolean | 온보딩 완료 |
 | created_at | timestamptz | 생성 시각 |
 | updated_at | timestamptz | 수정 시각 |
@@ -1007,7 +1010,7 @@ invite: active → expired/revoked/exhausted
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | uuid PK | 미션 ID |
-| challenge_date | date unique | KST 기준 날짜 |
+| challenge_date | date unique | 타임존에서 확정된 전역 날짜 키 |
 | mission_type | text | MVP `color` |
 | color_id | uuid FK | 팔레트 참조 |
 | title_ko | text | `오늘의 체리 레드` |
@@ -1027,7 +1030,7 @@ invite: active → expired/revoked/exhausted
 | id | uuid PK | 개인 기록 ID |
 | user_id | uuid FK | 소유자 |
 | mission_id | uuid FK | 당시 일일 미션 |
-| challenge_date | date | KST 날짜 |
+| challenge_date | date | 기록 생성 시 적용된 타임존의 날짜 키 |
 | note | text nullable | 0~200자 |
 | created_at | timestamptz | 생성 시각 |
 | updated_at | timestamptz | 수정 시각 |
@@ -1050,7 +1053,7 @@ invite: active → expired/revoked/exhausted
 | position | smallint | 1~9 |
 | caption | text nullable | 0~80자 |
 | captured_at | timestamptz | 실제 촬영 시각 |
-| capture_date | date | KST 촬영 날짜 |
+| capture_date | date | 기록 생성 시 적용된 타임존의 촬영 날짜 키 |
 | width | integer | 처리 후 폭 |
 | height | integer | 처리 후 높이 |
 | byte_size | integer | 파일 크기 |
@@ -1073,6 +1076,7 @@ invite: active → expired/revoked/exhausted
 | emoji | text nullable | 선택적 방 표시 |
 | created_by | uuid FK | 생성자 |
 | status | text | draft/active/ended |
+| timezone | text | 생성 시 고정하는 유효한 IANA 타임존 |
 | max_members | smallint | MVP 기본 6 |
 | created_at | timestamptz | 생성 시각 |
 | ended_at | timestamptz nullable | 종료 시각 |
@@ -1139,7 +1143,7 @@ invite: active → expired/revoked/exhausted
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | room_id | uuid FK | 친구방 |
-| challenge_date | date | KST 날짜 |
+| challenge_date | date | 방 타임존 날짜 키 |
 | mission_id | uuid FK | 전역 일일 미션 |
 | created_at | timestamptz | 바인딩 시각 |
 
@@ -1421,7 +1425,7 @@ features/diary/api/diaryRepository.ts
    - 촬영 당시 `capture_date`와 연결된 전날 개인 기록과 전날 방 미션에 저장한다.
 
 2. 사용자가 기기 시간을 변경함
-   - 서버 날짜와 `Asia/Seoul` 기준을 우선하고 비정상 미래 기록을 차단한다.
+   - 프로필 및 참여 중인 방의 저장된 IANA 타임존을 기준으로 비정상 미래 기록을 차단한다.
 
 3. 같은 초대 링크를 여러 친구가 동시에 수락함
    - 서버 트랜잭션에서 방 정원과 `use_count`를 잠그고 정원 이내 수락만 성공시킨다.
@@ -1483,7 +1487,7 @@ features/diary/api/diaryRepository.ts
 - [ ] 같은 날짜에 두 기기가 같은 전역 컬러 미션을 표시한다.
 - [ ] 같은 친구방의 모든 멤버가 동일한 `room_daily_mission`을 본다.
 - [ ] 앱 재실행 시 룰렛 결과가 바뀌지 않는다.
-- [ ] KST 자정 후 새 미션으로 전환된다.
+- [ ] 개인/방 각각의 타임존 자정 후 새 미션으로 전환된다.
 - [ ] 모션 감소 설정에서 대체 애니메이션을 사용한다.
 
 ### 사진 기록

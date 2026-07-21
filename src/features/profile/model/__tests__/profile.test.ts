@@ -18,4 +18,8 @@ describe('parseProfile', () => {
   it('rejects malformed rows', () => {
     expect(() => parseProfile({ id: 'user-id', nickname: 'a', timezone: 'Asia/Seoul', is_onboarded: true })).toThrow('Invalid profile nickname');
   });
+
+  it('rejects a non-IANA timezone', () => {
+    expect(() => parseProfile({ id: 'user-id', nickname: '오늘빛', timezone: 'GMT+9ish', is_onboarded: true })).toThrow('Invalid profile timezone');
+  });
 });
