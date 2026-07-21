@@ -21,7 +21,7 @@ export function RoomPhotoReactionBar({ isOwnPhoto, photoId, roomId, userId }: Ro
   return (
     <View style={styles.wrap}>
       <AppText style={styles.label}>{isOwnPhoto ? 'MEMBER REACTIONS' : 'LEAVE A REACTION'}</AppText>
-      <View accessibilityLabel="사진 반응" style={styles.row}>
+      <View style={styles.row}>
         {ROOM_PHOTO_REACTION_CHOICES.map((choice) => {
           const summary = summaries.find((item) => item.emoji === choice.emoji);
           const selected = summary?.reactedByMe === true;
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   wrap: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, gap: 8, marginTop: 2, paddingTop: 11 },
   label: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
   row: { flexDirection: 'row', gap: 7 },
-  button: { alignItems: 'center', borderColor: 'rgba(0, 0, 0, 0.46)', borderWidth: 1, flex: 1, flexDirection: 'row', gap: 3, justifyContent: 'center', minHeight: 42, paddingHorizontal: 3 },
+  button: { alignItems: 'center', borderColor: 'rgba(0, 0, 0, 0.46)', borderWidth: 1, flex: 1, flexDirection: 'row', gap: 3, justifyContent: 'center', minHeight: 44, paddingHorizontal: 3 },
   buttonSelected: { backgroundColor: colors.black, borderColor: colors.black },
   buttonPressed: { opacity: 0.62 },
   buttonLoading: { opacity: 0.48 },

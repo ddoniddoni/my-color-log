@@ -107,7 +107,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         <CameraControl accessibilityLabel={`플래시 ${flash}`} onPress={() => setFlash(getNextFlashMode(flash))}><FlashIcon mode={flash} /></CameraControl>
       </View>
       <View pointerEvents="none" style={styles.squareGuideArea}>
-        <View accessibilityLabel="정사각형 사진 저장 가이드" style={styles.squareGuide}>
+        <View accessible accessibilityLabel="정사각형 사진 저장 가이드" accessibilityRole="image" style={styles.squareGuide}>
           <AppText style={styles.squareGuideLabel}>SQUARE FRAME · 정사각형으로 저장돼요</AppText>
         </View>
       </View>
@@ -149,10 +149,10 @@ function CameraPermissionPrompt({ canAskAgain, onCancel, onOpen }: { canAskAgain
         <AppText style={styles.permissionTitle}>We need your eyes!</AppText>
         <AppText style={styles.permissionCopy}>Please allow camera access in settings to start logging colors. We use the lens to pick up the digital ink from the world around you.</AppText>
         <View style={styles.permissionDivider} />
-        <Pressable accessibilityRole="button" onPress={onOpen} style={({ pressed }) => [styles.permissionButton, pressed && styles.shutterPressed]}>
+        <Pressable accessibilityLabel={canAskAgain ? '카메라 권한 허용' : '기기 설정 열기'} accessibilityRole="button" onPress={onOpen} style={({ pressed }) => [styles.permissionButton, pressed && styles.shutterPressed]}>
           <AppText style={styles.permissionButtonText}>{canAskAgain ? 'Allow Camera' : 'Open Settings'}</AppText>
         </Pressable>
-        <Pressable accessibilityRole="button" hitSlop={12} onPress={onCancel} style={styles.cancelButton}><AppText style={styles.cancelText}>Cancel</AppText></Pressable>
+        <Pressable accessibilityLabel="카메라 화면 닫기" accessibilityRole="button" hitSlop={12} onPress={onCancel} style={styles.cancelButton}><AppText style={styles.cancelText}>Cancel</AppText></Pressable>
       </View>
     </View>
   );

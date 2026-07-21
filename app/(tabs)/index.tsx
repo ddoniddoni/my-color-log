@@ -36,7 +36,7 @@ export default function TodayScreen() {
   const revealPaletteQuery = useMissionRevealPalette(dateKey, !reveal.isRevealed);
   const reduceMotion = useReducedMotion();
   const millisecondsUntilMidnight = useKstCountdown();
-  const photoSync = usePhotoSync({ userId, dateKey, photos: queueQuery.data ?? [] });
+  const photoSync = usePhotoSync(dateKey);
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();

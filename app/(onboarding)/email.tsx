@@ -398,6 +398,7 @@ function SketchActionButton({ label, onPress, pending }: { label: string; onPres
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ busy: pending, disabled: pending }}
       disabled={pending}
       onPress={onPress}
       style={({ pressed }) => [styles.actionButton, pending && styles.actionButtonDisabled, pressed && !pending && styles.actionButtonPressed]}
@@ -420,7 +421,7 @@ function SignupHeader({ fontFamily, topInset }: { fontFamily: string | undefined
 
 function DoodleRow({ login = false }: { login?: boolean }) {
   return (
-    <View style={[styles.doodleRow, login && styles.loginDoodleRow]} accessibilityLabel="손그림 장식">
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.doodleRow, login && styles.loginDoodleRow]}>
       {login ? <PaletteIcon color="#A2A2A2" /> : <HeartIcon />}
       {login ? <PenIcon color="#A2A2A2" /> : <PaletteIcon color="#7D7D7D" />}
       {login ? <StarIcon color="#A2A2A2" size={18} /> : <PenIcon color="#8D8D8D" />}

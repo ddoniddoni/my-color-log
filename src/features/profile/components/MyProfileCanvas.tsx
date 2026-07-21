@@ -59,15 +59,15 @@ export function MyProfileCanvas({
     <View style={styles.page}>
       <View style={styles.appBarShadow}>
         <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
-          <View accessibilityLabel="메뉴" accessibilityRole="image" style={styles.appBarIcon}><MenuIcon /></View>
+          <View accessible accessibilityLabel="메뉴" accessibilityRole="image" style={styles.appBarIcon}><MenuIcon /></View>
           <AppText style={[styles.brand, { fontFamily: boldFont }]}>Color Log</AppText>
-          <View accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.appBarIcon}><GearIcon /></View>
+          <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.appBarIcon}><GearIcon /></View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
-          <View accessibilityLabel={`${nickname}의 프로필 그림`} accessibilityRole="image" style={styles.avatar}><DoodleAvatar /></View>
+          <View accessible accessibilityLabel={`${nickname}의 프로필 그림`} accessibilityRole="image" style={styles.avatar}><DoodleAvatar /></View>
           <AppText style={[styles.nickname, { fontFamily: boldFont }]}>{nickname}</AppText>
           <AppText numberOfLines={1} style={[styles.email, { fontFamily: bodyFont }]}>{email}</AppText>
         </View>

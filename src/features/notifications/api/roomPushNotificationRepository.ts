@@ -52,6 +52,10 @@ export async function notifyRoomPhotoUploaded(photoId: string): Promise<void> {
   if (error) throw new Error('room_photo_push_enqueue_failed');
 }
 
+export async function clearStoredRoomPushToken(): Promise<void> {
+  await AsyncStorage.removeItem(ROOM_PUSH_TOKEN_STORAGE_KEY);
+}
+
 async function disableStoredRoomPushToken(): Promise<void> {
   const token = await AsyncStorage.getItem(ROOM_PUSH_TOKEN_STORAGE_KEY);
   if (!token) return;

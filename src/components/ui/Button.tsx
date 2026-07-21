@@ -16,6 +16,7 @@ export function Button({ label, variant = 'primary', style, disabled, accessibil
       {...props}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ ...props.accessibilityState, disabled: disabled ?? false }}
       disabled={disabled}
       style={({ pressed }) => [styles.base, variant === 'primary' ? styles.primary : styles.secondary, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
       <AppText variant="bodyStrong" color={textColor}>{label}</AppText>

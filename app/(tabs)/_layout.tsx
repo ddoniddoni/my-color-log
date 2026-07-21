@@ -4,8 +4,10 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { colors, spacing } from '@/src/design/tokens';
+import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
 
 export default function TabLayout() {
+  const reduceMotion = useReducedMotion();
   return (
     <Tabs
       screenOptions={{
@@ -22,7 +24,7 @@ export default function TabLayout() {
           paddingBottom: 18,
           paddingTop: spacing[2],
         },
-        tabBarButton: TabBarButton,
+        tabBarButton: (props) => <TabBarButton {...props} reduceMotion={reduceMotion} />,
         tabBarItemStyle: { paddingTop: 1 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.1, marginTop: 2 },
       }}>
@@ -62,15 +64,16 @@ function TabBarButton({
   pressOpacity: _pressOpacity,
   ref: _ref,
   hoverEffect: _hoverEffect,
+  reduceMotion,
   style,
   ...props
-}: BottomTabBarButtonProps) {
+}: BottomTabBarButtonProps & { reduceMotion: boolean }) {
   return (
     <Pressable
       {...props}
       android_ripple={{ color: 'transparent' }}
       onPress={(event) => onPress?.(event)}
-      style={({ pressed }) => [style, pressed && styles.tabButtonPressed]}>
+      style={({ pressed }) => [style, pressed && (reduceMotion ? styles.tabButtonPressedReducedMotion : styles.tabButtonPressed)]}>
       {children}
     </Pressable>
   );
@@ -87,5 +90,8 @@ const styles = StyleSheet.create({
   tabButtonPressed: {
     opacity: 0.72,
     transform: [{ scale: 0.98 }],
+  },
+  tabButtonPressedReducedMotion: {
+    opacity: 0.72,
   },
 });

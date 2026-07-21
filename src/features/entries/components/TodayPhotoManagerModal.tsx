@@ -70,7 +70,7 @@ export function TodayPhotoManagerModal({
           {selectedPhoto ? <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.heading}>
               <View><AppText style={styles.eyebrow}>TODAY&apos;S PHOTO</AppText><AppText accessibilityRole="header" style={styles.title}>사진 관리</AppText></View>
-              <Pressable accessibilityLabel="사진 관리 닫기" accessibilityRole="button" disabled={isInteractionBlocked} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
+              <Pressable accessibilityLabel="사진 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isInteractionBlocked }} disabled={isInteractionBlocked} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
             </View>
 
             <View style={styles.photoFrame}>
@@ -88,7 +88,7 @@ export function TodayPhotoManagerModal({
               <MoveButton direction="forward" disabled={!moveAvailability.forward || isInteractionBlocked} label="뒤 칸" onPress={() => void move('forward')} />
             </View>
 
-            <Pressable accessibilityLabel="이 사진 지우기" accessibilityRole="button" disabled={isInteractionBlocked} onPress={requestDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, isInteractionBlocked && styles.disabled]}>
+            <Pressable accessibilityLabel="이 사진 지우기" accessibilityRole="button" accessibilityState={{ busy: operation === 'deleting', disabled: isInteractionBlocked }} disabled={isInteractionBlocked} onPress={requestDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, isInteractionBlocked && styles.disabled]}>
               <TrashIcon />
               <AppText style={styles.deleteText}>{operation === 'deleting' ? '사진을 지우는 중…' : '사진 지우기'}</AppText>
             </Pressable>
@@ -109,7 +109,7 @@ export function TodayPhotoManagerModal({
 }
 
 function MoveButton({ direction, disabled, label, onPress }: { direction: PhotoMoveDirection; disabled: boolean; label: string; onPress: () => void }) {
-  return <Pressable accessibilityLabel={`${label}으로 사진 순서 변경`} accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.moveButton, pressed && styles.pressed, disabled && styles.disabled]}><Chevron direction={direction} /><AppText style={styles.moveText}>{label}</AppText></Pressable>;
+  return <Pressable accessibilityLabel={`${label}으로 사진 순서 변경`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.moveButton, pressed && styles.pressed, disabled && styles.disabled]}><Chevron direction={direction} /><AppText style={styles.moveText}>{label}</AppText></Pressable>;
 }
 
 function CloseIcon() {

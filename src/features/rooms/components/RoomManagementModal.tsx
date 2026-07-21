@@ -57,14 +57,14 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
     <>
       <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} statusBarTranslucent transparent visible={visible}>
         <View style={styles.overlay}>
-          <Pressable accessibilityLabel="친구방 관리 닫기" disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
+          <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
           <View accessibilityViewIsModal style={styles.card}>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>PRIVATE ROOM SETTINGS</AppText>
               <AppText style={styles.title}>{room.emoji ? `${room.emoji} ${room.name}` : room.name}</AppText>
             </View>
-            <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
+            <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
           </View>
 
           <View style={styles.body}>
@@ -98,6 +98,7 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
                             <Pressable
                               accessibilityLabel={`${member.nickname} 님 내보내기`}
                               accessibilityRole="button"
+                              accessibilityState={{ disabled: isPending }}
                               disabled={isPending}
                               onPress={() => setConfirmation({ kind: 'remove_member', member })}
                               style={[styles.removeMemberButton, isPending && styles.buttonDisabled]}>
@@ -117,6 +118,7 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
                           <Pressable
                             accessibilityLabel={`${member.nickname} 님에게 방장 넘기기`}
                             accessibilityRole="button"
+                            accessibilityState={{ disabled: isPending }}
                             disabled={isPending}
                             key={member.id}
                             onPress={() => setConfirmation({ kind: 'transfer', member })}
@@ -291,7 +293,7 @@ const styles = StyleSheet.create({
   memberName: { color: colors.black, fontSize: 15, fontWeight: '700' },
   memberMeta: { color: 'rgba(0, 0, 0, 0.56)', fontFamily: 'monospace', fontSize: 9 },
   memberArrow: { color: colors.black, fontSize: 19 },
-  removeMemberButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1, justifyContent: 'center', minHeight: 34, paddingHorizontal: 9 },
+  removeMemberButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 9 },
   removeMemberText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
   pendingText: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12 },
   ownerDangerFooter: { borderTopColor: 'rgba(210, 64, 61, 0.38)', borderTopWidth: 1, gap: 8, paddingTop: 14 },

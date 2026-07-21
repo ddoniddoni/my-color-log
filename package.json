@@ -57,6 +57,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:db:account-deletion": "npx supabase db query --linked --file supabase/tests/account_deletion_contract.sql",
+    "test:db:security": "npx supabase db query --linked --file supabase/tests/rls_security_contract.sql",
     "test:watch": "jest --watch",
     "check": "npm run typecheck && npm run lint && npm test"
   },

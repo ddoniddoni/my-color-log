@@ -27,6 +27,7 @@ import { useRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoar
 import { useRoomHistory } from '@/src/features/rooms/hooks/useActiveRoomHistory';
 import { type RoomHistoryDay } from '@/src/features/rooms/model/roomHistory';
 import { type RoomBoardMember, type RoomBoardPhoto } from '@/src/features/rooms/model/roomTodayBoard';
+import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 type RoomBoardPhotoSelection = {
   memberId: string;
@@ -236,7 +237,13 @@ const HistoryMemberItem = memo(function HistoryMemberItem({ boldFont, dateKey, i
 
 function RoomHistoryMosaic({ member, onOpenPhoto }: { member: RoomBoardMember; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
-    photo.signedUrl ? [{ capturedAt: photo.capturedAt, id: photo.id, position: photo.position, uri: photo.signedUrl }] : []
+    photo.signedUrl ? [{
+      accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
+      capturedAt: photo.capturedAt,
+      id: photo.id,
+      position: photo.position,
+      uri: photo.signedUrl,
+    }] : []
   ));
 
   return (

@@ -68,7 +68,7 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.main}>
-        <View style={styles.illustration} accessibilityLabel="오늘의 색을 발견하는 장면">
+        <View accessible accessibilityLabel="오늘의 색을 발견하는 장면" accessibilityRole="image" style={styles.illustration}>
           <View style={styles.illustrationFrame}>
             <Image resizeMode="contain" source={ONBOARDING_IMAGE} style={styles.illustrationImage} />
           </View>
@@ -81,7 +81,7 @@ export default function OnboardingScreen() {
           <AppText style={[styles.description, { fontFamily: regularFont }]}>{slide.description}</AppText>
         </View>
 
-        <View accessibilityLabel={`${currentIndex + 1} / ${slides.length} 단계`} style={styles.progress}>
+        <View accessible accessibilityLabel={`${currentIndex + 1} / ${slides.length} 단계`} accessibilityRole="progressbar" style={styles.progress}>
           {slides.map((item, index) => (
             <View key={item.title} style={[styles.progressDot, index === currentIndex ? styles.progressDotActive : styles.progressDotInactive]} />
           ))}
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   page: { backgroundColor: SURFACE, flex: 1 },
   header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 24, paddingHorizontal: 16 },
   wordmark: { color: INK, fontSize: 24, fontStyle: 'italic', fontWeight: '700', letterSpacing: -0.72, lineHeight: 29, transform: [{ rotate: '-1.5deg' }] },
-  closeButton: { alignItems: 'center', backgroundColor: SURFACE, borderColor: INK, borderRadius: 20, borderWidth: 2, height: 40, justifyContent: 'center', width: 40 },
+  closeButton: { alignItems: 'center', backgroundColor: SURFACE, borderColor: INK, borderRadius: 22, borderWidth: 2, height: 44, justifyContent: 'center', width: 44 },
   closeButtonPressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
   closeMark: { color: INK, fontSize: 27, fontWeight: '400', lineHeight: 30, marginTop: -2 },
   main: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingBottom: 80, paddingHorizontal: 16 },

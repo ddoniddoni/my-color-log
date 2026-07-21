@@ -44,13 +44,13 @@ export function BrandSplash() {
   }, [floatProgress]);
 
   return (
-    <View style={styles.screen} accessibilityLabel="Color Log 시작 화면">
+    <View style={styles.screen}>
       <View pointerEvents="none" style={styles.drawScribble}><DrawScribble /></View>
       <View pointerEvents="none" style={styles.paletteScribble}><PaletteDoodle color={INK} /></View>
 
       <View style={styles.main}>
         <View style={styles.logoGroup}>
-          <Animated.View style={[styles.iconWrap, floatingIconStyle]} accessibilityLabel="카메라와 팔레트 로고">
+          <Animated.View accessible accessibilityLabel="카메라와 팔레트 로고" accessibilityRole="image" style={[styles.iconWrap, floatingIconStyle]}>
             <View style={styles.iconShadow} />
             <View style={styles.iconCard}>
               <View style={styles.cameraBadge}><CameraGlyph /></View>
@@ -63,7 +63,7 @@ export function BrandSplash() {
             <View style={styles.titleLine} />
           </View>
 
-          <View style={styles.loadingDots} accessibilityLabel="시작 준비 중">
+          <View accessible accessibilityLabel="시작 준비 중" accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={styles.loadingDots}>
             <View style={styles.loadingDot} />
             <View style={styles.loadingDot} />
             <View style={styles.loadingDot} />

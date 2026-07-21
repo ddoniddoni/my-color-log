@@ -68,6 +68,10 @@ export async function recoverPendingGalleryImport(): Promise<RecoveredGalleryImp
   }
 }
 
+export async function clearPendingGalleryImportContext(): Promise<void> {
+  await clearImportContext();
+}
+
 async function savePickedAsset(asset: ImagePicker.ImagePickerAsset | undefined, context: GalleryImportContext): Promise<PendingPhoto> {
   if (!asset || !isValidPickedImage(asset)) throw new Error('gallery_photo_invalid');
 

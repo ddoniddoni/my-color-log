@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { type PendingPhoto, parsePendingPhoto } from '@/src/features/sync/model/pendingPhoto';
+import { comparePhotosForSync, type PendingPhoto, parsePendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
 const PHOTO_QUEUE_STORAGE_KEY = '@mycolorlog/photo-upload-queue/v1';
 
@@ -24,6 +24,13 @@ export async function getDayPhotoQueue(userId: string, dateKey: string): Promise
   return queue
     .filter((photo) => photo.userId === userId && photo.dateKey === dateKey && photo.status !== 'local_saved')
     .sort((left, right) => left.position - right.position);
+}
+
+export async function getUserPhotoQueue(userId: string): Promise<PendingPhoto[]> {
+  const queue = await getPhotoQueue();
+  return queue
+    .filter((photo) => photo.userId === userId && photo.status !== 'local_saved' && photo.status !== 'synced')
+    .sort(comparePhotosForSync);
 }
 
 export async function getQueuedPhoto(photoId: string): Promise<PendingPhoto | null> {

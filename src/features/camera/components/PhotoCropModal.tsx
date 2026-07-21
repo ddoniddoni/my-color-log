@@ -62,7 +62,7 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
               <AppText style={styles.title}>사진 구도 맞추기</AppText>
               <AppText style={styles.description}>확대하고 방향 버튼으로 정사각형 안의 장면을 옮겨 보세요.</AppText>
             </View>
-            <Pressable accessibilityLabel="사진 자르기 닫기" accessibilityRole="button" disabled={isApplying} hitSlop={8} onPress={onClose} style={styles.closeButton}>
+            <Pressable accessibilityLabel="사진 자르기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} hitSlop={8} onPress={onClose} style={styles.closeButton}>
               <AppText style={styles.closeButtonText}>×</AppText>
             </Pressable>
           </View>
@@ -91,15 +91,15 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
             <CropDirectionButton direction="up" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
             <View style={styles.directionMiddle}>
               <CropDirectionButton direction="left" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
-              <View accessibilityLabel="정사각형 자르기 프레임" style={styles.directionCenter}><CropFrameIcon /></View>
+              <View accessible accessibilityLabel="정사각형 자르기 프레임" accessibilityRole="image" style={styles.directionCenter}><CropFrameIcon /></View>
               <CropDirectionButton direction="right" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
             </View>
             <CropDirectionButton direction="down" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
           </View>
 
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" disabled={isApplying} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.cancelButtonText}>취소</AppText></Pressable>
-            <Pressable accessibilityRole="button" disabled={isApplying} onPress={() => onApply(crop)} style={({ pressed }) => [styles.applyButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.applyButtonText}>{isApplying ? '적용 중...' : '구도 적용'}</AppText></Pressable>
+            <Pressable accessibilityLabel="사진 자르기 취소" accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.cancelButtonText}>취소</AppText></Pressable>
+            <Pressable accessibilityLabel="사진 구도 적용" accessibilityRole="button" accessibilityState={{ busy: isApplying, disabled: isApplying }} disabled={isApplying} onPress={() => onApply(crop)} style={({ pressed }) => [styles.applyButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.applyButtonText}>{isApplying ? '적용 중...' : '구도 적용'}</AppText></Pressable>
           </View>
         </View>
       </View>
@@ -145,13 +145,13 @@ const styles = StyleSheet.create({
   guideBottomLeft: { borderBottomWidth: 2, borderLeftWidth: 2, bottom: -1, left: -1 },
   guideBottomRight: { borderBottomWidth: 2, borderRightWidth: 2, bottom: -1, right: -1 },
   zoomControls: { alignItems: 'center', flexDirection: 'row', gap: spacing[3], justifyContent: 'center', marginTop: spacing[3] },
-  zoomButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 42, justifyContent: 'center', width: 42 },
+  zoomButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
   zoomButtonText: { color: colors.black, fontSize: 24, fontWeight: '500', lineHeight: 28 },
   zoomLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', textAlign: 'center', width: 56 },
   directionControls: { alignItems: 'center', gap: 3, marginTop: spacing[3] },
   directionMiddle: { flexDirection: 'row', gap: 3 },
-  directionButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
-  directionCenter: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
+  directionButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  directionCenter: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   cancelButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 50 },
   cancelButtonText: { color: colors.black, fontSize: 14, fontWeight: '700' },

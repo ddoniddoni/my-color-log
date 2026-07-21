@@ -108,6 +108,7 @@ export default function NicknameScreen() {
               <Pressable
                 accessibilityLabel="닉네임으로 시작하기"
                 accessibilityRole="button"
+                accessibilityState={{ busy: mutation.isPending, disabled: mutation.isPending }}
                 disabled={mutation.isPending}
                 onPress={handleSubmit}
                 style={({ pressed }) => [styles.startButton, mutation.isPending && styles.startButtonDisabled, pressed && !mutation.isPending && styles.startButtonPressed]}
@@ -126,7 +127,7 @@ export default function NicknameScreen() {
 
 function SketchAvatar() {
   return (
-    <View style={styles.avatarGroup} accessibilityLabel="프로필 그림">
+    <View accessible accessibilityLabel="프로필 그림" accessibilityRole="image" style={styles.avatarGroup}>
       <View pointerEvents="none" style={styles.avatarScribble}><AvatarScribble /></View>
       <View style={styles.avatar}>
         <View style={styles.eyes}><View style={styles.eye} /><View style={styles.eye} /></View>

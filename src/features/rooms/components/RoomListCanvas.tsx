@@ -155,7 +155,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
           <AppText style={styles.eyebrow}>PRIVATE COLOR ROOMS</AppText>
           <AppText style={styles.headerTitle}>친구방</AppText>
         </View>
-        <View accessibilityLabel={`참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개`} style={styles.countBadge}>
+        <View accessible accessibilityLabel={`참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개`} style={styles.countBadge}>
           <AppText style={styles.countText}>{rooms.length} / {MAX_ACTIVE_ROOMS}</AppText>
         </View>
       </View>

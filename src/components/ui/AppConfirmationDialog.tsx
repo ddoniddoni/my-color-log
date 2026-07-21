@@ -38,7 +38,7 @@ export function AppConfirmationDialog({
       </View>
       <View style={styles.actions}>
         {cancelLabel ? (
-          <Pressable accessibilityLabel={cancelLabel} accessibilityRole="button" disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, isBusy && styles.disabledButton]}>
+          <Pressable accessibilityLabel={cancelLabel} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, isBusy && styles.disabledButton]}>
             <AppText style={styles.secondaryButtonText}>{cancelLabel}</AppText>
           </Pressable>
         ) : null}

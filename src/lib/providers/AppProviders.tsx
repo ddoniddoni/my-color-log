@@ -6,6 +6,7 @@ import { useAuthAutoRefresh } from '@/src/features/auth/hooks/useAuthAutoRefresh
 import { SessionBootstrapProvider, useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { configureLocalNotificationPresentation } from '@/src/features/notifications/api/localNotificationRepository';
 import { useRoomPhotoPushRegistration } from '@/src/features/notifications/hooks/useRoomPhotoPushRegistration';
+import { PhotoSyncProvider } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 
 const STALE_TIME_MS = 60_000;
@@ -43,5 +44,12 @@ function AppProviderContent({ children }: PropsWithChildren) {
     previousUserIdRef.current = userId;
   }, [queryClient, sessionState.status, userId]);
 
-  return <QueryClientProvider client={queryClient}>{children}<OfflineBanner visible={networkStatus === 'offline'} /></QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <PhotoSyncProvider userId={userId}>
+        {children}
+        <OfflineBanner visible={networkStatus === 'offline'} />
+      </PhotoSyncProvider>
+    </QueryClientProvider>
+  );
 }

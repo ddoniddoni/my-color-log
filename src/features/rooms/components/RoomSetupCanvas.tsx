@@ -37,6 +37,7 @@ import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { getRoomPhotoMosaicSlots, type RoomBoardMember, type RoomBoardPhoto, type RoomTodayBoard } from '@/src/features/rooms/model/roomTodayBoard';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { useKstDateKey } from '@/src/features/missions/hooks/useKstDateKey';
+import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_DIGIT_IDS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const;
@@ -311,11 +312,11 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
     <View style={styles.page}>
       <View style={styles.appBarShadow}>
         <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
-          <View accessibilityLabel="기록 아이콘" accessibilityRole="image" style={styles.appBarIcon}>
+          <View accessible accessibilityLabel="기록 아이콘" accessibilityRole="image" style={styles.appBarIcon}>
             <PencilIcon />
           </View>
           <AppText style={[styles.brand, { fontFamily: heavyFont }]}>Oneul-Bit</AppText>
-          <View accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.appBarIcon}>
+          <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.appBarIcon}>
             <GearIcon />
           </View>
         </View>
@@ -356,7 +357,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
             <HistoryIcon />
             <AppText style={styles.recentLabel}>RECENTLY VISITED</AppText>
           </View>
-          <View accessibilityLabel="최근에 방문한 친구방이 없어요" style={styles.recentEmpty}>
+          <View accessible accessibilityLabel="최근에 방문한 친구방이 없어요" style={styles.recentEmpty}>
             <View style={styles.recentEmptyIcon}><PaletteIcon /></View>
             <View style={styles.recentEmptyCopy}>
               <AppText style={[styles.recentEmptyTitle, { fontFamily: boldFont }]}>최근에 방문한 방이 없어요</AppText>
@@ -520,7 +521,7 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
           <AppText style={styles.roomBackText}>‹</AppText>
         </Pressable>
         <View style={styles.roomDateGroup}>
-          <View accessibilityLabel="우리 방 아이콘" accessibilityRole="image" style={styles.roomMark}>
+          <View accessible accessibilityLabel="우리 방 아이콘" accessibilityRole="image" style={styles.roomMark}>
             <AppText style={[styles.roomMarkText, { fontFamily: boldFont }]}>{room.emoji ?? room.name.slice(0, 1)}</AppText>
           </View>
           <AppText style={[styles.roomDate, { fontFamily: boldFont }]}>{formattedDate}</AppText>
@@ -684,7 +685,13 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
 
 function RoomMemberMosaic({ member, onCapture, onOpenPhoto }: { member: RoomBoardMember; onCapture: (() => void) | null; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
-    photo.signedUrl ? [{ capturedAt: photo.capturedAt, id: photo.id, position: photo.position, uri: photo.signedUrl }] : []
+    photo.signedUrl ? [{
+      accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
+      capturedAt: photo.capturedAt,
+      id: photo.id,
+      position: photo.position,
+      uri: photo.signedUrl,
+    }] : []
   ));
   return (
     <NinePhotoMosaic
@@ -710,16 +717,16 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
   visible: boolean;
 }) {
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={() => { if (!isPending) onClose(); }} statusBarTranslucent transparent visible={visible}>
       <View style={styles.modalOverlay}>
-        <Pressable accessibilityLabel="방 만들기 닫기" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderCopy}>
               <AppText style={styles.modalEyebrow}>NEW PRIVATE ROOM</AppText>
               <AppText style={styles.modalTitle}>친구방 만들기</AppText>
             </View>
-            <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalCloseButton}>
+            <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
               <AppText style={styles.modalCloseText}>×</AppText>
             </Pressable>
           </View>
@@ -729,8 +736,8 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
           <AppText style={styles.inputLabel}>표시 이모지 (선택)</AppText>
           <TextInput accessibilityLabel="방 표시 이모지" maxLength={8} onChangeText={onEmojiChange} placeholder="🎨" placeholderTextColor="rgba(0, 0, 0, 0.32)" style={styles.modalInput} value={emoji} />
           <View style={styles.modalActions}>
-            <Pressable accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>취소</AppText></Pressable>
-            <Pressable accessibilityRole="button" disabled={isPending} onPress={onCreate} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '만드는 중' : '방 만들기'}</AppText></Pressable>
+            <Pressable accessibilityLabel="친구방 만들기 취소" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>취소</AppText></Pressable>
+            <Pressable accessibilityLabel="친구방 만들기" accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onCreate} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '만드는 중' : '방 만들기'}</AppText></Pressable>
           </View>
         </View>
       </View>
@@ -740,24 +747,24 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
 
 export function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boolean; onClose: () => void; onJoin: () => void; preview: RoomInvitePreview | null }) {
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={preview !== null}>
+    <Modal animationType="fade" onRequestClose={() => { if (!isPending) onClose(); }} statusBarTranslucent transparent visible={preview !== null}>
       <View style={styles.modalOverlay}>
-        <Pressable accessibilityLabel="친구방 참여 닫기" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
         {preview ? <View accessibilityViewIsModal style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderCopy}>
               <AppText style={styles.modalEyebrow}>PRIVATE INVITATION</AppText>
               <AppText style={styles.modalTitle}>{preview.roomEmoji ? `${preview.roomEmoji} ${preview.roomName}` : preview.roomName}</AppText>
             </View>
-            <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalCloseButton}>
+            <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
               <AppText style={styles.modalCloseText}>×</AppText>
             </Pressable>
           </View>
           <AppText style={styles.modalDescription}>{preview.ownerNickname} 님의 방 · 현재 {preview.memberCount}/{preview.maxMembers}명</AppText>
           <View style={styles.privacyNotice}><AppText style={styles.privacyNoticeTitle}>참여 전에 확인해 주세요</AppText><AppText style={styles.privacyNoticeText}>참여하면 이 방의 멤버에게 내 오늘 기록이 함께 보여요. 내 다이어리 원본은 그대로 유지돼요.</AppText></View>
           <View style={styles.modalActions}>
-            <Pressable accessibilityRole="button" disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>다음에</AppText></Pressable>
-            <Pressable accessibilityRole="button" disabled={isPending} onPress={onJoin} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '참여 중' : '이 방에 참여'}</AppText></Pressable>
+            <Pressable accessibilityLabel="친구방 참여 취소" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>다음에</AppText></Pressable>
+            <Pressable accessibilityLabel="이 친구방에 참여" accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onJoin} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '참여 중' : '이 방에 참여'}</AppText></Pressable>
           </View>
         </View> : null}
       </View>
@@ -857,7 +864,7 @@ const styles = StyleSheet.create({
   recentEmptyTitle: { color: colors.black, fontSize: 15, fontWeight: '700', lineHeight: 20 },
   recentEmptyDescription: { color: 'rgba(0, 0, 0, 0.6)', fontSize: 10, lineHeight: 14 },
   roomTopBar: { alignItems: 'center', backgroundColor: '#F9F9F9', flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 8, paddingHorizontal: 16 },
-  roomBackButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 36 },
+  roomBackButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   roomBackText: { color: colors.black, fontSize: 42, fontWeight: '300', lineHeight: 42 },
   roomDateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   roomMark: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 20, borderWidth: 2, height: 40, justifyContent: 'center', overflow: 'hidden', width: 40 },
@@ -889,7 +896,7 @@ const styles = StyleSheet.create({
   canvasToolbar: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   canvasLabel: { borderBottomColor: colors.black, borderBottomWidth: 2, color: colors.black, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8, paddingBottom: 4 },
   canvasActions: { flexDirection: 'row', gap: 8 },
-  canvasActionButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', gap: 5, minHeight: 40, paddingHorizontal: 10, paddingVertical: 7 },
+  canvasActionButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', gap: 5, minHeight: 44, paddingHorizontal: 10, paddingVertical: 7 },
   canvasActionButtonDisabled: { opacity: 0.52 },
   canvasActionLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 13 },
   modalOverlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },

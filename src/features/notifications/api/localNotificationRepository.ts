@@ -61,6 +61,16 @@ export async function configureLocalNotificationPresentation(): Promise<void> {
   });
 }
 
+export async function clearLocalNotificationData(): Promise<void> {
+  const notifications = await getNotificationsModule();
+  if (notifications !== null) {
+    await Promise.allSettled(
+      Object.values(reminderIdentifiers).map((identifier) => notifications.cancelScheduledNotificationAsync(identifier)),
+    );
+  }
+  await AsyncStorage.removeItem(NOTIFICATION_SETTINGS_STORAGE_KEY);
+}
+
 async function scheduleReminder(notifications: ExpoNotifications, kind: ReminderKind, reminder: DailyReminder): Promise<void> {
   await ensureAndroidNotificationChannel(notifications);
   const content = kind === 'morning'

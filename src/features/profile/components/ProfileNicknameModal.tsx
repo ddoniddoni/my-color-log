@@ -44,7 +44,7 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
           <AppText style={styles.eyebrow}>PROFILE EDIT</AppText>
           <AppText accessibilityRole="header" style={styles.title}>나를 부를 이름</AppText>
         </View>
-        <Pressable accessibilityLabel="닉네임 수정 닫기" accessibilityRole="button" disabled={isSaving} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
+        <Pressable accessibilityLabel="닉네임 수정 닫기" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
       </View>
       <AppText style={styles.description}>친구방에서 이 이름으로 보여요. 2~12자로 입력해 주세요.</AppText>
       <TextInput

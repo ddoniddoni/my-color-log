@@ -22,7 +22,7 @@ export function DiaryEditModal({ isSaving, onClose, onSave, target }: DiaryEditM
   return (
     <Modal animationType="fade" onRequestClose={() => !isSaving && onClose()} statusBarTranslucent transparent visible={target !== null}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
-        <Pressable accessibilityLabel="메모 편집 닫기" onPress={() => !isSaving && onClose()} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel="메모 편집 닫기" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={onClose} style={StyleSheet.absoluteFill} />
         {target ? <DiaryEditForm key={getTargetKey(target)} isSaving={isSaving} onClose={onClose} onSave={onSave} target={target} /> : null}
       </KeyboardAvoidingView>
     </Modal>
@@ -52,7 +52,7 @@ function DiaryEditForm({ isSaving, onClose, onSave, target }: Omit<DiaryEditModa
     <View accessibilityViewIsModal style={styles.card}>
           <View style={styles.header}>
             <View><AppText style={styles.eyebrow}>{isPhotoCaption ? 'PHOTO CAPTION' : 'DAILY NOTE'}</AppText><AppText style={styles.title}>{title}</AppText></View>
-            <Pressable accessibilityLabel="메모 편집 닫기" accessibilityRole="button" disabled={isSaving} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
+            <Pressable accessibilityLabel="메모 편집 닫기" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} hitSlop={4} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
           </View>
           <AppText style={styles.description}>{description}</AppText>
           <TextInput
@@ -70,8 +70,8 @@ function DiaryEditForm({ isSaving, onClose, onSave, target }: Omit<DiaryEditModa
           <AppText accessibilityLiveRegion="polite" style={styles.count}>{value.length} / {maximumLength}</AppText>
           {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.error}>{errorMessage}</AppText> : null}
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" disabled={isSaving} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isSaving && styles.disabled]}><AppText style={styles.cancelText}>취소</AppText></Pressable>
-            <Pressable accessibilityRole="button" disabled={isSaving} onPress={() => void save()} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed, isSaving && styles.disabled]}><AppText style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</AppText></Pressable>
+            <Pressable accessibilityLabel="메모 편집 취소" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isSaving && styles.disabled]}><AppText style={styles.cancelText}>취소</AppText></Pressable>
+            <Pressable accessibilityLabel="메모 저장" accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isSaving }} disabled={isSaving} onPress={() => void save()} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed, isSaving && styles.disabled]}><AppText style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</AppText></Pressable>
           </View>
     </View>
   );

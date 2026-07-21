@@ -23,10 +23,10 @@ export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose,
               <AppText accessibilityRole="header" style={styles.title}>오늘의 장면 추가</AppText>
               <AppText style={styles.description}>새로 찍거나, 이미 발견한 사진을 골라 보세요.</AppText>
             </View>
-            <Pressable accessibilityLabel="사진 추가 방법 닫기" accessibilityRole="button" disabled={isImporting} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeButtonText}>×</AppText></Pressable>
+            <Pressable accessibilityLabel="사진 추가 방법 닫기" accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeButtonText}>×</AppText></Pressable>
           </View>
 
-          <Pressable accessibilityLabel="카메라로 사진 찍기" accessibilityRole="button" disabled={isImporting} onPress={onCamera} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
+          <Pressable accessibilityLabel="카메라로 사진 찍기" accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onCamera} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
             <View style={styles.sourceIcon}><CameraIcon /></View>
             <View style={styles.sourceCopy}><AppText style={styles.sourceTitle}>사진 찍기</AppText><AppText style={styles.sourceDescription}>지금 발견한 색을 바로 남겨요.</AppText></View>
             <AppText style={styles.sourceArrow}>→</AppText>

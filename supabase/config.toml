@@ -415,6 +415,12 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
+[functions.delete-my-account]
+enabled = true
+# The handler validates the bearer token with Auth before using the admin client.
+verify_jwt = false
+entrypoint = "./functions/delete-my-account/index.ts"
+
 [functions.notify-room-photo]
 enabled = true
 verify_jwt = true

@@ -35,7 +35,7 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
   const rotation = useSharedValue(INITIAL_WHEEL_ROTATION);
   const resultProgress = useSharedValue(0);
   const wheelStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotation.value}deg` }] }));
-  const resultStyle = useAnimatedStyle(() => ({ opacity: interpolate(resultProgress.value, [0, 1], [0, 1]), transform: [{ translateY: interpolate(resultProgress.value, [0, 1], [8, 0]) }] }));
+  const resultStyle = useAnimatedStyle(() => ({ opacity: interpolate(resultProgress.value, [0, 1], [0, 1]), transform: [{ translateY: reduceMotion ? 0 : interpolate(resultProgress.value, [0, 1], [8, 0]) }] }));
   const displayFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
   const titleFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const targetIndex = palette.findIndex((color) => color.id === mission.color.id);
@@ -63,9 +63,13 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
     setIsRevealing(true);
     setShowResult(false);
     resultProgress.set(0);
+    if (reduceMotion) {
+      showRevealResult();
+      return;
+    }
     rotation.value = withTiming(
-      reduceMotion ? getRevealTargetRotation(targetIndex) : getRevealTargetRotation(targetIndex),
-      { duration: reduceMotion ? 180 : 2_200, easing: Easing.out(Easing.cubic) },
+      getRevealTargetRotation(targetIndex),
+      { duration: 2_200, easing: Easing.out(Easing.cubic) },
       (finished) => {
         if (finished) runOnJS(showRevealResult)();
         else runOnJS(setIsRevealing)(false);
@@ -88,7 +92,7 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
           <AppText style={[styles.subtitle, { fontFamily: fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined }]}>색을 돌려 오늘의 장면을 만나보세요.</AppText>
         </View>
 
-        <View accessibilityLabel={`${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${mission.color.nameKo} 룰렛`} style={styles.wheelFrame}>
+        <View accessibilityLabel={`${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${mission.color.nameKo} 룰렛`} accessible={!showResult} style={styles.wheelFrame}>
           <Animated.View style={[styles.wheel, wheelStyle]}>
             <WheelArtwork palette={palette} />
           </Animated.View>
@@ -97,7 +101,7 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
             <View style={styles.pointerTriangle} />
             <View style={styles.pointerDisc}><BrushIcon /></View>
           </View>
-          {showResult ? <Animated.View pointerEvents="none" style={[styles.resultCard, { backgroundColor: mission.color.accentTint }, resultStyle]}>
+          {showResult ? <Animated.View accessibilityLabel={`오늘의 색은 ${mission.color.nameKo}`} accessibilityLiveRegion="assertive" accessibilityRole="alert" accessible pointerEvents="none" style={[styles.resultCard, { backgroundColor: mission.color.accentTint }, resultStyle]}>
             <AppText style={styles.resultEyebrow}>TODAY&apos;S COLOR</AppText>
             <AppText style={styles.resultName}>{mission.color.nameKo}</AppText>
           </Animated.View> : null}

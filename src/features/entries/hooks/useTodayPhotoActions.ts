@@ -27,6 +27,7 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
     if (!userId) return;
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingPhotos(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
@@ -42,6 +43,9 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
         queryClient.setQueryData<PendingPhoto[]>(queryKeys.pendingPhotos(userId, dateKey), (current) => (
           (current ?? []).map((item) => item.id === photo.id ? { ...item, status: 'cancelled', lastErrorCode: null } : item)
         ));
+        queryClient.setQueryData<PendingPhoto[]>(queryKeys.photoQueue(userId), (current) => (
+          current?.map((item) => item.id === photo.id ? { ...item, status: 'cancelled', lastErrorCode: null } : item)
+        ));
       }
 
       let deletedStoragePath: string | null;
@@ -52,6 +56,9 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
           await restorePendingPhoto(queuedPhoto);
           queryClient.setQueryData<PendingPhoto[]>(queryKeys.pendingPhotos(userId, dateKey), (current) => (
             (current ?? []).map((item) => item.id === photo.id ? queuedPhoto : item)
+          ));
+          queryClient.setQueryData<PendingPhoto[]>(queryKeys.photoQueue(userId), (current) => (
+            current?.map((item) => item.id === photo.id ? queuedPhoto : item)
           ));
         }
         throw error;
@@ -115,6 +122,12 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
     ));
     queryClient.setQueryData<PendingPhoto[]>(queryKeys.pendingPhotos(userId, dateKey), (current) => (
       (current ?? []).map((photo) => ({
+        ...photo,
+        position: newPositionByPhotoId.get(photo.id) ?? photo.position,
+      }))
+    ));
+    queryClient.setQueryData<PendingPhoto[]>(queryKeys.photoQueue(userId), (current) => (
+      current?.map((photo) => ({
         ...photo,
         position: newPositionByPhotoId.get(photo.id) ?? photo.position,
       }))

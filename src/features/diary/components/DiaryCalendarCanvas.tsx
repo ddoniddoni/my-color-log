@@ -27,6 +27,7 @@ import { useDiaryMonth } from '@/src/features/diary/hooks/useDiaryMonth';
 import { getDiaryEntryMemo, type DiaryEntry } from '@/src/features/diary/model/diaryMonth';
 import { getCalendarCells, getSelectedDiaryDateKey, moveMonth, type MonthCursor } from '@/src/features/diary/model/calendar';
 import { getKstDateKey, isFutureKstDate } from '@/src/utils/dates/kst';
+import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -78,10 +79,10 @@ export function DiaryCalendarCanvas() {
     <View style={styles.page}>
       <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
         <View style={styles.dateGroup}>
-          <View accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}><ProfileSketch /></View>
+          <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}><ProfileSketch /></View>
           <AppText style={[styles.headerDate, { fontFamily: boldFont }]}>{todayKey.replaceAll('-', '.')}</AppText>
         </View>
-        <View accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}><SettingsSketch /></View>
+        <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}><SettingsSketch /></View>
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 48) }]} ref={scrollViewRef} showsVerticalScrollIndicator={false}>
@@ -182,7 +183,7 @@ export function DiaryCalendarCanvas() {
 function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; bodyFont: string | undefined; boldFont: string | undefined }) {
   const photoCount = entries.reduce((total, entry) => total + entry.photos.length, 0);
   return (
-    <View accessibilityLabel={`이번 달 ${entries.length}일 기록, 사진 ${photoCount}장`} style={styles.monthSummaryCard}>
+    <View accessible accessibilityLabel={`이번 달 ${entries.length}일 기록, 사진 ${photoCount}장`} style={styles.monthSummaryCard}>
       <View style={styles.summaryCopy}>
         <AppText style={[styles.summaryTitle, { fontFamily: boldFont }]}>{entries.length > 0 ? `${entries.length}일의 색을 모았어요` : '이번 달 첫 색을 기다리고 있어요'}</AppText>
         <AppText style={[styles.summaryDescription, { fontFamily: bodyFont }]}>{entries.length > 0 ? `${photoCount}장의 사진이 나만의 다이어리에 남아 있어요.` : '오늘 발견한 색을 기록하면 달력에 채워져요.'}</AppText>
@@ -196,7 +197,13 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
   const photoCount = entry.photos.length;
   const [isCollageVisible, setIsCollageVisible] = useState(false);
   const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
-    photo.signedUrl ? [{ capturedAt: photo.capturedAt, id: photo.id, position: photo.position, uri: photo.signedUrl }] : []
+    photo.signedUrl ? [{
+      accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, colorName: entry.color.nameKo, position: photo.position }),
+      capturedAt: photo.capturedAt,
+      id: photo.id,
+      position: photo.position,
+      uri: photo.signedUrl,
+    }] : []
   ));
   const memo = getDiaryEntryMemo(entry);
 
@@ -204,7 +211,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onPhotoPress }:
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
         <AppText style={styles.timestamp}>{entry.dateKey} · KST</AppText>
-        <View accessibilityLabel={`${entry.color.nameKo} 색`} style={[styles.colorBadge, { backgroundColor: entry.color.accent }]} />
+        <View accessible accessibilityLabel={`${entry.color.nameKo} 색`} accessibilityRole="image" style={[styles.colorBadge, { backgroundColor: entry.color.accent }]} />
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{entry.color.nameKo}</AppText>
       <AppText style={[styles.entryDescription, { fontFamily: bodyFont }]}>{memo}</AppText>
@@ -244,11 +251,11 @@ function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture }: { bodyFont: s
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
         <AppText style={styles.timestamp}>{dateKey ? `${dateKey} · KST` : 'EMPTY PAGE'}</AppText>
-        <View accessibilityLabel="기록 별표" accessibilityRole="image"><StarIcon /></View>
+        <View accessible accessibilityLabel="기록 별표" accessibilityRole="image"><StarIcon /></View>
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{title}</AppText>
       <AppText style={[styles.entryDescription, { fontFamily: bodyFont }]}>{description}</AppText>
-      <View accessibilityLabel="아직 사진이 없는 기록 자리" style={styles.photoPlaceholder}>
+      <View accessible accessibilityLabel="아직 사진이 없는 기록 자리" accessibilityRole="image" style={styles.photoPlaceholder}>
         <View style={styles.placeholderLines}><View style={styles.placeholderLine} /><View style={[styles.placeholderLine, styles.shortPlaceholderLine]} /></View>
         <CameraSketch />
       </View>
@@ -265,7 +272,7 @@ function DiaryErrorCard({ onRetry }: { onRetry: () => void }) {
     <View style={styles.diaryCard}>
       <AppText style={styles.entryTitle}>다이어리를 불러오지 못했어요</AppText>
       <AppText style={styles.entryDescription}>연결되면 다시 불러올 수 있어요.</AppText>
-      <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retryButton}><AppText style={styles.retryText}>다시 시도</AppText></Pressable>
+      <Pressable accessibilityLabel="다이어리 다시 불러오기" accessibilityRole="button" onPress={onRetry} style={styles.retryButton}><AppText style={styles.retryText}>다시 시도</AppText></Pressable>
     </View>
   );
 }
@@ -327,7 +334,7 @@ const styles = StyleSheet.create({
   monthTitle: { color: colors.black, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 36 },
   yearLabel: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 11, lineHeight: 14 },
   monthControls: { flexDirection: 'row', gap: 16 },
-  monthControl: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 40, justifyContent: 'center', width: 40 },
+  monthControl: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
   monthControlPressed: { backgroundColor: '#EEEEEE', transform: [{ scale: 0.92 }] },
   calendarGrid: { backgroundColor: colors.white, borderColor: colors.black, borderRadius: 8, borderWidth: 1.5, overflow: 'hidden' },
   weekRow: { flexDirection: 'row' },

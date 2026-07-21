@@ -49,7 +49,7 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
           <AppText style={styles.eyebrow}>REMINDERS</AppText>
           <AppText accessibilityRole="header" style={styles.title}>알림 설정</AppText>
         </View>
-        <Pressable accessibilityLabel="알림 설정 닫기" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={styles.closeButton}>
+        <Pressable accessibilityLabel="알림 설정 닫기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={styles.closeButton}>
           <AppText style={styles.closeText}>×</AppText>
         </Pressable>
       </View>
@@ -98,7 +98,7 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
       </ScrollView>
 
       <View style={styles.actions}>
-        <Pressable accessibilityLabel="알림 설정 취소" accessibilityRole="button" disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
+        <Pressable accessibilityLabel="알림 설정 취소" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
           <AppText style={styles.cancelText}>취소</AppText>
         </Pressable>
         <Pressable accessibilityLabel="알림 설정 저장" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void save()} style={[styles.saveButton, isBusy && styles.disabledButton]}>
@@ -127,7 +127,7 @@ function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggl
       <View style={styles.reminderCopy}>
         <AppText style={styles.reminderLabel}>{label}</AppText>
         <AppText style={styles.reminderDescription}>{description}</AppText>
-        <Pressable accessibilityLabel={`${label} 시간 선택`} accessibilityRole="button" disabled={disabled} onPress={() => onSelectTime(kind)} style={({ pressed }) => [styles.timeButton, pressed && !disabled && styles.timeButtonPressed, disabled && styles.disabledButton]}>
+        <Pressable accessibilityLabel={`${label} 시간 선택`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => onSelectTime(kind)} style={({ pressed }) => [styles.timeButton, pressed && !disabled && styles.timeButtonPressed, disabled && styles.disabledButton]}>
           <AppText style={styles.timeText}>{getReminderTimeLabel(reminder)}</AppText>
         </Pressable>
       </View>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   reminderCopy: { flex: 1, gap: 3 },
   reminderLabel: { color: colors.black, fontSize: 16, fontWeight: '700', lineHeight: 22 },
   reminderDescription: { color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
-  timeButton: { alignSelf: 'flex-start', borderBottomColor: colors.black, borderBottomWidth: 1, marginTop: 6, minHeight: 32, justifyContent: 'center' },
+  timeButton: { alignSelf: 'flex-start', borderBottomColor: colors.black, borderBottomWidth: 1, justifyContent: 'center', marginTop: 6, minHeight: 44 },
   timeButtonPressed: { opacity: 0.58 },
   timeText: { color: colors.black, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', lineHeight: 18 },
   toggle: { backgroundColor: '#D6D4D0', borderColor: colors.black, borderRadius: 18, borderWidth: 1.5, height: 32, justifyContent: 'center', paddingHorizontal: 3, width: 54 },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   pickerWrap: { backgroundColor: '#F4F3F0', borderColor: 'rgba(0, 0, 0, 0.15)', borderWidth: 1, gap: spacing[2], padding: spacing[2] },
   pickerLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 11, marginLeft: spacing[2], marginTop: spacing[2] },
   timeControls: { alignItems: 'center', flexDirection: 'row', gap: spacing[2], justifyContent: 'center' },
-  timeAdjustButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1, height: 34, justifyContent: 'center', width: 42 },
+  timeAdjustButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   timeAdjustText: { color: colors.black, fontSize: 20, lineHeight: 23 },
   timeValue: { alignItems: 'center', minWidth: 110 },
   timeValueText: { color: colors.black, fontFamily: 'monospace', fontSize: 14, fontWeight: '700', lineHeight: 19 },

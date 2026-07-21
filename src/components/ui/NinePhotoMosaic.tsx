@@ -5,6 +5,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 
 export type NinePhotoMosaicPhoto = {
+  accessibilityLabel?: string;
   id: string;
   position: number;
   uri: string;
@@ -35,7 +36,7 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
                 <Pressable accessibilityLabel={`${index + 1}번째 빈 사진 칸에 사진 추가`} accessibilityRole="button" key={`empty-${index + 1}`} onPress={onEmptyPress} style={cellStyle}>
                   <AppText style={styles.emptyAddMark}>+</AppText>
                 </Pressable>
-              ) : <View accessibilityLabel={`${index + 1}번째 빈 사진 칸`} key={`empty-${index + 1}`} style={cellStyle} />;
+              ) : <View accessibilityLabel={`${index + 1}번째 빈 사진 칸`} accessibilityRole="image" accessible key={`empty-${index + 1}`} style={cellStyle} />;
             }
 
             const content = (
@@ -48,14 +49,14 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
             return onPhotoPress || onPhotoLongPress ? (
               <Pressable
                 accessibilityHint={onPhotoLongPress ? '길게 누르면 사진 순서를 관리할 수 있어요.' : undefined}
-                accessibilityLabel={`${photo.position}번째 오늘의 색 사진`}
+                accessibilityLabel={photo.accessibilityLabel ?? `${photo.position}번째 오늘의 색 사진`}
                 accessibilityRole="button"
                 key={photo.id}
                 onLongPress={onPhotoLongPress ? () => onPhotoLongPress(photo) : undefined}
                 onPress={onPhotoPress ? () => onPhotoPress(photo) : undefined}
                 style={cellStyle}
               >{content}</Pressable>
-            ) : <View accessibilityLabel={`${photo.position}번째 오늘의 색 사진`} key={photo.id} style={cellStyle}>{content}</View>;
+            ) : <View accessibilityLabel={photo.accessibilityLabel ?? `${photo.position}번째 오늘의 색 사진`} accessibilityRole="image" accessible key={photo.id} style={cellStyle}>{content}</View>;
           })}
         </View>
       ))}

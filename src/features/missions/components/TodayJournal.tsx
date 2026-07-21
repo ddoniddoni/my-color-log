@@ -17,6 +17,7 @@ import { type DailyMission } from '@/src/features/missions/model/dailyMission';
 import { formatKstCountdown } from '@/src/features/missions/model/countdown';
 import { getTodayJournalLayout } from '@/src/features/missions/model/todayJournalLayout';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
+import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
 type TodayJournalProps = {
   mission: DailyMission;
@@ -53,12 +54,12 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
     <View style={styles.page}>
       <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
         <View style={styles.dateGroup}>
-          <View accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}>
+          <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}>
             <ProfileSketch />
           </View>
           <AppText style={[styles.headerDate, { fontFamily: boldFont }]}>{formatHeaderDate(mission.challengeDate)}</AppText>
         </View>
-        <View accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}>
+        <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}>
           <SettingsSketch />
         </View>
       </View>
@@ -88,7 +89,15 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
                   if (todayPhoto) onPhotoPress(todayPhoto);
                 }}
                 onEmptyPress={photos.length < 9 ? onAddPhotoPress : undefined}
-                photos={photos}
+                photos={photos.map((photo) => ({
+                  ...photo,
+                  accessibilityLabel: getPhotoAccessibilityLabel({
+                    caption: photo.caption,
+                    colorName: mission.color.nameKo,
+                    position: photo.position,
+                    status: photo.status,
+                  }),
+                }))}
               />
             </View>}
 
@@ -105,7 +114,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         <View style={[styles.actionArea, isCompact && styles.actionAreaCompact]}>
           <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onAddPhotoPress} style={isCompact ? styles.actionButtonCompact : undefined} />
           {hasSyncFailure
-            ? <Pressable accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={styles.retryText}>업로드 다시 시도</AppText></Pressable>
+            ? <Pressable accessibilityLabel="실패한 사진 업로드 다시 시도" accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={styles.retryText}>업로드 다시 시도</AppText></Pressable>
             : <AppText accessibilityLiveRegion="polite" numberOfLines={isCompact ? 1 : 2} style={[styles.actionHint, { fontFamily: bodyFont }]}>{isSyncing ? '사진은 보존됐어요. 지금 안전하게 올리는 중이에요.' : photos.length === 0 ? '발견한 색은 먼저 기기에 안전하게 보관해요.' : `${photos.length}/9장의 오늘을 모았어요. 사진을 길게 눌러 순서를 바꿀 수 있어요.`}</AppText>}
         </View>
       </View>
@@ -115,7 +124,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
 function EmptyJournalCanvas({ bodyFont, boldFont, mission, size }: { bodyFont: string | undefined; boldFont: string | undefined; mission: DailyMission; size: number }) {
   return (
-    <View accessibilityLabel={`아직 ${mission.color.nameKo} 사진이 없는 기록 영역`} style={[styles.canvas, { height: size, width: size }]}>
+    <View accessible accessibilityLabel={`아직 ${mission.color.nameKo} 사진이 없는 기록 영역`} style={[styles.canvas, { height: size, width: size }]}>
       <View pointerEvents="none" style={styles.canvasGuide}>
         <View style={[styles.guideLine, { backgroundColor: mission.color.accent }]} />
         <View style={[styles.guideLine, styles.guideLineShort, { backgroundColor: mission.color.accent }]} />

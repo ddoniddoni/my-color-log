@@ -22,7 +22,7 @@ export function AppModal({ accessibilityLabel, children, contentStyle, dismissib
   return (
     <Modal animationType="fade" onRequestClose={close} statusBarTranslucent transparent visible={visible}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
-        <Pressable accessibilityLabel={accessibilityLabel} disabled={!canDismiss} onPress={close} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" accessibilityState={{ disabled: !canDismiss }} disabled={!canDismiss} onPress={close} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={[styles.card, contentStyle]}>
           {children}
         </View>

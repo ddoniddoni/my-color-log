@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
+import { deleteAuthIdentity } from './accountDeletionWorkflow.ts';
+
 const ENTRY_PHOTO_BUCKET = 'entry-photos';
 const STORAGE_LIST_LIMIT = 1_000;
 const STORAGE_REMOVE_CHUNK_SIZE = 100;
@@ -43,11 +45,11 @@ Deno.serve(async (request) => {
     const { error: roomPreparationError } = await adminClient.rpc('prepare_account_deletion', { p_user_id: user.id });
     if (roomPreparationError) throw new Error('room_preparation_failed');
 
-    const { error: signOutError } = await adminClient.auth.admin.signOut(user.id, 'global');
-    if (signOutError) throw new Error('session_revocation_failed');
-
-    const { error: deleteUserError } = await adminClient.auth.admin.deleteUser(user.id);
-    if (deleteUserError) throw new Error('auth_user_deletion_failed');
+    await deleteAuthIdentity({
+      accessToken,
+      adminAuth: adminClient.auth.admin,
+      userId: user.id,
+    });
 
     return jsonResponse({ deleted: true }, 200);
   } catch {

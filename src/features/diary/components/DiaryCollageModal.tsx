@@ -116,7 +116,7 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
                   <AppText numberOfLines={1} style={styles.collageColorName}>{entry.color.nameKo}</AppText>
                   <AppText style={styles.collageColorEnglish}>{entry.color.nameEn.toUpperCase()}</AppText>
                 </View>
-                <View accessibilityLabel={`${entry.color.nameKo} 색`} style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
+                <View accessible accessibilityLabel={`${entry.color.nameKo} 색`} accessibilityRole="image" style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
               </View>
               <CollagePhotoGrid onImageSettled={markImageSettled} photos={exportablePhotos} rowCounts={rowCounts} />
               <View style={styles.collageFooter}>

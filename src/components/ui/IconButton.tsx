@@ -7,7 +7,7 @@ type IconButtonProps = Omit<PressableProps, 'children' | 'style'> & { label: str
 
 export function IconButton({ label, symbol, style, ...props }: IconButtonProps) {
   return (
-    <Pressable {...props} accessibilityRole="button" accessibilityLabel={label} hitSlop={8} style={({ pressed }) => [styles.base, pressed && styles.pressed, style]}>
+    <Pressable {...props} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ ...props.accessibilityState, disabled: props.disabled ?? false }} hitSlop={8} style={({ pressed }) => [styles.base, pressed && styles.pressed, style]}>
       <AppText>{symbol}</AppText>
     </Pressable>
   );

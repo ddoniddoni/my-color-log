@@ -54,6 +54,39 @@ export function isPendingUpload(photo: PendingPhoto): boolean {
   return photo.status === 'pending' || photo.status === 'uploading';
 }
 
+export function comparePhotosForSync(left: PendingPhoto, right: PendingPhoto): number {
+  const capturedAtComparison = left.capturedAt.localeCompare(right.capturedAt);
+  if (capturedAtComparison !== 0) return capturedAtComparison;
+
+  const dateComparison = left.dateKey.localeCompare(right.dateKey);
+  if (dateComparison !== 0) return dateComparison;
+
+  const positionComparison = left.position - right.position;
+  return positionComparison !== 0 ? positionComparison : left.id.localeCompare(right.id);
+}
+
+export function getNextPendingUpload(photos: readonly PendingPhoto[]): PendingPhoto | null {
+  return photos.filter(isPendingUpload).sort(comparePhotosForSync)[0] ?? null;
+}
+
+export function getNextCancelledPhoto(
+  photos: readonly PendingPhoto[],
+  attemptedPhotoIds: ReadonlySet<string>,
+): PendingPhoto | null {
+  return photos
+    .filter((photo) => photo.status === 'cancelled' && !attemptedPhotoIds.has(photo.id))
+    .sort(comparePhotosForSync)[0] ?? null;
+}
+
+export function getRecoverableFailedPhotos(
+  photos: readonly PendingPhoto[],
+  attemptedPhotoIds: ReadonlySet<string>,
+): PendingPhoto[] {
+  return photos
+    .filter((photo) => photo.status === 'failed' && !attemptedPhotoIds.has(photo.id))
+    .sort(comparePhotosForSync);
+}
+
 function isUploadStatus(value: unknown): value is UploadStatus {
   return value === 'local_saved' || value === 'pending' || value === 'uploading' || value === 'synced' || value === 'failed' || value === 'cancelled';
 }
