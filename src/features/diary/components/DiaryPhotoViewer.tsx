@@ -5,7 +5,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
 
 type DiaryPhotoViewerProps = {
@@ -20,6 +21,7 @@ type DiaryPhotoViewerProps = {
 };
 
 export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, onDeletePhoto, onEditPhoto, onSelectPhoto, timeZone }: DiaryPhotoViewerProps) {
+  const styles = useDiaryPhotoViewerStyles();
   const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat('ko-KR', {
     day: '2-digit',
     hour: '2-digit',
@@ -74,31 +76,39 @@ function formatPhotoDate(value: string, formatter: Intl.DateTimeFormat): string 
 }
 
 function CloseIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={21} viewBox="0 0 24 24" width={21}><Path d="m6 6 12 12M18 6 6 18" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.7} /></Svg>;
 }
 
 function Chevron({ direction }: { direction: 'left' | 'right' }) {
+  const { colors } = useAppTheme();
   const path = direction === 'left' ? 'm14.5 5-6 7 6 7' : 'm9.5 5 6 7-6 7';
   return <Svg height={21} viewBox="0 0 24 24" width={21}><Path d={path} fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
 
-const styles = StyleSheet.create({
+function useDiaryPhotoViewerStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { maxHeight: '86%', maxWidth: 360, padding: 0 },
   scroll: { flexShrink: 1 },
   content: { flexGrow: 1 },
-  photoSection: { alignItems: 'center', backgroundColor: '#F2F2EE', borderBottomColor: colors.ink, borderBottomWidth: 1.5, height: 224, justifyContent: 'center', padding: spacing[5], position: 'relative' },
+  photoSection: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderBottomColor: colors.ink, borderBottomWidth: 1.5, height: 224, justifyContent: 'center', padding: spacing[5], position: 'relative' },
   photo: { height: '100%', width: '100%' },
-  closeButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 44 },
-  photoNav: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', position: 'absolute', top: '44%', width: 44 },
+  closeButton: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 44 },
+  photoNav: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', position: 'absolute', top: '44%', width: 44 },
   previousButton: { left: 10 },
   nextButton: { right: 10 },
   metaSection: { padding: spacing[4] },
   metaHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  metaLabel: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },
+  metaLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },
   dateValue: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 24, marginTop: 2 },
-  positionValue: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, marginTop: 13 },
-  divider: { backgroundColor: '#B9B9B9', height: 1, marginVertical: spacing[3] },
-  memoLabel: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },
+  positionValue: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, marginTop: 13 },
+  divider: { backgroundColor: colors.borderStrong, height: 1, marginVertical: spacing[3] },
+  memoLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.5 },
   memoValue: { color: colors.ink, fontSize: 13, fontStyle: 'italic', lineHeight: 19, marginTop: spacing[2] },
   colorRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   colorDot: { borderColor: colors.ink, borderRadius: 6, borderWidth: 1, height: 12, width: 12 },
@@ -106,7 +116,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   editAction: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 46 },
   editActionText: { color: colors.ink, fontSize: 12, fontWeight: '700' },
-  deleteAction: { alignItems: 'center', backgroundColor: '#FFF7F6', borderColor: colors.danger, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 46 },
+  deleteAction: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.danger, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 46 },
   deleteActionText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
   disabledAction: { opacity: 0.42 },
-});
+  });
+}

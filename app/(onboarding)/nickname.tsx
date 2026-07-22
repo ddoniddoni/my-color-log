@@ -63,7 +63,7 @@ export default function NicknameScreen() {
     <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={styles.flex}>
       <View style={styles.page}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
-          <AppText style={[styles.wordmark, { fontFamily: heavyFont }]}>Oneul-Bit</AppText>
+          <AppText style={[styles.wordmark, { fontFamily: heavyFont }]}>Color Log</AppText>
           <View style={styles.memberBadge}>
             <AppText style={[styles.memberText, { fontFamily: bodyFont }]}>New Member</AppText>
             <View style={styles.memberAvatar}><FaceIcon /></View>

@@ -1,9 +1,10 @@
 import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { type ThemeColors } from '@/src/design/tokens';
 import { getInviteExpiryLabel, type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomManagementState } from '@/src/features/rooms/model/roomLifecycle';
 
@@ -34,6 +35,7 @@ type RoomManagementConfirmation =
   | { kind: 'transfer'; member: RoomMember };
 
 export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, onNotice, onRemoveMember, onReissueInvite, onRevokeInvite, onTransfer, onUpdateSettings, pendingAction, room, visible }: RoomManagementModalProps) {
+  const styles = useRoomManagementStyles();
   const managementState = getRoomManagementState(room, currentUserId);
   const isPending = pendingAction !== null;
   const [confirmation, setConfirmation] = useState<RoomManagementConfirmation | null>(null);
@@ -151,6 +153,8 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
 }
 
 function RoomOwnerSettings({ onNotice, onRequestConfirmation, onUpdateSettings, pendingAction, room }: Pick<RoomManagementModalProps, 'onNotice' | 'onUpdateSettings' | 'pendingAction' | 'room'> & { onRequestConfirmation: (confirmation: RoomManagementConfirmation) => void }) {
+  const { colors } = useAppTheme();
+  const styles = useRoomManagementStyles();
   const nameRef = useRef(room.name);
   const emojiRef = useRef(room.emoji ?? '');
   const isPending = pendingAction !== null;
@@ -186,11 +190,11 @@ function RoomOwnerSettings({ onNotice, onRequestConfirmation, onUpdateSettings, 
         <AppText style={styles.sectionLabel}>ROOM IDENTITY</AppText>
         <View style={styles.fieldGroup}>
           <AppText style={styles.fieldLabel}>방 이름</AppText>
-          <TextInput accessibilityLabel="방 이름" defaultValue={room.name} editable={!isPending} maxLength={20} onChangeText={(value) => { nameRef.current = value; }} placeholder="방 이름" placeholderTextColor="rgba(0, 0, 0, 0.38)" style={styles.textInput} />
+          <TextInput accessibilityLabel="방 이름" defaultValue={room.name} editable={!isPending} maxLength={20} onChangeText={(value) => { nameRef.current = value; }} placeholder="방 이름" placeholderTextColor={colors.textTertiary} style={styles.textInput} />
         </View>
         <View style={styles.fieldGroup}>
           <AppText style={styles.fieldLabel}>방 이모지 · 선택</AppText>
-          <TextInput accessibilityLabel="방 이모지" defaultValue={room.emoji ?? ''} editable={!isPending} maxLength={8} onChangeText={(value) => { emojiRef.current = value; }} placeholder="🎨" placeholderTextColor="rgba(0, 0, 0, 0.38)" style={[styles.textInput, styles.emojiInput]} />
+          <TextInput accessibilityLabel="방 이모지" defaultValue={room.emoji ?? ''} editable={!isPending} maxLength={8} onChangeText={(value) => { emojiRef.current = value; }} placeholder="🎨" placeholderTextColor={colors.textTertiary} style={[styles.textInput, styles.emojiInput]} />
         </View>
         <PrimaryButton accessibilityLabel="방 정보 저장" disabled={isPending} label={pendingAction === 'updating_settings' ? '저장 중' : '방 정보 저장'} onPress={saveSettings} />
       </View>
@@ -245,60 +249,70 @@ function getConfirmationCopy(confirmation: RoomManagementConfirmation): { confir
 }
 
 function PrimaryButton({ accessibilityLabel, disabled, label, onPress }: { accessibilityLabel: string; disabled: boolean; label: string; onPress: () => void }) {
+  const styles = useRoomManagementStyles();
   return <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.primaryButton, disabled && styles.buttonDisabled]}><AppText style={styles.primaryButtonText}>{label}</AppText></Pressable>;
 }
 
 function SecondaryButton({ accessibilityLabel, disabled, label, onPress }: { accessibilityLabel: string; disabled: boolean; label: string; onPress: () => void }) {
+  const styles = useRoomManagementStyles();
   return <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.secondaryButton, disabled && styles.buttonDisabled]}><AppText style={styles.secondaryButtonText}>{label}</AppText></Pressable>;
 }
 
 function DangerButton({ accessibilityLabel, disabled, label, onPress }: { accessibilityLabel: string; disabled: boolean; label: string; onPress: () => void }) {
+  const styles = useRoomManagementStyles();
   return <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.dangerButton, disabled && styles.buttonDisabled]}><AppText style={styles.dangerButtonText}>{label}</AppText></Pressable>;
 }
 
-const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.54)', flex: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', gap: 16, maxHeight: '88%', maxWidth: 390, padding: 20, width: '100%' },
+function useRoomManagementStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  overlay: { alignItems: 'center', backgroundColor: colors.overlay, flex: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 2, boxShadow: `7px 7px 0px ${colors.black}`, gap: 16, maxHeight: '88%', maxWidth: 390, padding: 20, width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   body: { flexShrink: 1, gap: 14 },
   content: { gap: 16 },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
-  title: { color: colors.black, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
-  closeText: { color: colors.black, fontSize: 28, fontWeight: '300', lineHeight: 31 },
-  description: { color: 'rgba(0, 0, 0, 0.7)', fontSize: 14, lineHeight: 21 },
-  notice: { backgroundColor: '#F2F1ED', borderColor: 'rgba(0, 0, 0, 0.24)', borderWidth: 1, gap: 4, padding: 13 },
-  noticeTitle: { color: colors.black, fontSize: 13, fontWeight: '700' },
-  noticeText: { color: 'rgba(0, 0, 0, 0.65)', fontSize: 12, lineHeight: 18 },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
+  title: { color: colors.ink, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 38, justifyContent: 'center', width: 38 },
+  closeText: { color: colors.ink, fontSize: 28, fontWeight: '300', lineHeight: 31 },
+  description: { color: colors.textSecondary, fontSize: 14, lineHeight: 21 },
+  notice: { backgroundColor: colors.surfaceMuted, borderColor: colors.border, borderWidth: 1, gap: 4, padding: 13 },
+  noticeTitle: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+  noticeText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
   section: { gap: 8 },
-  sectionLabel: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
+  sectionLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
   fieldGroup: { gap: 5 },
-  fieldLabel: { color: colors.black, fontSize: 12, fontWeight: '700' },
-  textInput: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 15, minHeight: 46, paddingHorizontal: 11, paddingVertical: 9 },
+  fieldLabel: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  textInput: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, color: colors.ink, fontSize: 15, minHeight: 46, paddingHorizontal: 11, paddingVertical: 9 },
   emojiInput: { fontSize: 20 },
-  primaryButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
-  primaryButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
-  secondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
-  secondaryButtonText: { color: colors.black, fontSize: 14, fontWeight: '800' },
-  inviteCard: { backgroundColor: '#F2F1ED', borderColor: colors.black, borderWidth: 1.5, gap: 4, padding: 13 },
-  inviteCode: { color: colors.black, fontFamily: 'monospace', fontSize: 23, fontWeight: '800', letterSpacing: 3 },
-  inviteMeta: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 11, lineHeight: 16 },
-  memberList: { borderColor: colors.black, borderWidth: 1.5 },
-  memberButton: { alignItems: 'center', borderBottomColor: 'rgba(0, 0, 0, 0.2)', borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
-  memberControlHint: { color: 'rgba(0, 0, 0, 0.61)', fontSize: 11, lineHeight: 16 },
-  memberControlRow: { alignItems: 'center', borderBottomColor: 'rgba(0, 0, 0, 0.2)', borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
-  memberAvatar: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderRadius: 18, borderWidth: 1.5, height: 36, justifyContent: 'center', width: 36 },
-  memberInitial: { color: colors.black, fontSize: 15, fontWeight: '700' },
+  primaryButton: { alignItems: 'center', backgroundColor: colors.ink, boxShadow: `3px 3px 0px ${colors.black}`, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
+  primaryButtonText: { color: colors.surface, fontSize: 14, fontWeight: '800' },
+  secondaryButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
+  secondaryButtonText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  inviteCard: { backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, gap: 4, padding: 13 },
+  inviteCode: { color: colors.ink, fontFamily: 'monospace', fontSize: 23, fontWeight: '800', letterSpacing: 3 },
+  inviteMeta: { color: colors.textSecondary, fontSize: 11, lineHeight: 16 },
+  memberList: { borderColor: colors.ink, borderWidth: 1.5 },
+  memberButton: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
+  memberControlHint: { color: colors.textSecondary, fontSize: 11, lineHeight: 16 },
+  memberControlRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: 10, minHeight: 62, paddingHorizontal: 12 },
+  memberAvatar: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 18, borderWidth: 1.5, height: 36, justifyContent: 'center', width: 36 },
+  memberInitial: { color: colors.ink, fontSize: 15, fontWeight: '700' },
   memberCopy: { flex: 1, gap: 1 },
-  memberName: { color: colors.black, fontSize: 15, fontWeight: '700' },
-  memberMeta: { color: 'rgba(0, 0, 0, 0.56)', fontFamily: 'monospace', fontSize: 9 },
-  memberArrow: { color: colors.black, fontSize: 19 },
+  memberName: { color: colors.ink, fontSize: 15, fontWeight: '700' },
+  memberMeta: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 9 },
+  memberArrow: { color: colors.ink, fontSize: 19 },
   removeMemberButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 9 },
   removeMemberText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
-  pendingText: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12 },
-  ownerDangerFooter: { borderTopColor: 'rgba(210, 64, 61, 0.38)', borderTopWidth: 1, gap: 8, paddingTop: 14 },
-  ownerDangerHint: { color: 'rgba(130, 32, 30, 0.8)', fontSize: 11, lineHeight: 16 },
+  pendingText: { color: colors.textSecondary, fontSize: 12 },
+  ownerDangerFooter: { borderTopColor: colors.danger, borderTopWidth: 1, gap: 8, paddingTop: 14 },
+  ownerDangerHint: { color: colors.danger, fontSize: 11, lineHeight: 16 },
   dangerButton: { alignItems: 'center', borderColor: colors.danger, borderWidth: 1.5, justifyContent: 'center', minHeight: 48, paddingHorizontal: 16 },
   dangerButtonText: { color: colors.danger, fontSize: 15, fontWeight: '800' },
   buttonDisabled: { opacity: 0.5 },
-});
+  });
+}

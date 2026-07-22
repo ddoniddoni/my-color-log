@@ -1,4 +1,4 @@
-type PhotoAccessibilityStatus = 'failed' | 'synced' | 'syncing';
+type PhotoAccessibilityStatus = 'failed' | 'pending' | 'synced' | 'syncing';
 
 type PhotoAccessibilityLabelInput = {
   caption?: string | null;
@@ -10,6 +10,7 @@ type PhotoAccessibilityLabelInput = {
 
 const statusLabels: Record<Exclude<PhotoAccessibilityStatus, 'synced'>, string> = {
   failed: '업로드 실패',
+  pending: '업로드 대기',
   syncing: '동기화 중',
 };
 

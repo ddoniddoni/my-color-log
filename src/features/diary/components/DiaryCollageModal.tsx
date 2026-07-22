@@ -6,7 +6,8 @@ import { Image } from 'expo-image';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { saveDiaryCollageToLibrary, shareDiaryCollage } from '@/src/features/diary/api/collageRepository';
 import { DIARY_COLLAGE_MAX_PHOTOS, getDiaryCollageFilename, getDiaryCollageRowCounts } from '@/src/features/diary/model/diaryCollage';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
@@ -31,6 +32,7 @@ export function DiaryCollageModal({ entry, onClose, visible }: DiaryCollageModal
 }
 
 function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'entry' | 'onClose'> & { entry: DiaryEntry }) {
+  const styles = useDiaryCollageStyles();
   const viewShotRef = useRef<ViewShotRef>(null);
   const imageLoadStates = useRef(new Map<string, 'failed' | 'loaded'>());
   const [loadedImageCount, setLoadedImageCount] = useState(0);
@@ -153,6 +155,7 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
 }
 
 function CollagePhotoGrid({ onImageSettled, photos, rowCounts }: { onImageSettled: (photoId: string, state: 'failed' | 'loaded') => void; photos: DiaryPhoto[]; rowCounts: readonly number[] }) {
+  const styles = useDiaryCollageStyles();
   const photoSlots = Array.from({ length: DIARY_COLLAGE_MAX_PHOTOS }, (_, index) => photos[index] ?? null);
 
   return (
@@ -190,38 +193,45 @@ function getCollageErrorMessage(error: unknown, action: 'save' | 'share'): strin
   return action === 'save' ? '잠시 뒤 다시 저장해 주세요.' : '잠시 뒤 다시 공유해 주세요.';
 }
 
-const styles = StyleSheet.create({
+function useDiaryCollageStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { maxHeight: '90%' },
-  header: { alignItems: 'flex-start', borderBottomColor: colors.black, borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', padding: spacing[4] },
+  header: { alignItems: 'flex-start', borderBottomColor: colors.ink, borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', padding: spacing[4] },
   headerCopy: { flex: 1, paddingRight: spacing[3] },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
-  title: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 28, marginTop: 2 },
-  description: { color: 'rgba(0, 0, 0, 0.66)', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
-  closeButtonText: { color: colors.black, fontSize: 27, fontWeight: '300', lineHeight: 30 },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
+  title: { color: colors.ink, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 28, marginTop: 2 },
+  description: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
+  closeButtonText: { color: colors.ink, fontSize: 27, fontWeight: '300', lineHeight: 30 },
   previewScroll: { gap: spacing[3], padding: spacing[4] },
   viewShot: { alignSelf: 'center', aspectRatio: 4 / 5, maxWidth: 330, width: '100%' },
-  collage: { borderColor: colors.black, borderWidth: 1.5, flex: 1, gap: 10, padding: 12 },
+  collage: { borderColor: colors.ink, borderWidth: 1.5, flex: 1, gap: 10, padding: 12 },
   collageHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   collageTitleWrap: { flex: 1, paddingRight: 8 },
-  collageEyebrow: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.7 },
-  collageColorName: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.75, lineHeight: 27, marginTop: 1 },
-  collageColorEnglish: { color: 'rgba(0, 0, 0, 0.62)', fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.65 },
-  colorMark: { borderColor: colors.black, borderRadius: 16, borderWidth: 1.5, height: 32, width: 32 },
+  collageEyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.7 },
+  collageColorName: { color: colors.ink, fontSize: 22, fontWeight: '800', letterSpacing: -0.75, lineHeight: 27, marginTop: 1 },
+  collageColorEnglish: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.65 },
+  colorMark: { borderColor: colors.ink, borderRadius: 16, borderWidth: 1.5, height: 32, width: 32 },
   collageGrid: { aspectRatio: 1, gap: 4, width: '100%' },
   collageRow: { flex: 1, flexDirection: 'row', gap: 4 },
-  collageTile: { backgroundColor: '#E6E4DF', flex: 1, overflow: 'hidden' },
-  collageEmptyTile: { backgroundColor: 'rgba(255, 255, 255, 0.42)', borderColor: 'rgba(0, 0, 0, 0.24)', borderStyle: 'dashed', borderWidth: 1 },
+  collageTile: { backgroundColor: colors.surfaceMuted, flex: 1, overflow: 'hidden' },
+  collageEmptyTile: { backgroundColor: colors.canvas, borderColor: colors.border, borderStyle: 'dashed', borderWidth: 1 },
   collageImage: { height: '100%', width: '100%' },
   collageFooter: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  collageFooterText: { color: colors.black, fontFamily: 'monospace', fontSize: 7, fontWeight: '700', letterSpacing: 0.5 },
-  footerLine: { backgroundColor: 'rgba(0, 0, 0, 0.5)', flex: 1, height: 1 },
-  readyNotice: { backgroundColor: '#F1F1EE', borderColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
-  readyNoticeText: { color: 'rgba(0, 0, 0, 0.65)', fontSize: 11, lineHeight: 16, textAlign: 'center' },
-  actions: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, flexDirection: 'row', gap: spacing[2], padding: spacing[4] },
-  saveButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 8 },
-  saveButtonText: { color: colors.black, fontSize: 13, fontWeight: '800' },
-  shareButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 8 },
-  shareButtonText: { color: colors.white, fontSize: 13, fontWeight: '800' },
+  collageFooterText: { color: colors.ink, fontFamily: 'monospace', fontSize: 7, fontWeight: '700', letterSpacing: 0.5 },
+  footerLine: { backgroundColor: colors.borderStrong, flex: 1, height: 1 },
+  readyNotice: { backgroundColor: colors.surfaceMuted, borderColor: colors.border, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
+  readyNoticeText: { color: colors.textSecondary, fontSize: 11, lineHeight: 16, textAlign: 'center' },
+  actions: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', gap: spacing[2], padding: spacing[4] },
+  saveButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 8 },
+  saveButtonText: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+  shareButton: { alignItems: 'center', backgroundColor: colors.ink, boxShadow: `3px 3px 0px ${colors.black}`, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 8 },
+  shareButtonText: { color: colors.surface, fontSize: 13, fontWeight: '800' },
   disabledButton: { opacity: 0.38 },
-});
+  });
+}

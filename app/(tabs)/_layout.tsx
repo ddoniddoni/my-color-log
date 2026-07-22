@@ -3,24 +3,25 @@ import type { BottomTabBarButtonProps } from 'expo-router/build/react-navigation
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing } from '@/src/design/tokens';
 import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
 
 export default function TabLayout() {
   const reduceMotion = useReducedMotion();
+  const theme = useAppTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.textPrimary,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarActiveTintColor: theme.colors.textPrimary,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
         tabBarStyle: {
-          backgroundColor: '#F9F9F9',
-          borderTopColor: colors.borderStrong,
+          backgroundColor: theme.colors.canvas,
+          borderTopColor: theme.colors.borderStrong,
           borderTopWidth: 1,
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
           height: 84,
+          overflow: 'hidden',
           paddingBottom: 18,
           paddingTop: spacing[2],
         },
@@ -44,6 +45,7 @@ const tabIcons = {
 } satisfies Record<string, number>;
 
 function StitchTabIcon({ focused, source }: { focused: boolean; source: number }) {
+  const theme = useAppTheme();
   return (
     <Image
       accessible={false}
@@ -51,7 +53,7 @@ function StitchTabIcon({ focused, source }: { focused: boolean; source: number }
       contentFit="contain"
       importantForAccessibility="no"
       source={source}
-      style={[styles.icon, !focused && styles.iconInactive]}
+      style={[styles.icon, { tintColor: theme.colors.ink }, !focused && styles.iconInactive]}
     />
   );
 }

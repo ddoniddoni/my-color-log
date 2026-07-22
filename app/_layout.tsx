@@ -9,6 +9,7 @@ import { GalleryImportRecovery } from '@/src/features/camera/components/GalleryI
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { useRoomPhotoNotificationNavigation } from '@/src/features/notifications/hooks/useRoomPhotoNotificationNavigation';
 import { AppProviders } from '@/src/lib/providers/AppProviders';
+import { useAppTheme } from '@/src/design/ThemeProvider';
 
 export default function RootLayout() {
   return (
@@ -16,7 +17,7 @@ export default function RootLayout() {
       <AppErrorBoundary>
         <AppProviders>
           <GalleryImportRecovery />
-          <StatusBar style="dark" />
+          <ThemedStatusBar />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
@@ -32,6 +33,11 @@ export default function RootLayout() {
       </AppErrorBoundary>
     </SafeAreaProvider>
   );
+}
+
+function ThemedStatusBar() {
+  const { resolvedTheme } = useAppTheme();
+  return <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />;
 }
 
 function RoomPhotoNotificationNavigation() {

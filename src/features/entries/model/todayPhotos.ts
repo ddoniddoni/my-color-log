@@ -9,7 +9,7 @@ export type TodayPhoto = {
   position: number;
   capturedAt: string;
   caption: string | null;
-  status: 'synced' | 'syncing' | 'failed';
+  status: 'pending' | 'synced' | 'syncing' | 'failed';
 };
 
 export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPhotos: PendingPhoto[]): TodayPhoto[] {
@@ -42,7 +42,13 @@ export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPho
       position: photo.position,
       capturedAt: photo.capturedAt,
       caption: photo.caption,
-      status: photo.status === 'failed' ? 'failed' : photo.status === 'synced' ? 'synced' : 'syncing',
+      status: photo.status === 'failed'
+        ? 'failed'
+        : photo.status === 'synced'
+          ? 'synced'
+          : photo.status === 'uploading'
+            ? 'syncing'
+            : 'pending',
     });
   }
   return [...byId.values()].sort((left, right) => left.position - right.position);

@@ -21,7 +21,7 @@ describe('today photos', () => {
       position: 1,
       capturedAt: queuedPhoto.capturedAt,
       caption: null,
-      status: 'syncing',
+      status: 'pending',
     }]);
   });
 

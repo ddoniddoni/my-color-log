@@ -18,6 +18,28 @@ export const colors = {
   black: '#000000',
 } as const;
 
+export type ThemeColors = { readonly [Key in keyof typeof colors]: string };
+
+export const darkColors: ThemeColors = {
+  canvas: '#161613',
+  surface: '#201F1B',
+  surfaceMuted: '#2C2A25',
+  paper: '#1B1A17',
+  ink: '#F7F5EF',
+  textPrimary: '#F7F5EF',
+  textSecondary: '#C7C3BA',
+  textTertiary: '#938F86',
+  border: '#4D4A43',
+  borderStrong: '#716D64',
+  overlay: 'rgba(0, 0, 0, 0.74)',
+  success: '#6CC491',
+  warning: '#EDBF65',
+  danger: '#F18E89',
+  info: '#8AC5F2',
+  white: '#FFFFFF',
+  black: '#000000',
+};
+
 export const spacing = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 } as const;
 
 export const radius = { sketch: 2, sm: 8, md: 12, lg: 18, xl: 24, pill: 999 } as const;

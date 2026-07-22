@@ -19,7 +19,8 @@ import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { DiaryCollageModal } from '@/src/features/diary/components/DiaryCollageModal';
 import { DiaryEditModal, type DiaryEditTarget } from '@/src/features/diary/components/DiaryEditModal';
@@ -54,6 +55,7 @@ type DiaryOverlay =
   | { kind: 'notice'; notice: DiaryNotice };
 
 export function DiaryCalendarCanvas() {
+  const styles = useDiaryStyles();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -275,6 +277,7 @@ export function DiaryCalendarCanvas() {
 }
 
 function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; bodyFont: string | undefined; boldFont: string | undefined }) {
+  const styles = useDiaryStyles();
   const photoCount = entries.reduce((total, entry) => total + entry.photos.length, 0);
   return (
     <View accessible accessibilityLabel={`이번 달 ${entries.length}일 기록, 사진 ${photoCount}장`} style={styles.monthSummaryCard}>
@@ -288,6 +291,7 @@ function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; 
 }
 
 function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoom, onPhotoPress, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onOpenSharedRoom: (room: DiarySharedRoom) => void; onPhotoPress: (photoId: string) => void; timeZone: string }) {
+  const styles = useDiaryStyles();
   const photoCount = entry.photos.length;
   const [isCollageVisible, setIsCollageVisible] = useState(false);
   const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
@@ -361,6 +365,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoo
 }
 
 function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; dateKey: string | null; isFuture: boolean; timeZone: string }) {
+  const styles = useDiaryStyles();
   const title = dateKey ? isFuture ? '아직 오지 않은 날이에요' : '아직 기록이 없어요' : '이번 달 첫 기록';
   const description = dateKey
     ? isFuture
@@ -385,10 +390,12 @@ function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture, timeZone }: { b
 }
 
 function DiaryLoadingCard() {
+  const styles = useDiaryStyles();
   return <View style={styles.diaryCard}><LoadingSkeleton style={styles.loadingTitle} /><LoadingSkeleton style={styles.loadingPhoto} /></View>;
 }
 
 function DiaryErrorCard({ onRetry }: { onRetry: () => void }) {
+  const styles = useDiaryStyles();
   return (
     <View style={styles.diaryCard}>
       <AppText style={styles.entryTitle}>다이어리를 불러오지 못했어요</AppText>
@@ -399,6 +406,7 @@ function DiaryErrorCard({ onRetry }: { onRetry: () => void }) {
 }
 
 function MonthControl({ direction, onPress }: { direction: 'next' | 'previous'; onPress: () => void }) {
+  const styles = useDiaryStyles();
   const label = direction === 'previous' ? '이전 달 보기' : '다음 달 보기';
   return (
     <Pressable accessibilityLabel={label} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.monthControl, pressed && styles.monthControlPressed]}>
@@ -417,108 +425,121 @@ function formatEntryDate(dateKey: string): string {
 }
 
 function ProfileSketch() {
-  return <Svg height={28} viewBox="0 0 28 28" width={28}><Circle cx={14} cy={14} fill="#F9F9F9" r={13} stroke={colors.black} strokeWidth={1.25} /><Circle cx={10} cy={12} fill={colors.black} r={1.4} /><Circle cx={18} cy={12} fill={colors.black} r={1.4} /><Path d="M9.5 17c1.4 1.7 3 2.5 4.5 2.5s3.1-.8 4.5-2.5M8.2 8.5c2.5-2.1 9.1-2.1 11.6 0" fill="none" stroke={colors.black} strokeLinecap="round" strokeWidth={1.25} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={28} viewBox="0 0 28 28" width={28}><Circle cx={14} cy={14} fill={colors.canvas} r={13} stroke={colors.ink} strokeWidth={1.25} /><Circle cx={10} cy={12} fill={colors.ink} r={1.4} /><Circle cx={18} cy={12} fill={colors.ink} r={1.4} /><Path d="M9.5 17c1.4 1.7 3 2.5 4.5 2.5s3.1-.8 4.5-2.5M8.2 8.5c2.5-2.1 9.1-2.1 11.6 0" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.25} /></Svg>;
 }
 
 function SettingsSketch() {
-  return <Svg height={23} viewBox="0 0 24 24" width={23}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={colors.black} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={colors.black} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={23} viewBox="0 0 24 24" width={23}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={colors.ink} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
 function StarIcon() {
-  return <Svg height={18} viewBox="0 0 24 24" width={18}><Path d="m12 3 2.1 5.5 5.9.2-4.6 3.7 1.6 5.7-5-3.4-5 3.4 1.6-5.7L4 8.7l5.9-.2L12 3Z" fill={colors.black} stroke={colors.black} strokeLinejoin="round" strokeWidth={1.1} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={18} viewBox="0 0 24 24" width={18}><Path d="m12 3 2.1 5.5 5.9.2-4.6 3.7 1.6 5.7-5-3.4-5 3.4 1.6-5.7L4 8.7l5.9-.2L12 3Z" fill={colors.ink} stroke={colors.ink} strokeLinejoin="round" strokeWidth={1.1} /></Svg>;
 }
 
 function PaletteMark() {
-  return <Svg height={27} viewBox="0 0 28 28" width={27}><Path d="M14 3.5a10.5 10.5 0 1 0 0 21h1.8c1.6 0 2.3-1.7 1.1-2.8-.6-.6-.1-1.6.8-1.6H20A6.5 6.5 0 0 0 20 7 10.5 10.5 0 0 0 14 3.5Z" fill="none" stroke={colors.black} strokeWidth={1.5} /><Circle cx={9} cy={11} fill={colors.black} r={1} /><Circle cx={14} cy={8.5} fill={colors.black} r={1} /><Circle cx={19} cy={11.5} fill={colors.black} r={1} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={27} viewBox="0 0 28 28" width={27}><Path d="M14 3.5a10.5 10.5 0 1 0 0 21h1.8c1.6 0 2.3-1.7 1.1-2.8-.6-.6-.1-1.6.8-1.6H20A6.5 6.5 0 0 0 20 7 10.5 10.5 0 0 0 14 3.5Z" fill="none" stroke={colors.ink} strokeWidth={1.5} /><Circle cx={9} cy={11} fill={colors.ink} r={1} /><Circle cx={14} cy={8.5} fill={colors.ink} r={1} /><Circle cx={19} cy={11.5} fill={colors.ink} r={1} /></Svg>;
 }
 
 function CameraSketch() {
-  return <Svg height={46} viewBox="0 0 56 48" width={54}><Path d="M7 16h12l3-5h12l3 5h12v24H7V16Zm21 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z" fill="none" stroke="rgba(0, 0, 0, 0.28)" strokeLinejoin="round" strokeWidth={1.6} /><Path d="M9 44c11-3 27-1 38-3" fill="none" stroke="rgba(0, 0, 0, 0.2)" strokeLinecap="round" strokeWidth={1.2} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={46} viewBox="0 0 56 48" width={54}><Path d="M7 16h12l3-5h12l3 5h12v24H7V16Zm21 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z" fill="none" stroke={colors.textTertiary} strokeLinejoin="round" strokeWidth={1.6} /><Path d="M9 44c11-3 27-1 38-3" fill="none" stroke={colors.textTertiary} strokeLinecap="round" strokeWidth={1.2} /></Svg>;
 }
 
 function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  const { colors } = useAppTheme();
   const path = direction === 'left' ? 'm14.5 5-6 7 6 7' : 'm9.5 5 6 7-6 7';
-  return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d={path} fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
+  return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d={path} fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
 
-const styles = StyleSheet.create({
-  page: { backgroundColor: '#F9F9F9', flex: 1 },
-  appBar: { alignItems: 'center', backgroundColor: '#F9F9F9', flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 10, paddingHorizontal: 16 },
+function useDiaryStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  page: { backgroundColor: colors.canvas, flex: 1 },
+  appBar: { alignItems: 'center', backgroundColor: colors.canvas, flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 10, paddingHorizontal: 16 },
   dateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   profileMark: { height: 32, width: 32 },
-  headerDate: { color: colors.black, fontSize: 12, fontWeight: '700', letterSpacing: -0.1, lineHeight: 16 },
+  headerDate: { color: colors.ink, fontSize: 12, fontWeight: '700', letterSpacing: -0.1, lineHeight: 16 },
   settingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   content: { gap: 32, paddingHorizontal: 16, paddingTop: 16 },
   monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
   monthTitleGroup: { alignItems: 'baseline', flexDirection: 'row', gap: 8 },
-  monthUnderline: { borderBottomColor: colors.black, borderBottomWidth: 2, paddingBottom: 1 },
-  monthTitle: { color: colors.black, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 36 },
-  yearLabel: { color: 'rgba(0, 0, 0, 0.6)', fontFamily: 'monospace', fontSize: 11, lineHeight: 14 },
+  monthUnderline: { borderBottomColor: colors.ink, borderBottomWidth: 2, paddingBottom: 1 },
+  monthTitle: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 36 },
+  yearLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 11, lineHeight: 14 },
   monthControls: { flexDirection: 'row', gap: 16 },
-  monthControl: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
-  monthControlPressed: { backgroundColor: '#EEEEEE', transform: [{ scale: 0.92 }] },
-  calendarGrid: { backgroundColor: colors.white, borderColor: colors.black, borderRadius: 8, borderWidth: 1.5, overflow: 'hidden' },
+  monthControl: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
+  monthControlPressed: { backgroundColor: colors.surfaceMuted, transform: [{ scale: 0.92 }] },
+  calendarGrid: { backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 8, borderWidth: 1.5, overflow: 'hidden' },
   weekRow: { flexDirection: 'row' },
-  weekdayCell: { alignItems: 'center', borderBottomColor: colors.black, borderBottomWidth: 1, borderRightColor: colors.black, borderRightWidth: 1, height: 29, justifyContent: 'center', width: `${100 / WEEKDAYS.length}%` },
-  weekdayText: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
+  weekdayCell: { alignItems: 'center', borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 29, justifyContent: 'center', width: `${100 / WEEKDAYS.length}%` },
+  weekdayText: { color: colors.ink, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { borderBottomColor: colors.black, borderBottomWidth: 1, borderRightColor: colors.black, borderRightWidth: 1, height: 47, paddingHorizontal: 7, paddingTop: 6, position: 'relative', width: `${100 / WEEKDAYS.length}%` },
+  dayCell: { borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 47, paddingHorizontal: 7, paddingTop: 6, position: 'relative', width: `${100 / WEEKDAYS.length}%` },
   dayCellPressed: { opacity: 0.72 },
-  selectedDayCell: { backgroundColor: colors.black, borderColor: colors.black, borderWidth: 2, paddingHorizontal: 6, paddingTop: 5 },
+  selectedDayCell: { backgroundColor: colors.ink, borderColor: colors.ink, borderWidth: 2, paddingHorizontal: 6, paddingTop: 5 },
   rightEdge: { borderRightWidth: 0 },
   bottomEdge: { borderBottomWidth: 0 },
-  dayNumber: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
-  selectedDayNumber: { color: colors.white, fontWeight: '700' },
+  dayNumber: { color: colors.ink, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
+  selectedDayNumber: { color: colors.surface, fontWeight: '700' },
   todayNumber: { fontWeight: '700' },
-  todayUnderline: { backgroundColor: colors.black, height: 2, left: 7, position: 'absolute', top: 23, width: 12 },
-  selectedTodayUnderline: { backgroundColor: colors.white },
-  entryDot: { borderColor: colors.black, borderRadius: 3, borderWidth: 0.5, bottom: 7, height: 6, position: 'absolute', right: 7, width: 6 },
-  selectedEntryDot: { borderColor: colors.white },
-  monthSummaryCard: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 76, padding: 20 },
+  todayUnderline: { backgroundColor: colors.ink, height: 2, left: 7, position: 'absolute', top: 23, width: 12 },
+  selectedTodayUnderline: { backgroundColor: colors.surface },
+  entryDot: { borderColor: colors.ink, borderRadius: 3, borderWidth: 0.5, bottom: 7, height: 6, position: 'absolute', right: 7, width: 6 },
+  selectedEntryDot: { borderColor: colors.surface },
+  monthSummaryCard: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 76, padding: 20 },
   summaryCopy: { flex: 1, gap: 3 },
-  summaryTitle: { color: colors.black, fontSize: 15, fontWeight: '700', lineHeight: 20 },
-  summaryDescription: { color: 'rgba(0, 0, 0, 0.6)', fontSize: 11, lineHeight: 16 },
+  summaryTitle: { color: colors.ink, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  summaryDescription: { color: colors.textSecondary, fontSize: 11, lineHeight: 16 },
   summaryMark: { marginLeft: spacing[3] },
   diarySection: { gap: 14 },
-  diaryHeading: { color: colors.black, fontSize: 23, fontWeight: '700', letterSpacing: -0.55, lineHeight: 30 },
-  diaryCard: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, padding: 20 },
+  diaryHeading: { color: colors.ink, fontSize: 23, fontWeight: '700', letterSpacing: -0.55, lineHeight: 30 },
+  diaryCard: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 2, padding: 20 },
   diaryCardHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  timestamp: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.35, lineHeight: 12 },
-  colorBadge: { borderColor: colors.black, borderRadius: 9, borderWidth: 1, height: 18, width: 18 },
-  entryTitle: { color: colors.black, fontSize: 18, fontWeight: '700', lineHeight: 24, marginBottom: 5 },
-  entryDescription: { color: colors.black, fontSize: 14, lineHeight: 21, marginBottom: 16 },
-  awaitingPhoto: { alignItems: 'center', backgroundColor: '#F1F1F1', borderColor: colors.black, borderStyle: 'dashed', borderWidth: 1.5, height: 112, justifyContent: 'center' },
-  awaitingPhotoText: { color: '#5D5F5F', fontSize: 12 },
-  photoPlaceholder: { alignItems: 'center', backgroundColor: '#F1F1F1', borderColor: colors.black, borderWidth: 1.5, height: 150, justifyContent: 'center', overflow: 'hidden', position: 'relative' },
+  timestamp: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.35, lineHeight: 12 },
+  colorBadge: { borderColor: colors.ink, borderRadius: 9, borderWidth: 1, height: 18, width: 18 },
+  entryTitle: { color: colors.ink, fontSize: 18, fontWeight: '700', lineHeight: 24, marginBottom: 5 },
+  entryDescription: { color: colors.ink, fontSize: 14, lineHeight: 21, marginBottom: 16 },
+  awaitingPhoto: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderStyle: 'dashed', borderWidth: 1.5, height: 112, justifyContent: 'center' },
+  awaitingPhotoText: { color: colors.textSecondary, fontSize: 12 },
+  photoPlaceholder: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, height: 150, justifyContent: 'center', overflow: 'hidden', position: 'relative' },
   placeholderLines: { left: 18, opacity: 0.35, position: 'absolute', top: 18 },
-  placeholderLine: { backgroundColor: colors.black, height: 2, marginBottom: 7, transform: [{ rotate: '-2deg' }], width: 65 },
+  placeholderLine: { backgroundColor: colors.ink, height: 2, marginBottom: 7, transform: [{ rotate: '-2deg' }], width: 65 },
   shortPlaceholderLine: { marginLeft: 9, transform: [{ rotate: '2deg' }], width: 38 },
   tags: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  tag: { borderColor: colors.black, borderWidth: 1.5, paddingHorizontal: 11, paddingVertical: 5 },
-  tagLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
-  sharedRoomsSection: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, gap: 8, marginTop: 16, paddingTop: 16 },
-  sharedRoomsEyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.8, lineHeight: 12 },
-  sharedRoomsTitle: { color: colors.black, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  tag: { borderColor: colors.ink, borderWidth: 1.5, paddingHorizontal: 11, paddingVertical: 5 },
+  tagLabel: { color: colors.ink, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
+  sharedRoomsSection: { borderTopColor: colors.border, borderTopWidth: 1, gap: 8, marginTop: 16, paddingTop: 16 },
+  sharedRoomsEyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.8, lineHeight: 12 },
+  sharedRoomsTitle: { color: colors.ink, fontSize: 14, fontWeight: '700', lineHeight: 20 },
   sharedRoomsList: { gap: 8 },
-  sharedRoomItem: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 62, paddingHorizontal: 12, paddingVertical: 9 },
-  sharedRoomItemDisabled: { backgroundColor: '#F7F7F5', borderColor: '#B8B8B3', borderStyle: 'dashed' },
+  sharedRoomItem: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 62, paddingHorizontal: 12, paddingVertical: 9 },
+  sharedRoomItemDisabled: { backgroundColor: colors.canvas, borderColor: colors.borderStrong, borderStyle: 'dashed' },
   sharedRoomItemPressed: { opacity: 0.68 },
   sharedRoomCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10 },
-  sharedRoomEmoji: { color: colors.black, fontSize: 20, lineHeight: 26, textAlign: 'center', width: 28 },
+  sharedRoomEmoji: { color: colors.ink, fontSize: 20, lineHeight: 26, textAlign: 'center', width: 28 },
   sharedRoomTextGroup: { flex: 1 },
-  sharedRoomName: { color: colors.black, fontSize: 12, fontWeight: '800', lineHeight: 17 },
-  sharedRoomStatus: { color: '#5D5F5F', fontSize: 10, lineHeight: 15 },
-  sharedRoomArrow: { color: colors.black, fontSize: 18, lineHeight: 22, marginLeft: 8 },
-  sharedRoomArrowDisabled: { color: '#858585' },
-  collageExportAction: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, marginTop: 16, minHeight: 62, paddingHorizontal: 12 },
-  collageExportTitle: { color: colors.black, fontSize: 13, fontWeight: '800' },
-  collageExportDescription: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 10, lineHeight: 15, marginTop: 2 },
-  collageExportArrow: { color: colors.black, fontSize: 22, fontWeight: '700' },
-  noteEditAction: { alignItems: 'center', borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, minHeight: 44, paddingTop: 8 },
-  noteEditActionText: { color: colors.black, fontSize: 12, fontWeight: '700' },
-  noteEditArrow: { color: colors.black, fontSize: 18, lineHeight: 22 },
+  sharedRoomName: { color: colors.ink, fontSize: 12, fontWeight: '800', lineHeight: 17 },
+  sharedRoomStatus: { color: colors.textSecondary, fontSize: 10, lineHeight: 15 },
+  sharedRoomArrow: { color: colors.ink, fontSize: 18, lineHeight: 22, marginLeft: 8 },
+  sharedRoomArrowDisabled: { color: colors.textTertiary },
+  collageExportAction: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, marginTop: 16, minHeight: 62, paddingHorizontal: 12 },
+  collageExportTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+  collageExportDescription: { color: colors.textSecondary, fontSize: 10, lineHeight: 15, marginTop: 2 },
+  collageExportArrow: { color: colors.ink, fontSize: 22, fontWeight: '700' },
+  noteEditAction: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, minHeight: 44, paddingTop: 8 },
+  noteEditActionText: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  noteEditArrow: { color: colors.ink, fontSize: 18, lineHeight: 22 },
   loadingTitle: { height: 22, marginBottom: spacing[4], width: '42%' },
   loadingPhoto: { height: 150, width: '100%' },
-  retryButton: { alignItems: 'center', backgroundColor: colors.black, justifyContent: 'center', minHeight: 44 },
-  retryText: { color: colors.white, fontSize: 13, fontWeight: '700' },
-});
+  retryButton: { alignItems: 'center', backgroundColor: colors.ink, justifyContent: 'center', minHeight: 44 },
+  retryText: { color: colors.surface, fontSize: 13, fontWeight: '700' },
+  });
+}

@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing } from '@/src/design/tokens';
 
 type AppConfirmationDialogProps = {
   cancelLabel?: string;
@@ -29,17 +30,18 @@ export function AppConfirmationDialog({
   title,
   visible,
 }: AppConfirmationDialogProps) {
+  const theme = useAppTheme();
   return (
     <AppModal accessibilityLabel={`${title} 닫기`} contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
       <View style={styles.copy}>
-        <AppText style={styles.eyebrow}>{eyebrow}</AppText>
-        <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
-        <AppText style={styles.description}>{description}</AppText>
+        <AppText style={[styles.eyebrow, { color: theme.colors.textSecondary }]}>{eyebrow}</AppText>
+        <AppText accessibilityRole="header" style={[styles.title, { color: theme.colors.ink }]}>{title}</AppText>
+        <AppText style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</AppText>
       </View>
       <View style={styles.actions}>
         {cancelLabel ? (
-          <Pressable accessibilityLabel={cancelLabel} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, isBusy && styles.disabledButton]}>
-            <AppText style={styles.secondaryButtonText}>{cancelLabel}</AppText>
+          <Pressable accessibilityLabel={cancelLabel} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, { borderColor: theme.colors.ink }, isBusy && styles.disabledButton]}>
+            <AppText style={[styles.secondaryButtonText, { color: theme.colors.ink }]}>{cancelLabel}</AppText>
           </Pressable>
         ) : null}
         <Pressable
@@ -48,8 +50,14 @@ export function AppConfirmationDialog({
           accessibilityState={{ disabled: isBusy }}
           disabled={isBusy}
           onPress={onConfirm}
-          style={[styles.confirmButton, tone === 'destructive' ? styles.destructiveButton : styles.primaryButton, isBusy && styles.disabledButton]}>
-          <AppText style={[styles.confirmButtonText, tone === 'destructive' && styles.destructiveButtonText]}>{confirmLabel}</AppText>
+          style={[
+            styles.confirmButton,
+            tone === 'destructive'
+              ? [styles.destructiveButton, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.danger }]
+              : [styles.primaryButton, { backgroundColor: theme.colors.ink, boxShadow: `3px 3px 0px ${theme.colors.black}` }],
+            isBusy && styles.disabledButton,
+          ]}>
+          <AppText style={[styles.confirmButtonText, { color: tone === 'destructive' ? theme.colors.danger : theme.colors.white }]}>{confirmLabel}</AppText>
         </Pressable>
       </View>
     </AppModal>
@@ -59,16 +67,15 @@ export function AppConfirmationDialog({
 const styles = StyleSheet.create({
   card: { gap: spacing[5], padding: spacing[5] },
   copy: { gap: spacing[2] },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
-  title: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 29 },
-  description: { color: 'rgba(0, 0, 0, 0.68)', fontSize: 14, lineHeight: 21 },
+  eyebrow: { fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
+  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 29 },
+  description: { fontSize: 14, lineHeight: 21 },
   actions: { flexDirection: 'row', gap: spacing[2] },
-  secondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: spacing[3] },
-  secondaryButtonText: { color: colors.black, fontSize: 14, fontWeight: '800' },
+  secondaryButton: { alignItems: 'center', borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: spacing[3] },
+  secondaryButtonText: { fontSize: 14, fontWeight: '800' },
   confirmButton: { alignItems: 'center', flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: spacing[3] },
-  primaryButton: { backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000' },
-  destructiveButton: { backgroundColor: '#FFF7F6', borderColor: colors.danger, borderWidth: 1.5 },
-  confirmButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
-  destructiveButtonText: { color: colors.danger },
+  primaryButton: {},
+  destructiveButton: { borderWidth: 1.5 },
+  confirmButtonText: { fontSize: 14, fontWeight: '800' },
   disabledButton: { opacity: 0.4 },
 });

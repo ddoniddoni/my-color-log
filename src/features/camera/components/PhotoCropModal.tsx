@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import {
   createPhotoCropAdjustment,
   getSquareCropForAdjustment,
@@ -25,6 +26,7 @@ type PhotoCropModalProps = {
 };
 
 export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCropModalProps) {
+  const styles = usePhotoCropStyles();
   const { height, width } = useWindowDimensions();
   const [adjustment, setAdjustment] = useState(createPhotoCropAdjustment);
   const crop = useMemo(
@@ -108,6 +110,7 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
 }
 
 function CropDirectionButton({ direction, disabled, onPress }: { direction: PhotoCropMoveDirection; disabled: boolean; onPress: (direction: PhotoCropMoveDirection) => void }) {
+  const styles = usePhotoCropStyles();
   const label = direction === 'up' ? '자르기 영역 위로 이동' : direction === 'down' ? '자르기 영역 아래로 이동' : direction === 'left' ? '자르기 영역 왼쪽으로 이동' : '자르기 영역 오른쪽으로 이동';
 
   return (
@@ -118,45 +121,54 @@ function CropDirectionButton({ direction, disabled, onPress }: { direction: Phot
 }
 
 function DirectionArrow({ direction }: { direction: PhotoCropMoveDirection }) {
+  const { colors } = useAppTheme();
   const rotation = direction === 'up' ? '0deg' : direction === 'right' ? '90deg' : direction === 'down' ? '180deg' : '-90deg';
   return <View style={{ transform: [{ rotate: rotation }] }}><Svg height={20} viewBox="0 0 24 24" width={20}><Path d="m6 14 6-6 6 6" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} /></Svg></View>;
 }
 
 function CropFrameIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d="M7 3v14a2 2 0 0 0 2 2h12M3 7h12a2 2 0 0 1 2 2v12" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
-const styles = StyleSheet.create({
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.58)', flex: 1, justifyContent: 'center', padding: spacing[3] },
-  card: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 2, boxShadow: '7px 7px 0px #000000', maxWidth: 408, padding: spacing[4], width: '100%' },
+function usePhotoCropStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  overlay: { alignItems: 'center', backgroundColor: colors.overlay, flex: 1, justifyContent: 'center', padding: spacing[3] },
+  card: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 2, boxShadow: `7px 7px 0px ${colors.black}`, maxWidth: 408, padding: spacing[4], width: '100%' },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[4] },
   headerCopy: { flex: 1, paddingRight: spacing[2] },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
-  title: { color: colors.black, fontSize: 21, fontWeight: '800', letterSpacing: -0.65, lineHeight: 28, marginTop: 2 },
-  description: { color: 'rgba(0, 0, 0, 0.64)', fontSize: 11, lineHeight: 17, marginTop: 3 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 36, justifyContent: 'center', width: 36 },
-  closeButtonText: { color: colors.black, fontSize: 26, fontWeight: '300', lineHeight: 30 },
-  previewFrame: { alignSelf: 'center', backgroundColor: '#151515', borderColor: colors.black, borderWidth: 2, overflow: 'hidden' },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.9 },
+  title: { color: colors.ink, fontSize: 21, fontWeight: '800', letterSpacing: -0.65, lineHeight: 28, marginTop: 2 },
+  description: { color: colors.textSecondary, fontSize: 11, lineHeight: 17, marginTop: 3 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 36, justifyContent: 'center', width: 36 },
+  closeButtonText: { color: colors.ink, fontSize: 26, fontWeight: '300', lineHeight: 30 },
+  previewFrame: { alignSelf: 'center', backgroundColor: colors.black, borderColor: colors.ink, borderWidth: 2, overflow: 'hidden' },
   previewImage: { position: 'absolute' },
-  previewGuide: { borderColor: 'rgba(255, 255, 255, 0.86)', borderWidth: 1, bottom: 10, left: 10, position: 'absolute', right: 10, top: 10 },
-  guideCorner: { borderColor: colors.white, height: 16, position: 'absolute', width: 16 },
+  previewGuide: { borderColor: colors.surface, borderWidth: 1, bottom: 10, left: 10, position: 'absolute', right: 10, top: 10 },
+  guideCorner: { borderColor: colors.surface, height: 16, position: 'absolute', width: 16 },
   guideTopLeft: { borderLeftWidth: 2, borderTopWidth: 2, left: -1, top: -1 },
   guideTopRight: { borderRightWidth: 2, borderTopWidth: 2, right: -1, top: -1 },
   guideBottomLeft: { borderBottomWidth: 2, borderLeftWidth: 2, bottom: -1, left: -1 },
   guideBottomRight: { borderBottomWidth: 2, borderRightWidth: 2, bottom: -1, right: -1 },
   zoomControls: { alignItems: 'center', flexDirection: 'row', gap: spacing[3], justifyContent: 'center', marginTop: spacing[3] },
-  zoomButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
-  zoomButtonText: { color: colors.black, fontSize: 24, fontWeight: '500', lineHeight: 28 },
-  zoomLabel: { color: colors.black, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', textAlign: 'center', width: 56 },
+  zoomButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
+  zoomButtonText: { color: colors.ink, fontSize: 24, fontWeight: '500', lineHeight: 28 },
+  zoomLabel: { color: colors.ink, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', textAlign: 'center', width: 56 },
   directionControls: { alignItems: 'center', gap: 3, marginTop: spacing[3] },
   directionMiddle: { flexDirection: 'row', gap: 3 },
-  directionButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
-  directionCenter: { alignItems: 'center', backgroundColor: '#F1F1EE', borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  directionButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  directionCenter: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   actions: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
-  cancelButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 50 },
-  cancelButtonText: { color: colors.black, fontSize: 14, fontWeight: '700' },
-  applyButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', flex: 1, justifyContent: 'center', minHeight: 50 },
-  applyButtonText: { color: colors.white, fontSize: 14, fontWeight: '700' },
+  cancelButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, flex: 1, justifyContent: 'center', minHeight: 50 },
+  cancelButtonText: { color: colors.ink, fontSize: 14, fontWeight: '700' },
+  applyButton: { alignItems: 'center', backgroundColor: colors.ink, boxShadow: `3px 3px 0px ${colors.black}`, flex: 1, justifyContent: 'center', minHeight: 50 },
+  applyButtonText: { color: colors.surface, fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.4 },
-});
+  });
+}

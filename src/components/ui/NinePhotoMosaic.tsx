@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing } from '@/src/design/tokens';
 
 export type NinePhotoMosaicPhoto = {
   accessibilityLabel?: string;
@@ -10,7 +11,7 @@ export type NinePhotoMosaicPhoto = {
   position: number;
   uri: string;
   capturedAt: string;
-  status?: 'synced' | 'syncing' | 'failed';
+  status?: 'pending' | 'synced' | 'syncing' | 'failed';
 };
 
 type NinePhotoMosaicProps = {
@@ -22,6 +23,7 @@ type NinePhotoMosaicProps = {
 };
 
 export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPhotoLongPress, onPhotoPress }: NinePhotoMosaicProps) {
+  const theme = useAppTheme();
   const slots = getNinePhotoMosaicSlots(photos);
 
   return (
@@ -30,11 +32,17 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
         <View key={`row-${rowIndex}`} style={styles.row}>
           {slots.slice(rowIndex * 3, (rowIndex + 1) * 3).map((photo, columnIndex) => {
             const index = (rowIndex * 3) + columnIndex;
-            const cellStyle = [styles.photoCard, photo ? styles.photoCardFilled : styles.photoCardEmpty];
+            const cellStyle = [
+              styles.photoCard,
+              { borderColor: theme.colors.ink },
+              photo
+                ? [styles.photoCardFilled, { backgroundColor: theme.colors.surfaceMuted }]
+                : [styles.photoCardEmpty, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.borderStrong }],
+            ];
             if (!photo) {
               return onEmptyPress ? (
                 <Pressable accessibilityLabel={`${index + 1}번째 빈 사진 칸에 사진 추가`} accessibilityRole="button" key={`empty-${index + 1}`} onPress={onEmptyPress} style={cellStyle}>
-                  <AppText style={styles.emptyAddMark}>+</AppText>
+                  <AppText style={[styles.emptyAddMark, { color: theme.colors.textTertiary }]}>+</AppText>
                 </Pressable>
               ) : <View accessibilityLabel={`${index + 1}번째 빈 사진 칸`} accessibilityRole="image" accessible key={`empty-${index + 1}`} style={cellStyle} />;
             }
@@ -42,7 +50,15 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
             const content = (
               <>
                 <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.uri }} style={styles.photoImage} />
-                {photo.status && photo.status !== 'synced' ? <View style={[styles.photoStatus, photo.status === 'failed' ? styles.photoStatusFailed : styles.photoStatusSyncing]}><AppText style={styles.photoStatusText}>{photo.status === 'failed' ? '!' : '↥'}</AppText></View> : null}
+                {photo.status && photo.status !== 'synced' ? <View style={[
+                  styles.photoStatus,
+                  { borderColor: theme.colors.surface },
+                  photo.status === 'failed'
+                    ? [styles.photoStatusFailed, { backgroundColor: theme.colors.danger }]
+                    : photo.status === 'pending'
+                      ? [styles.photoStatusPending, { backgroundColor: theme.colors.warning }]
+                      : [styles.photoStatusSyncing, { backgroundColor: theme.colors.info }],
+                ]}><AppText style={styles.photoStatusText}>{photo.status === 'failed' ? '!' : photo.status === 'pending' ? '…' : '↥'}</AppText></View> : null}
               </>
             );
 
@@ -72,13 +88,14 @@ function getNinePhotoMosaicSlots(photos: NinePhotoMosaicPhoto[]): (NinePhotoMosa
 const styles = StyleSheet.create({
   mosaic: { alignSelf: 'stretch', aspectRatio: 1, gap: spacing[2], width: '100%' },
   row: { flex: 1, flexDirection: 'row', gap: spacing[2] },
-  photoCard: { borderColor: colors.ink, borderWidth: 1, flex: 1, overflow: 'hidden', position: 'relative' },
-  photoCardFilled: { backgroundColor: '#E4E4E4' },
-  photoCardEmpty: { alignItems: 'center', backgroundColor: '#F1F1EF', borderColor: '#B7B7B2', borderStyle: 'dashed', justifyContent: 'center' },
-  emptyAddMark: { color: '#8E8D88', fontSize: 28, fontWeight: '300', lineHeight: 32 },
+  photoCard: { borderWidth: 1, flex: 1, overflow: 'hidden', position: 'relative' },
+  photoCardFilled: {},
+  photoCardEmpty: { alignItems: 'center', borderStyle: 'dashed', justifyContent: 'center' },
+  emptyAddMark: { fontSize: 28, fontWeight: '300', lineHeight: 32 },
   photoImage: { height: '100%', width: '100%' },
-  photoStatus: { alignItems: 'center', borderColor: colors.white, borderRadius: 9, borderWidth: 1, height: 18, justifyContent: 'center', left: 5, position: 'absolute', top: 5, width: 18 },
-  photoStatusSyncing: { backgroundColor: colors.info },
-  photoStatusFailed: { backgroundColor: colors.danger },
-  photoStatusText: { color: colors.white, fontSize: 10, fontWeight: '700' },
+  photoStatus: { alignItems: 'center', borderRadius: 9, borderWidth: 1, height: 18, justifyContent: 'center', left: 5, position: 'absolute', top: 5, width: 18 },
+  photoStatusSyncing: {},
+  photoStatusPending: {},
+  photoStatusFailed: {},
+  photoStatusText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
 });

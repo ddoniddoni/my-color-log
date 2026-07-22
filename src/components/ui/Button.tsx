@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, radius, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { radius, spacing } from '@/src/design/tokens';
 
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
@@ -10,6 +11,7 @@ type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
 };
 
 export function Button({ label, variant = 'primary', style, disabled, accessibilityLabel, ...props }: ButtonProps) {
+  const theme = useAppTheme();
   const textColor = variant === 'primary' ? 'inverse' : 'primary';
   return (
     <Pressable
@@ -18,7 +20,15 @@ export function Button({ label, variant = 'primary', style, disabled, accessibil
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ ...props.accessibilityState, disabled: disabled ?? false }}
       disabled={disabled}
-      style={({ pressed }) => [styles.base, variant === 'primary' ? styles.primary : styles.secondary, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
+      style={({ pressed }) => [
+        styles.base,
+        variant === 'primary'
+          ? { backgroundColor: theme.colors.ink, borderColor: theme.colors.ink }
+          : { backgroundColor: theme.colors.paper, borderColor: theme.colors.ink },
+        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed,
+        style,
+      ]}>
       <AppText variant="bodyStrong" color={textColor}>{label}</AppText>
     </Pressable>
   );
@@ -26,8 +36,6 @@ export function Button({ label, variant = 'primary', style, disabled, accessibil
 
 const styles = StyleSheet.create({
   base: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing[4] },
-  primary: { backgroundColor: colors.ink, borderColor: colors.ink },
-  secondary: { backgroundColor: colors.paper, borderColor: colors.ink },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
 });

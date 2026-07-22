@@ -30,7 +30,7 @@ import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLin
 type AuthMode = 'sign-in' | 'sign-up';
 
 export default function EmailOnboardingScreen() {
-  const [mode, setMode] = useState<AuthMode>('sign-up');
+  const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -320,11 +320,10 @@ function LoginForm({
       <FormErrors formError={formError} mutationError={mutationError} />
       <SketchActionButton label={pending ? 'Loading…' : 'Login'} onPress={onSubmit} pending={pending} />
       <View style={styles.loginUtilityRow}>
+        <AppText style={styles.loginUtility}>처음이신가요? </AppText>
         <Pressable accessibilityLabel="회원가입 화면으로 전환" accessibilityRole="button" hitSlop={8} onPress={onSwitchMode}>
-          <AppText style={styles.loginUtility}>Sign Up</AppText>
+          <AppText style={[styles.loginUtility, styles.loginUtilityLink]}>회원가입</AppText>
         </Pressable>
-        <View style={styles.utilityDot} />
-        <AppText style={styles.loginUtility}>Lost your light? Owd PW</AppText>
       </View>
       <DoodleRow login />
     </View>
@@ -413,7 +412,7 @@ function SignupHeader({ fontFamily, topInset }: { fontFamily: string | undefined
   return (
     <View style={[styles.signupHeader, { paddingTop: Math.max(topInset, 8) }]}>
       <PenIcon color="#000000" />
-      <AppText style={[styles.headerWordmark, { fontFamily }]}>Oneul-Bit</AppText>
+          <AppText style={[styles.headerWordmark, { fontFamily }]}>Color Log</AppText>
       <GearIcon />
     </View>
   );
@@ -530,8 +529,8 @@ const styles = StyleSheet.create({
   loginStar: { position: 'absolute', right: -12, top: 27 },
   loginTagline: { color: '#707070', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 8, letterSpacing: 0.25, marginTop: 34, textAlign: 'center' },
   loginFields: { gap: 16 },
-  loginUtilityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  loginUtilityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   loginUtility: { color: '#444444', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 8, fontStyle: 'italic', lineHeight: 12 },
-  utilityDot: { backgroundColor: '#000000', borderRadius: 2, height: 4, width: 4 },
+  loginUtilityLink: { color: '#000000', textDecorationLine: 'underline' },
   loginDoodleRow: { marginTop: 52 },
 });

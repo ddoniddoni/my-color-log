@@ -14,13 +14,14 @@ import {
 } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMemberPhotoViewer';
 import { useRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoard';
@@ -44,6 +45,7 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
 });
 
 export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { initialDateKey?: string; initialPhotoId?: string; roomId: string }) {
+  const styles = useRoomHistoryStyles();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -199,6 +201,7 @@ const HistoryDateItem = memo(function HistoryDateItem({ boldFont, day, isSelecte
   isSelected: boolean;
   onSelect: (dateKey: string) => void;
 }) {
+  const styles = useRoomHistoryStyles();
   const handlePress = useCallback(() => onSelect(day.dateKey), [day.dateKey, onSelect]);
 
   return (
@@ -222,6 +225,7 @@ const HistoryMemberItem = memo(function HistoryMemberItem({ boldFont, dateKey, i
   member: RoomBoardMember;
   onSelect: (memberId: string) => void;
 }) {
+  const styles = useRoomHistoryStyles();
   const handlePress = useCallback(() => onSelect(member.id), [member.id, onSelect]);
 
   return (
@@ -264,7 +268,9 @@ function RoomHistoryMosaic({ member, onOpenPhoto }: { member: RoomBoardMember; o
 }
 
 function HistoryState({ message }: { message: string }) {
-  return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.black} /><AppText style={styles.stateText}>{message}</AppText></View>;
+  const { colors } = useAppTheme();
+  const styles = useRoomHistoryStyles();
+  return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.ink} /><AppText style={styles.stateText}>{message}</AppText></View>;
 }
 
 function formatDate(dateKey: string): string {
@@ -272,52 +278,60 @@ function formatDate(dateKey: string): string {
 }
 
 function BackIcon() {
-  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m14.5 5-6 7 6 7" fill="none" stroke={colors.black} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m14.5 5-6 7 6 7" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
 
-const styles = StyleSheet.create({
-  page: { backgroundColor: colors.white, flex: 1 },
-  topBar: { alignItems: 'center', borderBottomColor: colors.black, borderBottomWidth: 2, flexDirection: 'row', gap: 10, paddingBottom: 12, paddingHorizontal: 16 },
+function useRoomHistoryStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  page: { backgroundColor: colors.canvas, flex: 1 },
+  topBar: { alignItems: 'center', borderBottomColor: colors.ink, borderBottomWidth: 2, flexDirection: 'row', gap: 10, paddingBottom: 12, paddingHorizontal: 16 },
   backButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   topCopy: { gap: 1 },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  topTitle: { color: colors.black, fontSize: 20, letterSpacing: -0.5 },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
+  topTitle: { color: colors.ink, fontSize: 20, letterSpacing: -0.5 },
   content: { gap: 22, paddingBottom: 48 },
   intro: { gap: 8, paddingHorizontal: 20, paddingTop: 28 },
-  title: { color: colors.black, fontSize: 33, letterSpacing: -1.4, lineHeight: 40 },
-  subtitle: { color: 'rgba(0, 0, 0, 0.66)', fontSize: 14, lineHeight: 21 },
+  title: { color: colors.ink, fontSize: 33, letterSpacing: -1.4, lineHeight: 40 },
+  subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 21 },
   dateList: { gap: 10, paddingHorizontal: 20 },
-  dateCard: { backgroundColor: colors.white, borderColor: 'rgba(0, 0, 0, 0.44)', borderWidth: 1.5, gap: 6, minWidth: 105, padding: 10 },
-  dateCardSelected: { backgroundColor: colors.black, borderColor: colors.black },
-  dateColor: { borderColor: colors.white, borderRadius: 99, borderWidth: 1, height: 12, width: 12 },
-  dateText: { color: colors.black, fontSize: 14 },
-  dateTextSelected: { color: colors.white },
-  dateCount: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10 },
-  dateCountSelected: { color: 'rgba(255, 255, 255, 0.7)' },
-  missionCard: { alignItems: 'stretch', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', marginHorizontal: 20, minHeight: 98 },
-  missionColor: { borderRightColor: colors.black, borderRightWidth: 1.5, width: 14 },
+  dateCard: { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1.5, gap: 6, minWidth: 105, padding: 10 },
+  dateCardSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  dateColor: { borderColor: colors.surface, borderRadius: 99, borderWidth: 1, height: 12, width: 12 },
+  dateText: { color: colors.ink, fontSize: 14 },
+  dateTextSelected: { color: colors.surface },
+  dateCount: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
+  dateCountSelected: { color: colors.surfaceMuted },
+  missionCard: { alignItems: 'stretch', borderColor: colors.ink, borderWidth: 1.5, flexDirection: 'row', marginHorizontal: 20, minHeight: 98 },
+  missionColor: { borderRightColor: colors.ink, borderRightWidth: 1.5, width: 14 },
   missionCopy: { flex: 1, gap: 3, padding: 13 },
-  missionEyebrow: { color: 'rgba(0, 0, 0, 0.56)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.45 },
-  missionTitle: { color: colors.black, fontSize: 21, letterSpacing: -0.6 },
-  missionPrompt: { color: 'rgba(0, 0, 0, 0.7)', fontSize: 12, lineHeight: 17 },
+  missionEyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.45 },
+  missionTitle: { color: colors.ink, fontSize: 21, letterSpacing: -0.6 },
+  missionPrompt: { color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
   memberTabs: { gap: 8, paddingHorizontal: 20 },
-  memberTab: { alignItems: 'center', backgroundColor: colors.white, borderColor: 'rgba(0, 0, 0, 0.36)', borderWidth: 1, flexDirection: 'row', gap: 8, minWidth: 128, padding: 9 },
-  memberTabSelected: { backgroundColor: colors.black, borderColor: colors.black },
-  memberAvatar: { alignItems: 'center', backgroundColor: '#F1F1EF', borderColor: colors.black, borderRadius: 999, borderWidth: 1, height: 29, justifyContent: 'center', width: 29 },
-  memberAvatarSelected: { backgroundColor: colors.white },
-  memberInitial: { color: colors.black, fontSize: 13 },
-  memberInitialSelected: { color: colors.black },
-  memberName: { color: colors.black, fontSize: 13 },
-  memberNameSelected: { color: colors.white },
-  memberStatus: { color: 'rgba(0, 0, 0, 0.55)', fontFamily: 'monospace', fontSize: 8, marginTop: 1 },
-  memberStatusSelected: { color: 'rgba(255, 255, 255, 0.72)' },
+  memberTab: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1, flexDirection: 'row', gap: 8, minWidth: 128, padding: 9 },
+  memberTabSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  memberAvatar: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderRadius: 999, borderWidth: 1, height: 29, justifyContent: 'center', width: 29 },
+  memberAvatarSelected: { backgroundColor: colors.surface },
+  memberInitial: { color: colors.ink, fontSize: 13 },
+  memberInitialSelected: { color: colors.ink },
+  memberName: { color: colors.ink, fontSize: 13 },
+  memberNameSelected: { color: colors.surface },
+  memberStatus: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 8, marginTop: 1 },
+  memberStatusSelected: { color: colors.surfaceMuted },
   canvasHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20 },
-  canvasLabel: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  canvasCount: { color: colors.black, fontFamily: 'monospace', fontSize: 12 },
+  canvasLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
+  canvasCount: { color: colors.ink, fontFamily: 'monospace', fontSize: 12 },
   mosaicWrap: { paddingHorizontal: spacing[4] },
   state: { alignItems: 'center', gap: 10, justifyContent: 'center', minHeight: 180, paddingHorizontal: 28 },
-  stateText: { color: 'rgba(0, 0, 0, 0.64)', fontSize: 14, lineHeight: 21, textAlign: 'center' },
-  retry: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, gap: 4, marginHorizontal: 20, padding: 22 },
-  retryTitle: { color: colors.black, fontSize: 16 },
-  retryText: { color: 'rgba(0, 0, 0, 0.63)', fontSize: 13 },
-});
+  stateText: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  retry: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, gap: 4, marginHorizontal: 20, padding: 22 },
+  retryTitle: { color: colors.ink, fontSize: 16 },
+  retryText: { color: colors.textSecondary, fontSize: 13 },
+  });
+}

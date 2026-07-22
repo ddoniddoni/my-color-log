@@ -2,11 +2,12 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View }
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { createRoom, endRoom, getRoomInvitePreview, joinRoomByCode } from '@/src/features/rooms/api/roomRepository';
 import { CreateRoomModal, JoinRoomModal } from '@/src/features/rooms/components/RoomSetupCanvas';
@@ -27,6 +28,8 @@ type RoomListDialog =
   | { description: string; kind: 'notice'; title: string };
 
 export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps) {
+  const theme = useAppTheme();
+  const styles = useRoomListStyles();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -211,7 +214,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
                 maxLength={6}
                 onChangeText={(value) => setInviteCode(value.replace(/\D/g, ''))}
                 placeholder="6자리 코드"
-                placeholderTextColor="rgba(0, 0, 0, 0.34)"
+                placeholderTextColor={theme.colors.textTertiary}
                 style={styles.inviteInput}
                 value={inviteCode}
               />
@@ -256,6 +259,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 }
 
 function RoomListItem({ isEnding, onEnd, onPress, room, userId }: { isEnding: boolean; onEnd: () => void; onPress: () => void; room: ActiveRoom; userId: string }) {
+  const styles = useRoomListStyles();
   const myMembership = room.members.find((member) => member.id === userId) ?? null;
   const isOwner = myMembership?.role === 'owner';
   return (
@@ -284,49 +288,58 @@ function RoomListItem({ isEnding, onEnd, onPress, room, userId }: { isEnding: bo
 }
 
 function RoomListState({ message }: { message: string }) {
-  return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.black} /><AppText style={styles.stateText}>{message}</AppText></View>;
+  const { colors } = useAppTheme();
+  const styles = useRoomListStyles();
+  return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.ink} /><AppText style={styles.stateText}>{message}</AppText></View>;
 }
 
-const styles = StyleSheet.create({
-  page: { backgroundColor: colors.white, flex: 1 },
-  header: { alignItems: 'flex-end', borderBottomColor: colors.black, borderBottomWidth: 2, flexDirection: 'row', justifyContent: 'space-between', paddingBottom: spacing[3], paddingHorizontal: spacing[4] },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.54)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  headerTitle: { color: colors.black, fontSize: 30, fontWeight: '800', letterSpacing: -1.1, lineHeight: 38 },
-  countBadge: { borderColor: colors.black, borderWidth: 1.5, paddingHorizontal: 10, paddingVertical: 6 },
-  countText: { color: colors.black, fontFamily: 'monospace', fontSize: 12, fontWeight: '700' },
+function useRoomListStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  page: { backgroundColor: colors.canvas, flex: 1 },
+  header: { alignItems: 'flex-end', borderBottomColor: colors.ink, borderBottomWidth: 2, flexDirection: 'row', justifyContent: 'space-between', paddingBottom: spacing[3], paddingHorizontal: spacing[4] },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
+  headerTitle: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1.1, lineHeight: 38 },
+  countBadge: { borderColor: colors.ink, borderWidth: 1.5, paddingHorizontal: 10, paddingVertical: 6 },
+  countText: { color: colors.ink, fontFamily: 'monospace', fontSize: 12, fontWeight: '700' },
   content: { gap: spacing[8], padding: spacing[4], paddingBottom: 130, paddingTop: spacing[8] },
-  emptyCard: { backgroundColor: '#F8F7F4', borderColor: colors.black, borderWidth: 2, gap: spacing[3], padding: spacing[6] },
-  emptyEyebrow: { color: 'rgba(0, 0, 0, 0.55)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  emptyTitle: { color: colors.black, fontSize: 31, fontWeight: '800', letterSpacing: -1.3, lineHeight: 39 },
-  emptyDescription: { color: 'rgba(0, 0, 0, 0.66)', fontSize: 15, lineHeight: 23 },
-  primaryButton: { alignItems: 'center', backgroundColor: colors.black, flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing[3], minHeight: 56, paddingHorizontal: spacing[4] },
-  primaryButtonText: { color: colors.white, fontSize: 16, fontWeight: '800' },
-  primaryButtonArrow: { color: colors.white, fontSize: 23, fontWeight: '700' },
+  emptyCard: { backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 2, gap: spacing[3], padding: spacing[6] },
+  emptyEyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
+  emptyTitle: { color: colors.ink, fontSize: 31, fontWeight: '800', letterSpacing: -1.3, lineHeight: 39 },
+  emptyDescription: { color: colors.textSecondary, fontSize: 15, lineHeight: 23 },
+  primaryButton: { alignItems: 'center', backgroundColor: colors.ink, flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing[3], minHeight: 56, paddingHorizontal: spacing[4] },
+  primaryButtonText: { color: colors.surface, fontSize: 16, fontWeight: '800' },
+  primaryButtonArrow: { color: colors.surface, fontSize: 23, fontWeight: '700' },
   listSection: { gap: spacing[3] },
   sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  sectionTitle: { color: colors.black, fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
-  sectionMeta: { color: 'rgba(0, 0, 0, 0.52)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.7 },
+  sectionTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
+  sectionMeta: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.7 },
   roomList: { gap: spacing[3] },
-  roomCard: { alignItems: 'stretch', borderColor: colors.black, borderWidth: 1.5, flexDirection: 'row', minHeight: 88 },
+  roomCard: { alignItems: 'stretch', borderColor: colors.ink, borderWidth: 1.5, flexDirection: 'row', minHeight: 88 },
   roomOpenButton: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing[3], paddingHorizontal: spacing[3] },
-  roomSymbol: { alignItems: 'center', backgroundColor: '#F1F1EF', borderColor: colors.black, borderRadius: 999, borderWidth: 1.5, height: 48, justifyContent: 'center', width: 48 },
-  roomSymbolText: { color: colors.black, fontSize: 22, fontWeight: '700' },
+  roomSymbol: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderRadius: 999, borderWidth: 1.5, height: 48, justifyContent: 'center', width: 48 },
+  roomSymbolText: { color: colors.ink, fontSize: 22, fontWeight: '700' },
   roomCopy: { flex: 1, gap: 3 },
-  roomName: { color: colors.black, fontSize: 19, fontWeight: '800', letterSpacing: -0.55 },
-  roomMeta: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10 },
-  roomArrow: { color: colors.black, fontSize: 24, fontWeight: '700' },
+  roomName: { color: colors.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.55 },
+  roomMeta: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10 },
+  roomArrow: { color: colors.ink, fontSize: 24, fontWeight: '700' },
   roomEndButton: { alignItems: 'center', borderLeftColor: colors.danger, borderLeftWidth: 1.5, justifyContent: 'center', minWidth: 70, paddingHorizontal: 8 },
   roomEndButtonText: { color: colors.danger, fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  joinSection: { borderTopColor: 'rgba(0, 0, 0, 0.22)', borderTopWidth: 1, gap: spacing[3], paddingTop: spacing[5] },
+  joinSection: { borderTopColor: colors.border, borderTopWidth: 1, gap: spacing[3], paddingTop: spacing[5] },
   actionRow: { flexDirection: 'row', gap: spacing[2] },
-  secondaryButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 50, paddingHorizontal: spacing[3] },
-  secondaryButtonText: { color: colors.black, fontSize: 14, fontWeight: '800' },
-  inviteInputWrap: { borderColor: colors.black, borderWidth: 1.5, flex: 1, flexDirection: 'row', minHeight: 50 },
-  inviteInput: { color: colors.black, flex: 1, fontFamily: 'monospace', fontSize: 15, paddingHorizontal: 10 },
-  inviteButton: { alignItems: 'center', backgroundColor: colors.black, justifyContent: 'center', minWidth: 48 },
-  inviteButtonText: { color: colors.white, fontSize: 12, fontWeight: '800' },
+  secondaryButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, justifyContent: 'center', minHeight: 50, paddingHorizontal: spacing[3] },
+  secondaryButtonText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  inviteInputWrap: { borderColor: colors.ink, borderWidth: 1.5, flex: 1, flexDirection: 'row', minHeight: 50 },
+  inviteInput: { color: colors.ink, flex: 1, fontFamily: 'monospace', fontSize: 15, paddingHorizontal: 10 },
+  inviteButton: { alignItems: 'center', backgroundColor: colors.ink, justifyContent: 'center', minWidth: 48 },
+  inviteButtonText: { color: colors.surface, fontSize: 12, fontWeight: '800' },
   disabledButton: { opacity: 0.38 },
   limitMessage: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
-  state: { alignItems: 'center', backgroundColor: colors.white, flex: 1, gap: spacing[3], justifyContent: 'center', padding: spacing[6] },
+  state: { alignItems: 'center', backgroundColor: colors.canvas, flex: 1, gap: spacing[3], justifyContent: 'center', padding: spacing[6] },
   stateText: { color: colors.textSecondary, fontSize: 14, textAlign: 'center' },
-});
+  });
+}

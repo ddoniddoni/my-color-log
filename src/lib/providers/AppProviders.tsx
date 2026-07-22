@@ -9,14 +9,17 @@ import { useRoomPhotoPushRegistration } from '@/src/features/notifications/hooks
 import { useProfileTimeZoneSync } from '@/src/features/profile/hooks/useProfileTimeZoneSync';
 import { PhotoSyncProvider } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
+import { ThemeProvider } from '@/src/design/ThemeProvider';
 
 const STALE_TIME_MS = 60_000;
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
-    <SessionBootstrapProvider>
-      <AppProviderContent>{children}</AppProviderContent>
-    </SessionBootstrapProvider>
+    <ThemeProvider>
+      <SessionBootstrapProvider>
+        <AppProviderContent>{children}</AppProviderContent>
+      </SessionBootstrapProvider>
+    </ThemeProvider>
   );
 }
 

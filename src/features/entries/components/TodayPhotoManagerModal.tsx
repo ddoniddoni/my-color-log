@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -6,7 +6,8 @@ import Svg, { Path } from 'react-native-svg';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { type PhotoMoveDirection } from '@/src/features/entries/model/photoManagement';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 
@@ -33,6 +34,7 @@ export function TodayPhotoManagerModal({
   selectedPhoto,
   visible,
 }: TodayPhotoManagerModalProps) {
+  const styles = useTodayPhotoManagerStyles();
   const [dialog, setDialog] = useState<PhotoManagerDialog | null>(null);
   const isBusy = operation !== 'idle';
   const isInteractionBlocked = isBusy || dialog !== null;
@@ -109,36 +111,46 @@ export function TodayPhotoManagerModal({
 }
 
 function MoveButton({ direction, disabled, label, onPress }: { direction: PhotoMoveDirection; disabled: boolean; label: string; onPress: () => void }) {
+  const styles = useTodayPhotoManagerStyles();
   return <Pressable accessibilityLabel={`${label}으로 사진 순서 변경`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.moveButton, pressed && styles.pressed, disabled && styles.disabled]}><Chevron direction={direction} /><AppText style={styles.moveText}>{label}</AppText></Pressable>;
 }
 
 function CloseIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d="m6 6 12 12M18 6 6 18" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.8} /></Svg>;
 }
 
 function Chevron({ direction }: { direction: PhotoMoveDirection }) {
+  const { colors } = useAppTheme();
   const path = direction === 'backward' ? 'm14.5 5-6 7 6 7' : 'm9.5 5 6 7-6 7';
   return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d={path} fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
 
 function TrashIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={18} viewBox="0 0 24 24" width={18}><Path d="M5 7h14m-9-3h4m-7 3 1 13h8l1-13" fill="none" stroke={colors.danger} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} /></Svg>;
 }
 
-const styles = StyleSheet.create({
+function useTodayPhotoManagerStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { maxHeight: '90%', maxWidth: 360, padding: 0 },
   scroll: { flexShrink: 1 },
   content: { flexGrow: 1, padding: spacing[4] },
   heading: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[3] },
-  eyebrow: { color: '#5D5F5F', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '800', lineHeight: 29, marginTop: 2 },
   closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
-  photoFrame: { backgroundColor: '#E4E4E4', borderColor: colors.ink, borderWidth: 1.5, height: 240, overflow: 'hidden', position: 'relative' },
+  photoFrame: { backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, height: 240, overflow: 'hidden', position: 'relative' },
   photo: { height: '100%', width: '100%' },
-  positionBadge: { backgroundColor: colors.white, borderColor: colors.ink, borderWidth: 1, bottom: 8, paddingHorizontal: 8, paddingVertical: 4, position: 'absolute', right: 8 },
+  positionBadge: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 8, paddingHorizontal: 8, paddingVertical: 4, position: 'absolute', right: 8 },
   positionText: { color: colors.ink, fontFamily: 'monospace', fontSize: 10 },
   descriptionBlock: { gap: 7, marginTop: spacing[3] },
-  description: { color: '#525252', fontSize: 12, lineHeight: 18 },
+  description: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
   memo: { color: colors.ink, fontSize: 13, fontStyle: 'italic', lineHeight: 19 },
   moveRow: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[4] },
   moveButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, flex: 1, flexDirection: 'row', gap: 4, justifyContent: 'center', minHeight: 46 },
@@ -147,4 +159,5 @@ const styles = StyleSheet.create({
   deleteText: { color: colors.danger, fontSize: 13, fontWeight: '700' },
   pressed: { opacity: 0.76, transform: [{ translateY: 1 }] },
   disabled: { opacity: 0.35 },
-});
+  });
+}

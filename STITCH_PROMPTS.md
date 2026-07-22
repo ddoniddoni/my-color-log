@@ -1,6 +1,6 @@
-# Google Stitch 프롬프트 — 오늘빛 친구방 중심 모바일 앱
+# Google Stitch 프롬프트 — Color Log 친구방 중심 모바일 앱
 
-> 제품: 오늘빛(가칭)  
+> 제품: Color Log
 > 플랫폼: React Native + Expo, iOS / Android  
 > 핵심: 솔로 컬러 다이어리 + 2~6명 비공개 친구방 + 매일 같은 미션  
 > 패키지 매니저는 디자인 단계와 무관하지만 개발 핸드오프는 npm 기준
@@ -22,7 +22,7 @@
 ## 2. Master Prompt
 
 ```text
-Design a polished native mobile app called “오늘빛” for iOS and Android.
+Design a polished native mobile app called “Color Log” for iOS and Android.
 
 Product concept:
 “매일 하나의 색으로 내 하루를 기록하고, 친구방을 만들면 같은 미션으로 모인 서로 다른 하루를 함께 보는 컬러 포토 다이어리.”
@@ -154,7 +154,7 @@ Ensure Korean copy is concise, warm, and non-judgmental. Ensure color names are 
 ### 4.1 온보딩
 
 ```text
-Design three swipeable onboarding screens for 오늘빛.
+Design three swipeable onboarding screens for Color Log.
 
 1. “매일 하나의 색을 발견해요.” Show one calm color disc and small real-life photo fragments.
 2. “스쳐 간 장면은 나만의 다이어리에 쌓여요.” Show a personal monthly color archive and photo pages.

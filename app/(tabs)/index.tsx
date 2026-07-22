@@ -23,6 +23,7 @@ import { useMissionRevealPalette } from '@/src/features/missions/hooks/useMissio
 import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
 import { useDayPhotoQueue } from '@/src/features/sync/hooks/useDayPhotoQueue';
 import { usePhotoSync } from '@/src/features/sync/hooks/usePhotoSync';
+import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { radius, spacing } from '@/src/design/tokens';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 
@@ -39,6 +40,7 @@ export default function TodayScreen() {
   const reduceMotion = useReducedMotion();
   const millisecondsUntilMidnight = useTimeZoneCountdown(timeZone);
   const photoSync = usePhotoSync(dateKey);
+  const networkStatus = useNetworkStatus();
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();
@@ -58,6 +60,7 @@ export default function TodayScreen() {
   const photos = mergeTodayPhotos(entryQuery.data, queueQuery.data ?? []);
   const nextPosition = getNextPhotoPosition(photos);
   const hasSyncFailure = photos.some((photo) => photo.status === 'failed');
+  const pendingPhotoCount = photos.filter((photo) => photo.status === 'pending' || photo.status === 'syncing').length;
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId) ?? null;
   return (
     <>
@@ -81,6 +84,8 @@ export default function TodayScreen() {
         onPhotoPress={(photo) => setSelectedPhotoId(photo.id)}
         onRetrySync={() => void photoSync.retryFailed()}
         photos={photos}
+        networkStatus={networkStatus}
+        pendingPhotoCount={pendingPhotoCount}
         timeZone={timeZone}
       />
       <TodayPhotoManagerModal

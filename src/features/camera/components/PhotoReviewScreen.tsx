@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { applyColorIsolationToPhoto } from '@/src/features/camera/api/colorIsolationRepository';
 import { cropCapturedPhoto, confirmCapturedPhoto, discardCapturedPhoto, rotateCapturedPhoto } from '@/src/features/camera/api/localPhotoRepository';
 import { ColorIsolationPreview, isColorIsolationPreviewAvailable } from '@/src/features/camera/components/ColorIsolationPreview';
@@ -24,6 +25,8 @@ export type PhotoReviewContext = {
 };
 
 export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoReviewContext }) {
+  const theme = useAppTheme();
+  const styles = usePhotoReviewStyles();
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -201,7 +204,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
             maxLength={80}
             onChangeText={setCaption}
             placeholder="Found this in the back garden..."
-            placeholderTextColor="#BDBDBD"
+            placeholderTextColor={theme.colors.textTertiary}
             style={styles.memoInput}
             value={caption}
           />
@@ -222,10 +225,12 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
 }
 
 function Tag({ label }: { label: string }) {
+  const styles = usePhotoReviewStyles();
   return <View style={styles.tag}><AppText style={styles.tagText}>{label}</AppText></View>;
 }
 
 function ScribbleMark() {
+  const { colors } = useAppTheme();
   return <Svg height={24} viewBox="0 0 24 24" width={24}><Path d="M6 18 18 6M7 9l3-3m4 12 4-4M5 14l5-5m4 1 4-4" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={2.2} /></Svg>;
 }
 
@@ -234,24 +239,34 @@ function SparkleIcon() {
 }
 
 function CloseIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m6 6 12 12M18 6 6 18" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
 function CropIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="M7 3v14a2 2 0 0 0 2 2h12M3 7h12a2 2 0 0 1 2 2v12" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
 function AgainIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={20} viewBox="0 0 24 24" width={20}><Circle cx={12} cy={12} fill="none" r={8} stroke={colors.ink} strokeWidth={1.5} /><Path d="m8 8-2 3 3 1" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} /></Svg>;
 }
 
 function CheckIcon() {
-  return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d="m5 12 4 4L19 6" fill="none" stroke={colors.white} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} /></Svg>;
+  const { colors } = useAppTheme();
+  return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d="m5 12 4 4L19 6" fill="none" stroke={colors.surface} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} /></Svg>;
 }
 
-const styles = StyleSheet.create({
-  page: { backgroundColor: '#F9F9F9', flex: 1 },
-  loadingPage: { alignItems: 'center', backgroundColor: '#F9F9F9', flex: 1, gap: spacing[4], justifyContent: 'center', padding: spacing[6] },
+function usePhotoReviewStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  page: { backgroundColor: colors.canvas, flex: 1 },
+  loadingPage: { alignItems: 'center', backgroundColor: colors.canvas, flex: 1, gap: spacing[4], justifyContent: 'center', padding: spacing[6] },
   loadingText: { color: colors.ink, fontSize: 15, textAlign: 'center' },
   backButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, minHeight: 46, justifyContent: 'center', paddingHorizontal: spacing[5] },
   backButtonText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
@@ -266,27 +281,27 @@ const styles = StyleSheet.create({
   titleUnderline: { backgroundColor: colors.ink, height: 1.5, marginTop: 6, width: 160 },
   photoStageWrapper: { height: 294, marginTop: spacing[4], position: 'relative' },
   photoStageShadow: { backgroundColor: colors.ink, bottom: 0, left: 7, position: 'absolute', right: -7, top: 7, transform: [{ rotate: '1deg' }] },
-  photoStage: { alignItems: 'center', backgroundColor: '#D8D8D8', borderColor: colors.ink, borderWidth: 1.5, bottom: 7, justifyContent: 'center', left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
+  photoStage: { alignItems: 'center', backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, bottom: 7, justifyContent: 'center', left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
   photoBlur: { height: '100%', opacity: 0.6, width: '100%' },
-  photoDimmer: { backgroundColor: 'rgba(255,255,255,0.5)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
-  photoFilterBackdrop: { backgroundColor: '#A7A7A7', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
-  photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#ECECEC', borderWidth: 1, padding: 8, position: 'absolute', width: 152 },
+  photoDimmer: { backgroundColor: colors.overlay, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  photoFilterBackdrop: { backgroundColor: colors.textTertiary, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, padding: 8, position: 'absolute', width: 152 },
   photoPreview: { height: 136, width: 136 },
-  photoFileName: { color: '#8C8C8C', fontFamily: 'monospace', fontSize: 7, marginTop: 5 },
-  photoReviewBadge: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 7, boxShadow: '0px 1px 2px rgba(0,0,0,0.18)', justifyContent: 'center', minHeight: 24, paddingHorizontal: 14, position: 'absolute', top: 10 },
+  photoFileName: { color: colors.textTertiary, fontFamily: 'monospace', fontSize: 7, marginTop: 5 },
+  photoReviewBadge: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 7, boxShadow: '0px 1px 2px colors.border', justifyContent: 'center', minHeight: 24, paddingHorizontal: 14, position: 'absolute', top: 10 },
   photoReviewBadgeText: { color: colors.ink, fontSize: 8, fontWeight: '700' },
-  cropMark: { alignItems: 'center', backgroundColor: '#FFF', borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', position: 'absolute', right: 12, width: 36 },
-  resetMark: { alignItems: 'center', backgroundColor: '#FFF', borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', left: 12, width: 36 },
-  colorLabel: { alignItems: 'center', backgroundColor: colors.black, borderRadius: 8, marginTop: 10, minHeight: 32, justifyContent: 'center', paddingHorizontal: spacing[3] },
-  colorLabelText: { color: colors.white, fontFamily: 'monospace', fontSize: 10, fontWeight: '700', letterSpacing: 0.7 },
-  colorIsolationToggle: { alignItems: 'center', borderBottomColor: '#D6D6D6', borderBottomWidth: 1, flexDirection: 'row', gap: 9, minHeight: 62, paddingVertical: 9 },
+  cropMark: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', position: 'absolute', right: 12, width: 36 },
+  resetMark: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', left: 12, width: 36 },
+  colorLabel: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 8, marginTop: 10, minHeight: 32, justifyContent: 'center', paddingHorizontal: spacing[3] },
+  colorLabelText: { color: colors.surface, fontFamily: 'monospace', fontSize: 10, fontWeight: '700', letterSpacing: 0.7 },
+  colorIsolationToggle: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: 9, minHeight: 62, paddingVertical: 9 },
   colorIsolationDot: { borderColor: colors.ink, borderRadius: 11, borderWidth: 1, height: 22, width: 22 },
   colorIsolationCopy: { flex: 1, gap: 2 },
   colorIsolationTitle: { color: colors.ink, fontSize: 12, fontWeight: '700' },
-  colorIsolationDescription: { color: '#6F6F6F', fontSize: 9, lineHeight: 13 },
-  colorIsolationTrack: { backgroundColor: '#D7D7D7', borderColor: '#8B8B8B', borderRadius: 12, borderWidth: 1, height: 24, padding: 2, width: 42 },
-  colorIsolationTrackEnabled: { backgroundColor: colors.black, borderColor: colors.black },
-  colorIsolationKnob: { backgroundColor: colors.white, borderRadius: 9, height: 18, width: 18 },
+  colorIsolationDescription: { color: colors.textSecondary, fontSize: 9, lineHeight: 13 },
+  colorIsolationTrack: { backgroundColor: colors.borderStrong, borderColor: colors.textTertiary, borderRadius: 12, borderWidth: 1, height: 24, padding: 2, width: 42 },
+  colorIsolationTrackEnabled: { backgroundColor: colors.ink, borderColor: colors.ink },
+  colorIsolationKnob: { backgroundColor: colors.surface, borderRadius: 9, height: 18, width: 18 },
   colorIsolationKnobEnabled: { transform: [{ translateX: 16 }] },
   memoGroup: { marginTop: spacing[4] },
   memoLabel: { color: colors.ink, fontFamily: 'monospace', fontSize: 9, marginBottom: 6 },
@@ -298,10 +313,11 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing[3], marginTop: spacing[4] },
   actionButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 2, flex: 1, minHeight: 54, justifyContent: 'center' },
   actionContent: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  againButton: { backgroundColor: colors.white },
-  useButton: { backgroundColor: colors.black },
+  againButton: { backgroundColor: colors.surface },
+  useButton: { backgroundColor: colors.ink },
   againText: { color: colors.ink, fontSize: 17, fontWeight: '700' },
-  useText: { color: colors.white, fontSize: 17, fontWeight: '700' },
+  useText: { color: colors.surface, fontSize: 17, fontWeight: '700' },
   pressed: { opacity: 0.82, transform: [{ translateY: 2 }] },
   disabled: { opacity: 0.45 },
-});
+  });
+}

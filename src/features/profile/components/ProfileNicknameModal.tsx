@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { type ThemeColors } from '@/src/design/tokens';
 import { validateNickname } from '@/src/features/profile/model/profile';
 
 type ProfileNicknameModalProps = {
@@ -15,6 +16,7 @@ type ProfileNicknameModalProps = {
 };
 
 export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visible }: ProfileNicknameModalProps) {
+  const styles = useProfileNicknameStyles();
   return (
     <AppModal accessibilityLabel="닉네임 수정 닫기" contentStyle={styles.card} isBusy={isSaving} onClose={onClose} visible={visible}>
       <NicknameForm key={`${nickname}:${visible ? 'open' : 'closed'}`} isSaving={isSaving} nickname={nickname} onClose={onClose} onSave={onSave} />
@@ -23,6 +25,8 @@ export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visi
 }
 
 function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNicknameModalProps, 'visible'>) {
+  const { colors } = useAppTheme();
+  const styles = useProfileNicknameStyles();
   const nicknameRef = useRef(nickname);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
@@ -59,7 +63,7 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
         }}
         onSubmitEditing={save}
         placeholder="닉네임"
-        placeholderTextColor="rgba(0, 0, 0, 0.38)"
+        placeholderTextColor={colors.textTertiary}
         returnKeyType="done"
         style={styles.input}
       />
@@ -72,18 +76,25 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
   );
 }
 
-const styles = StyleSheet.create({
+function useProfileNicknameStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { gap: 14, padding: 20 },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
-  title: { color: colors.black, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
-  closeText: { color: colors.black, fontSize: 28, fontWeight: '300', lineHeight: 31 },
-  description: { color: 'rgba(0, 0, 0, 0.68)', fontSize: 14, lineHeight: 21 },
-  input: { backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1.5, color: colors.black, fontSize: 18, minHeight: 52, paddingHorizontal: 13, paddingVertical: 10 },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.9 },
+  title: { color: colors.ink, fontSize: 23, fontWeight: '800', letterSpacing: -0.65, lineHeight: 30, marginTop: 3 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
+  closeText: { color: colors.ink, fontSize: 28, fontWeight: '300', lineHeight: 31 },
+  description: { color: colors.textSecondary, fontSize: 14, lineHeight: 21 },
+  input: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1.5, color: colors.ink, fontSize: 18, minHeight: 52, paddingHorizontal: 13, paddingVertical: 10 },
   errorText: { color: colors.danger, fontSize: 12, lineHeight: 17, marginTop: -6 },
-  saveButton: { alignItems: 'center', backgroundColor: colors.black, boxShadow: '3px 3px 0px #000000', justifyContent: 'center', minHeight: 50, paddingHorizontal: 16 },
-  saveButtonText: { color: colors.white, fontSize: 15, fontWeight: '800' },
+  saveButton: { alignItems: 'center', backgroundColor: colors.ink, boxShadow: `3px 3px 0px ${colors.black}`, justifyContent: 'center', minHeight: 50, paddingHorizontal: 16 },
+  saveButtonText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
   disabledButton: { opacity: 0.5 },
-  hint: { color: 'rgba(0, 0, 0, 0.52)', fontSize: 10, lineHeight: 14, textAlign: 'center' },
-});
+  hint: { color: colors.textSecondary, fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  });
+}

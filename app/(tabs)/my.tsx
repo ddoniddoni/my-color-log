@@ -16,9 +16,11 @@ import { syncRoomPhotoPushNotifications } from '@/src/features/notifications/api
 import { useNotificationSettings } from '@/src/features/notifications/hooks/useNotificationSettings';
 import { MyProfileCanvas } from '@/src/features/profile/components/MyProfileCanvas';
 import { ProfileNicknameModal } from '@/src/features/profile/components/ProfileNicknameModal';
+import { ThemeSettingsModal } from '@/src/features/profile/components/ThemeSettingsModal';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useUpdateProfileNickname } from '@/src/features/profile/hooks/useUpdateProfileNickname';
 import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
+import { getThemePreferenceLabel, useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing } from '@/src/design/tokens';
 
 type MyDialog =
@@ -28,6 +30,7 @@ type MyDialog =
 export default function MyScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const theme = useAppTheme();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id : undefined;
   const profileQuery = useProfile(userId);
@@ -35,6 +38,8 @@ export default function MyScreen() {
   const [isAccountDeletionVisible, setIsAccountDeletionVisible] = useState(false);
   const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
+  const [isThemeSettingsVisible, setIsThemeSettingsVisible] = useState(false);
+  const [isThemeSaving, setIsThemeSaving] = useState(false);
   const [dialog, setDialog] = useState<MyDialog | null>(null);
   const updateNicknameMutation = useUpdateProfileNickname(userId ?? '');
   const notificationSettings = useNotificationSettings();
@@ -81,9 +86,11 @@ export default function MyScreen() {
         onPrivacyPress={() => showNotice('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.')}
         onRoomsPress={() => router.push('/(tabs)/room')}
         onSignOutPress={() => setDialog({ kind: 'sign_out_confirmation' })}
+        onThemePress={() => setIsThemeSettingsVisible(true)}
         rooms={(roomsQuery.data ?? []).map((room) => ({ emoji: room.emoji, id: room.id, memberCount: room.members.length, name: room.name }))}
         roomsStatus={roomsQuery.isPending ? 'loading' : roomsQuery.isError ? 'error' : 'ready'}
         signingOut={signOutMutation.isPending}
+        themePreferenceLabel={getThemePreferenceLabel(theme.preference)}
       />
       <ProfileNicknameModal
         isSaving={updateNicknameMutation.isPending}
@@ -137,6 +144,19 @@ export default function MyScreen() {
         settings={notificationSettings.settings}
         visible={isNotificationSettingsVisible}
       />
+      <ThemeSettingsModal
+        isSaving={isThemeSaving}
+        onClose={() => setIsThemeSettingsVisible(false)}
+        onSelect={(preference) => {
+          setIsThemeSaving(true);
+          void theme.setPreference(preference)
+            .then(() => setIsThemeSettingsVisible(false))
+            .catch(() => showNotice('테마를 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.'))
+            .finally(() => setIsThemeSaving(false));
+        }}
+        preference={theme.preference}
+        visible={isThemeSettingsVisible}
+      />
       <AppConfirmationDialog
         cancelLabel={dialog?.kind === 'sign_out_confirmation' ? '취소' : undefined}
         confirmLabel={dialog?.kind === 'sign_out_confirmation' ? '로그아웃' : '확인'}
@@ -157,7 +177,8 @@ function MyLoadingScreen() {
 }
 
 function MyProfileError({ onRetry }: { onRetry: () => void }) {
-  return <Screen contentContainerStyle={styles.error}><View style={styles.errorCopy}><AppText variant="title2">내 정보를 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요.</AppText></View><AppText accessibilityRole="button" onPress={onRetry} style={styles.retry}>다시 시도</AppText></Screen>;
+  const theme = useAppTheme();
+  return <Screen contentContainerStyle={styles.error}><View style={styles.errorCopy}><AppText variant="title2">내 정보를 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요.</AppText></View><AppText accessibilityRole="button" onPress={onRetry} style={[styles.retry, { color: theme.colors.ink }]}>다시 시도</AppText></Screen>;
 }
 
 const styles = StyleSheet.create({
@@ -167,5 +188,5 @@ const styles = StyleSheet.create({
   cardSkeleton: { height: 96, marginTop: spacing[6], width: '100%' },
   error: { gap: spacing[4], justifyContent: 'center' },
   errorCopy: { gap: spacing[2] },
-  retry: { color: '#171714', fontSize: 16, fontWeight: '700', textDecorationLine: 'underline' },
+  retry: { fontSize: 16, fontWeight: '700', textDecorationLine: 'underline' },
 });

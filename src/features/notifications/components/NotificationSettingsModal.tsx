@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 import {
   getReminderPickerDate,
   getReminderTimeLabel,
@@ -28,6 +29,7 @@ export function NotificationSettingsModal({ isLoading, isSaving, onClose, onSave
 }
 
 function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settings, visible }: NotificationSettingsModalProps) {
+  const styles = useNotificationSettingsStyles();
   const [draft, setDraft] = useState(settings);
   const [pickerKind, setPickerKind] = useState<ReminderKind | null>(null);
   const isBusy = isLoading || isSaving;
@@ -122,6 +124,7 @@ function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggl
   onToggle: (enabled: boolean) => void;
   reminder: NotificationSettings[ReminderKind];
 }) {
+  const styles = useNotificationSettingsStyles();
   return (
     <View style={styles.reminderRow}>
       <View style={styles.reminderCopy}>
@@ -145,6 +148,7 @@ function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggl
 }
 
 function InlineTimePicker({ kind, onChange, reminder }: { kind: ReminderKind; onChange: (date: Date) => void; reminder: NotificationSettings[ReminderKind] }) {
+  const styles = useNotificationSettingsStyles();
   const changeTime = (hours: number, minutes: number): void => {
     const nextDate = getReminderPickerDate(reminder);
     nextDate.setHours(nextDate.getHours() + hours, nextDate.getMinutes() + minutes);
@@ -169,44 +173,52 @@ function InlineTimePicker({ kind, onChange, reminder }: { kind: ReminderKind; on
 }
 
 function TimeAdjustButton({ label, onPress, symbol }: { label: string; onPress: () => void; symbol: '+' | '−' }) {
+  const styles = useNotificationSettingsStyles();
   return <Pressable accessibilityLabel={label} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.timeAdjustButton, pressed && styles.timeButtonPressed]}><AppText style={styles.timeAdjustText}>{symbol}</AppText></Pressable>;
 }
 
-const styles = StyleSheet.create({
+function useNotificationSettingsStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { gap: 0, maxHeight: '90%', maxWidth: 440, padding: 0 },
-  titleRow: { alignItems: 'flex-start', borderBottomColor: 'rgba(0, 0, 0, 0.18)', borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingLeft: spacing[5], paddingRight: spacing[3], paddingVertical: spacing[4] },
+  titleRow: { alignItems: 'flex-start', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingLeft: spacing[5], paddingRight: spacing[3], paddingVertical: spacing[4] },
   titleCopy: { flex: 1, paddingRight: spacing[3] },
   eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 11, letterSpacing: 1.2, lineHeight: 15 },
-  title: { color: colors.black, fontSize: 26, fontWeight: '800', lineHeight: 33, marginTop: 2 },
+  title: { color: colors.ink, fontSize: 26, fontWeight: '800', lineHeight: 33, marginTop: 2 },
   closeButton: { alignItems: 'center', height: 44, justifyContent: 'center', marginRight: -8, marginTop: -8, width: 44 },
-  closeText: { color: colors.black, fontSize: 32, fontWeight: '300', lineHeight: 34 },
+  closeText: { color: colors.ink, fontSize: 32, fontWeight: '300', lineHeight: 34 },
   scroll: { flexShrink: 1 },
   content: { gap: spacing[4], padding: spacing[5] },
   description: { color: colors.textSecondary, fontSize: 14, lineHeight: 21 },
-  reminderRow: { alignItems: 'center', borderColor: 'rgba(0, 0, 0, 0.16)', borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'space-between', paddingTop: spacing[4] },
+  reminderRow: { alignItems: 'center', borderColor: colors.border, borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'space-between', paddingTop: spacing[4] },
   reminderCopy: { flex: 1, gap: 3 },
-  reminderLabel: { color: colors.black, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+  reminderLabel: { color: colors.ink, fontSize: 16, fontWeight: '700', lineHeight: 22 },
   reminderDescription: { color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
-  timeButton: { alignSelf: 'flex-start', borderBottomColor: colors.black, borderBottomWidth: 1, justifyContent: 'center', marginTop: 6, minHeight: 44 },
+  timeButton: { alignSelf: 'flex-start', borderBottomColor: colors.ink, borderBottomWidth: 1, justifyContent: 'center', marginTop: 6, minHeight: 44 },
   timeButtonPressed: { opacity: 0.58 },
-  timeText: { color: colors.black, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', lineHeight: 18 },
-  toggle: { backgroundColor: '#D6D4D0', borderColor: colors.black, borderRadius: 18, borderWidth: 1.5, height: 32, justifyContent: 'center', paddingHorizontal: 3, width: 54 },
-  toggleEnabled: { backgroundColor: colors.black },
-  toggleKnob: { backgroundColor: colors.white, borderColor: colors.black, borderRadius: 13, borderWidth: 1, height: 24, width: 24 },
+  timeText: { color: colors.ink, fontFamily: 'monospace', fontSize: 13, fontWeight: '700', lineHeight: 18 },
+  toggle: { backgroundColor: colors.borderStrong, borderColor: colors.ink, borderRadius: 18, borderWidth: 1.5, height: 32, justifyContent: 'center', paddingHorizontal: 3, width: 54 },
+  toggleEnabled: { backgroundColor: colors.ink },
+  toggleKnob: { backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 13, borderWidth: 1, height: 24, width: 24 },
   toggleKnobEnabled: { alignSelf: 'flex-end' },
-  pickerWrap: { backgroundColor: '#F4F3F0', borderColor: 'rgba(0, 0, 0, 0.15)', borderWidth: 1, gap: spacing[2], padding: spacing[2] },
+  pickerWrap: { backgroundColor: colors.surfaceMuted, borderColor: colors.border, borderWidth: 1, gap: spacing[2], padding: spacing[2] },
   pickerLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 11, marginLeft: spacing[2], marginTop: spacing[2] },
   timeControls: { alignItems: 'center', flexDirection: 'row', gap: spacing[2], justifyContent: 'center' },
-  timeAdjustButton: { alignItems: 'center', backgroundColor: colors.white, borderColor: colors.black, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
-  timeAdjustText: { color: colors.black, fontSize: 20, lineHeight: 23 },
+  timeAdjustButton: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  timeAdjustText: { color: colors.ink, fontSize: 20, lineHeight: 23 },
   timeValue: { alignItems: 'center', minWidth: 110 },
-  timeValueText: { color: colors.black, fontFamily: 'monospace', fontSize: 14, fontWeight: '700', lineHeight: 19 },
+  timeValueText: { color: colors.ink, fontFamily: 'monospace', fontSize: 14, fontWeight: '700', lineHeight: 19 },
   timeHint: { color: colors.textSecondary, fontSize: 10, lineHeight: 14 },
   note: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
-  actions: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'flex-end', padding: spacing[4] },
-  cancelButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 88, paddingHorizontal: spacing[3] },
-  cancelText: { color: colors.black, fontSize: 14, fontWeight: '700' },
-  saveButton: { alignItems: 'center', backgroundColor: colors.black, borderColor: colors.black, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 100, paddingHorizontal: spacing[3] },
-  saveText: { color: colors.white, fontSize: 14, fontWeight: '700' },
+  actions: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', gap: spacing[3], justifyContent: 'flex-end', padding: spacing[4] },
+  cancelButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 88, paddingHorizontal: spacing[3] },
+  cancelText: { color: colors.ink, fontSize: 14, fontWeight: '700' },
+  saveButton: { alignItems: 'center', backgroundColor: colors.ink, borderColor: colors.ink, borderWidth: 1.5, justifyContent: 'center', minHeight: 44, minWidth: 100, paddingHorizontal: spacing[3] },
+  saveText: { color: colors.surface, fontSize: 14, fontWeight: '700' },
   disabledButton: { opacity: 0.45 },
-});
+  });
+}

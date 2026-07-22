@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
-import { colors, spacing } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { spacing, type ThemeColors } from '@/src/design/tokens';
 
 type PhotoSourceModalProps = {
   errorMessage: string | null;
@@ -15,6 +17,7 @@ type PhotoSourceModalProps = {
 };
 
 export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose, onGallery, visible }: PhotoSourceModalProps) {
+  const styles = usePhotoSourceStyles();
   return (
     <AppModal accessibilityLabel="사진 추가 방법 닫기" contentStyle={styles.card} isBusy={isImporting} onClose={onClose} visible={visible}>
           <View style={styles.header}>
@@ -44,28 +47,37 @@ export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose,
 }
 
 function CameraIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={24} viewBox="0 0 24 24" width={24}><Rect fill="none" height={12} rx={1.5} stroke={colors.ink} strokeWidth={1.6} width={17} x={3.5} y={7.5} /><Path d="M8 7.5 9.4 5h5.2L16 7.5" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} /><Circle cx={12} cy={13.5} fill="none" r={3.2} stroke={colors.ink} strokeWidth={1.6} /></Svg>;
 }
 
 function GalleryIcon() {
+  const { colors } = useAppTheme();
   return <Svg height={24} viewBox="0 0 24 24" width={24}><Rect fill="none" height={15} rx={1.3} stroke={colors.ink} strokeWidth={1.6} width={18} x={3} y={4.5} /><Circle cx={9} cy={10} fill="none" r={1.6} stroke={colors.ink} strokeWidth={1.4} /><Path d="m5.5 17 4.1-4 3.1 2.8 2.4-2.3 3.3 3.5" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} /></Svg>;
 }
 
-const styles = StyleSheet.create({
+function usePhotoSourceStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { padding: spacing[4] },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing[3] },
-  eyebrow: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.85 },
-  title: { color: colors.black, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 29, marginTop: 1 },
-  description: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 12, lineHeight: 18, marginTop: 2 },
-  closeButton: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, height: 44, justifyContent: 'center', marginLeft: spacing[2], width: 44 },
-  closeButtonText: { color: colors.black, fontSize: 27, fontWeight: '300', lineHeight: 30 },
-  sourceButton: { alignItems: 'center', borderColor: colors.black, borderTopWidth: 1.5, flexDirection: 'row', minHeight: 78, paddingVertical: spacing[2] },
+  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.85 },
+  title: { color: colors.ink, fontSize: 22, fontWeight: '800', letterSpacing: -0.7, lineHeight: 29, marginTop: 1 },
+  description: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1.5, height: 44, justifyContent: 'center', marginLeft: spacing[2], width: 44 },
+  closeButtonText: { color: colors.ink, fontSize: 27, fontWeight: '300', lineHeight: 30 },
+  sourceButton: { alignItems: 'center', borderColor: colors.ink, borderTopWidth: 1.5, flexDirection: 'row', minHeight: 78, paddingVertical: spacing[2] },
   sourceIcon: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   sourceCopy: { flex: 1, paddingHorizontal: spacing[2] },
-  sourceTitle: { color: colors.black, fontSize: 15, fontWeight: '800' },
-  sourceDescription: { color: 'rgba(0, 0, 0, 0.62)', fontSize: 11, lineHeight: 16, marginTop: 2 },
-  sourceArrow: { color: colors.black, fontSize: 24, fontWeight: '400', paddingHorizontal: 4 },
+  sourceTitle: { color: colors.ink, fontSize: 15, fontWeight: '800' },
+  sourceDescription: { color: colors.textSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  sourceArrow: { color: colors.ink, fontSize: 24, fontWeight: '400', paddingHorizontal: 4 },
   errorText: { color: colors.danger, fontSize: 12, lineHeight: 17, marginTop: spacing[3] },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.45 },
-});
+  });
+}
