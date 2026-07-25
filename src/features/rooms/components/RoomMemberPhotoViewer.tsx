@@ -9,6 +9,7 @@ import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { RoomPhotoReactionBar } from '@/src/features/reactions/components/RoomPhotoReactionBar';
 import { type RoomBoardMember, type RoomBoardMission } from '@/src/features/rooms/model/roomTodayBoard';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type RoomMemberPhotoViewerProps = {
   currentUserId: string | null;
@@ -22,14 +23,15 @@ type RoomMemberPhotoViewerProps = {
 
 export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, mission, onClose, roomId, timeZone }: RoomMemberPhotoViewerProps) {
   const styles = useRoomMemberPhotoViewerStyles();
-  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat('ko-KR', {
+  const { format, language, t } = useAppLanguage();
+  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
     day: '2-digit',
     hour: '2-digit',
     hour12: false,
     minute: '2-digit',
     month: '2-digit',
     timeZone,
-  }), [timeZone]);
+  }), [language, timeZone]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(() => (
     member?.photos.some((photo) => photo.id === initialPhotoId) ? initialPhotoId : member?.photos[0]?.id ?? null
   ));
@@ -42,33 +44,33 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
   if (!photo || !member || !mission) return null;
 
   return (
-    <AppModal accessibilityLabel="멤버 사진 닫기" contentStyle={styles.card} onClose={onClose} visible>
+    <AppModal accessibilityLabel={t('멤버 사진 닫기')} contentStyle={styles.card} onClose={onClose} visible>
             <View style={styles.header}>
               <View style={styles.headerCopy}>
                 <AppText style={styles.eyebrow}>TODAY&apos;S SHARED PHOTO</AppText>
-                <AppText accessibilityRole="header" numberOfLines={2} style={styles.title}>{member.nickname}의 오늘</AppText>
+                <AppText localize={false} accessibilityRole="header" numberOfLines={2} style={styles.title}>{format('{name}의 오늘', { name: member.nickname })}</AppText>
               </View>
-              <Pressable accessibilityLabel="멤버 사진 닫기" accessibilityRole="button" hitSlop={10} onPress={onClose} style={styles.closeButton}>
+              <Pressable accessibilityLabel={t('멤버 사진 닫기')} accessibilityRole="button" hitSlop={10} onPress={onClose} style={styles.closeButton}>
                 <CloseIcon />
               </Pressable>
             </View>
 
       <ScrollView bounces={false} contentContainerStyle={styles.scrollContent} style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.photoArea}>
-          <Image accessibilityLabel={`${member.nickname}의 ${selectedIndex + 1}번째 공유 사진`} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
-          {previousPhoto ? <Pressable accessibilityLabel="이전 사진" accessibilityRole="button" onPress={() => setSelectedPhotoId(previousPhoto.id)} style={[styles.navButton, styles.previousButton]}><Chevron direction="left" /></Pressable> : null}
-          {nextPhoto ? <Pressable accessibilityLabel="다음 사진" accessibilityRole="button" onPress={() => setSelectedPhotoId(nextPhoto.id)} style={[styles.navButton, styles.nextButton]}><Chevron direction="right" /></Pressable> : null}
+          <Image accessibilityLabel={format('{name}의 {position}번째 공유 사진', { name: member.nickname, position: selectedIndex + 1 })} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
+          {previousPhoto ? <Pressable accessibilityLabel={t('이전 사진')} accessibilityRole="button" onPress={() => setSelectedPhotoId(previousPhoto.id)} style={[styles.navButton, styles.previousButton]}><Chevron direction="left" /></Pressable> : null}
+          {nextPhoto ? <Pressable accessibilityLabel={t('다음 사진')} accessibilityRole="button" onPress={() => setSelectedPhotoId(nextPhoto.id)} style={[styles.navButton, styles.nextButton]}><Chevron direction="right" /></Pressable> : null}
         </View>
 
         <View style={styles.meta}>
           <View style={styles.metaTopline}>
-            <View style={styles.colorLine}><View style={[styles.colorDot, { backgroundColor: mission.colorHex }]} /><AppText numberOfLines={2} style={styles.colorName}>{mission.colorNameKo} · {mission.colorNameEn}</AppText></View>
+            <View style={styles.colorLine}><View style={[styles.colorDot, { backgroundColor: mission.colorHex }]} /><AppText localize={false} numberOfLines={2} style={styles.colorName}>{language === 'ko' ? `${mission.colorNameKo} · ${mission.colorNameEn}` : mission.colorNameEn}</AppText></View>
             <AppText style={styles.position}>{selectedIndex + 1} / {member.photos.length}</AppText>
           </View>
           <AppText style={styles.date}>{formatPhotoDate(photo.capturedAt, photoDateFormatter)}</AppText>
           <View style={styles.divider} />
           <AppText style={styles.memoLabel}>MEMO</AppText>
-          <AppText style={styles.memo}>{photo.caption ?? '남긴 메모가 없어요.'}</AppText>
+          <AppText localize={false} style={styles.memo}>{photo.caption ?? t('남긴 메모가 없어요.')}</AppText>
           {currentUserId && roomId ? <RoomPhotoReactionBar isOwnPhoto={member.id === currentUserId} photoId={photo.id} roomId={roomId} userId={currentUserId} /> : null}
           <AppText style={styles.readOnly}>이 사진은 멤버의 개인 기록을 참조해 읽기 전용으로 보여요.</AppText>
         </View>

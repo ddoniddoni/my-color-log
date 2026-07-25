@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
 import { getLanguagePreference, saveLanguagePreference, type AppLanguage } from '@/src/lib/localization/languagePreference';
-import { translateText } from '@/src/lib/localization/translations';
+import { translateTemplate, translateText, type TranslationValues } from '@/src/lib/localization/translations';
 
 type AppLanguageContextValue = {
   isLoading: boolean;
   language: AppLanguage;
   setLanguage: (language: AppLanguage) => Promise<void>;
   t: (text: string) => string;
+  format: (text: string, values: TranslationValues) => string;
 };
 
 const AppLanguageContext = createContext<AppLanguageContextValue | null>(null);
@@ -41,6 +42,7 @@ export function LanguageProvider({ children }: PropsWithChildren) {
     isLoading,
     language,
     setLanguage,
+    format: (text, values) => translateTemplate(language, text, values),
     t: (text) => translateText(language, text),
   }), [isLoading, language, setLanguage]);
 
@@ -59,6 +61,7 @@ export function useOptionalAppLanguage(): AppLanguageContextValue {
     isLoading: false,
     language: 'ko',
     setLanguage: async () => undefined,
+    format: (text, values) => translateTemplate('ko', text, values),
     t: (text) => translateText('ko', text),
   };
 }

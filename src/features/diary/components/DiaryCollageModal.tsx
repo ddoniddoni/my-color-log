@@ -11,6 +11,8 @@ import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { saveDiaryCollageToLibrary, shareDiaryCollage } from '@/src/features/diary/api/collageRepository';
 import { DIARY_COLLAGE_MAX_PHOTOS, getDiaryCollageFilename, getDiaryCollageRowCounts } from '@/src/features/diary/model/diaryCollage';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
+import { formatDateKey } from '@/src/lib/localization/dateFormat';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type DiaryCollageModalProps = {
   entry: DiaryEntry | null;
@@ -33,6 +35,7 @@ export function DiaryCollageModal({ entry, onClose, visible }: DiaryCollageModal
 
 function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'entry' | 'onClose'> & { entry: DiaryEntry }) {
   const styles = useDiaryCollageStyles();
+  const { format, language, t } = useAppLanguage();
   const viewShotRef = useRef<ViewShotRef>(null);
   const imageLoadStates = useRef(new Map<string, 'failed' | 'loaded'>());
   const [loadedImageCount, setLoadedImageCount] = useState(0);
@@ -61,11 +64,14 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
       setAction('saving');
       await saveDiaryCollageToLibrary(await captureCollage());
       setNotice({
-        description: `${formatDate(entry.dateKey)}의 ${entry.color.nameKo} 기록을 기기에 남겼어요.`,
-        title: '갤러리에 저장했어요',
+        description: format('{date}의 {colorName} 기록을 기기에 남겼어요.', {
+          colorName: language === 'ko' ? entry.color.nameKo : entry.color.nameEn,
+          date: formatDateKey(entry.dateKey, language, 'monthDay'),
+        }),
+        title: t('갤러리에 저장했어요'),
       });
     } catch (error) {
-      setNotice({ description: getCollageErrorMessage(error, 'save'), title: '저장하지 못했어요' });
+      setNotice({ description: getCollageErrorMessage(error, 'save', t), title: t('저장하지 못했어요') });
     } finally {
       setAction('idle');
     }
@@ -76,7 +82,7 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
       setAction('sharing');
       await shareDiaryCollage(await captureCollage());
     } catch (error) {
-      setNotice({ description: getCollageErrorMessage(error, 'share'), title: '공유하지 못했어요' });
+      setNotice({ description: getCollageErrorMessage(error, 'share', t), title: t('공유하지 못했어요') });
     } finally {
       setAction('idle');
     }
@@ -88,14 +94,14 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
 
   return (
     <>
-      <AppModal accessibilityLabel="콜라주 내보내기 닫기" contentStyle={styles.card} isBusy={isWorking} onClose={close} visible>
+      <AppModal accessibilityLabel={t('콜라주 내보내기 닫기')} contentStyle={styles.card} isBusy={isWorking} onClose={close} visible>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <AppText style={styles.eyebrow}>MY COLOR LOG</AppText>
             <AppText style={styles.title}>오늘의 기록 내보내기</AppText>
             <AppText style={styles.description}>내 사진만 한 장의 콜라주로 만들어요.</AppText>
           </View>
-          <Pressable accessibilityLabel="콜라주 내보내기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isWorking }} disabled={isWorking} onPress={close} style={[styles.closeButton, isWorking && styles.disabledButton]}>
+          <Pressable accessibilityLabel={t('콜라주 내보내기 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isWorking }} disabled={isWorking} onPress={close} style={[styles.closeButton, isWorking && styles.disabledButton]}>
             <AppText style={styles.closeButtonText}>×</AppText>
           </Pressable>
         </View>
@@ -114,15 +120,15 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
             <View style={[styles.collage, { backgroundColor: entry.color.accentTint }]}>
               <View style={styles.collageHeader}>
                 <View style={styles.collageTitleWrap}>
-                  <AppText style={styles.collageEyebrow}>{entry.dateKey.replaceAll('-', '.')}</AppText>
-                  <AppText numberOfLines={1} style={styles.collageColorName}>{entry.color.nameKo}</AppText>
-                  <AppText style={styles.collageColorEnglish}>{entry.color.nameEn.toUpperCase()}</AppText>
+                  <AppText localize={false} style={styles.collageEyebrow}>{formatDateKey(entry.dateKey, language, 'numeric')}</AppText>
+                  <AppText localize={false} numberOfLines={1} style={styles.collageColorName}>{language === 'ko' ? entry.color.nameKo : entry.color.nameEn}</AppText>
+                  {language === 'ko' ? <AppText localize={false} style={styles.collageColorEnglish}>{entry.color.nameEn.toUpperCase()}</AppText> : null}
                 </View>
-                <View accessible accessibilityLabel={`${entry.color.nameKo} 색`} accessibilityRole="image" style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
+                <View accessible accessibilityLabel={format('{colorName} 색', { colorName: language === 'ko' ? entry.color.nameKo : entry.color.nameEn })} accessibilityRole="image" style={[styles.colorMark, { backgroundColor: entry.color.accent }]} />
               </View>
               <CollagePhotoGrid onImageSettled={markImageSettled} photos={exportablePhotos} rowCounts={rowCounts} />
               <View style={styles.collageFooter}>
-                <AppText style={styles.collageFooterText}>COLOR LOG · {exportablePhotos.length} PHOTO{exportablePhotos.length === 1 ? '' : 'S'}</AppText>
+                <AppText localize={false} style={styles.collageFooterText}>{language === 'ko' ? `COLOR LOG · 사진 ${exportablePhotos.length}장` : `COLOR LOG · ${exportablePhotos.length} PHOTO${exportablePhotos.length === 1 ? '' : 'S'}`}</AppText>
                 <View style={styles.footerLine} />
               </View>
             </View>
@@ -134,10 +140,10 @@ function DiaryCollageContent({ entry, onClose }: Pick<DiaryCollageModalProps, 'e
         </ScrollView>
 
         <View style={styles.actions}>
-          <Pressable accessibilityLabel="콜라주를 갤러리에 저장" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void saveToLibrary()} style={[styles.saveButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
+          <Pressable accessibilityLabel={t('콜라주를 갤러리에 저장')} accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void saveToLibrary()} style={[styles.saveButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
             <AppText style={styles.saveButtonText}>{action === 'saving' ? '저장하는 중...' : '갤러리에 저장'}</AppText>
           </Pressable>
-          <Pressable accessibilityLabel="콜라주 공유하기" accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void share()} style={[styles.shareButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
+          <Pressable accessibilityLabel={t('콜라주 공유하기')} accessibilityRole="button" accessibilityState={{ disabled: !imagesAreReady || isWorking }} disabled={!imagesAreReady || isWorking} onPress={() => void share()} style={[styles.shareButton, (!imagesAreReady || isWorking) && styles.disabledButton]}>
             <AppText style={styles.shareButtonText}>{action === 'sharing' ? '공유 여는 중...' : '공유하기'}</AppText>
           </Pressable>
         </View>
@@ -181,16 +187,11 @@ function hasSignedUrl(photo: DiaryPhoto): photo is DiaryPhoto & { signedUrl: str
   return typeof photo.signedUrl === 'string' && photo.signedUrl.length > 0;
 }
 
-function formatDate(dateKey: string): string {
-  const [, month, day] = dateKey.split('-');
-  return month && day ? `${Number(month)}월 ${Number(day)}일` : '오늘';
-}
-
-function getCollageErrorMessage(error: unknown, action: 'save' | 'share'): string {
-  if (error instanceof Error && error.message === 'diary_collage_save_permission_denied') return '갤러리에 저장하려면 사진 추가 권한을 허용해 주세요.';
-  if (error instanceof Error && error.message === 'diary_collage_sharing_unavailable') return '이 기기에서는 공유 기능을 사용할 수 없어요.';
-  if (error instanceof Error && error.message === 'diary_collage_not_ready') return '사진을 모두 불러온 뒤 다시 시도해 주세요.';
-  return action === 'save' ? '잠시 뒤 다시 저장해 주세요.' : '잠시 뒤 다시 공유해 주세요.';
+function getCollageErrorMessage(error: unknown, action: 'save' | 'share', t: (text: string) => string): string {
+  if (error instanceof Error && error.message === 'diary_collage_save_permission_denied') return t('갤러리에 저장하려면 사진 추가 권한을 허용해 주세요.');
+  if (error instanceof Error && error.message === 'diary_collage_sharing_unavailable') return t('이 기기에서는 공유 기능을 사용할 수 없어요.');
+  if (error instanceof Error && error.message === 'diary_collage_not_ready') return t('사진을 모두 불러온 뒤 다시 시도해 주세요.');
+  return action === 'save' ? t('잠시 뒤 다시 저장해 주세요.') : t('잠시 뒤 다시 공유해 주세요.');
 }
 
 function useDiaryCollageStyles() {

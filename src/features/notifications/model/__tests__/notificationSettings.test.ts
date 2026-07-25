@@ -27,6 +27,7 @@ describe('notificationSettings', () => {
 
     expect(settings.evening).toEqual({ enabled: false, hour: 20, minute: 5 });
     expect(getReminderTimeLabel(settings.evening)).toBe('오후 8:05');
+    expect(getReminderTimeLabel(settings.evening, 'en')).toBe('8:05 PM');
   });
 
   it('detects whether notification permission is needed for an enabled reminder', () => {

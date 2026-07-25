@@ -3,7 +3,7 @@ import {
   BricolageGrotesque_700Bold,
   BricolageGrotesque_800ExtraBold,
 } from '@expo-google-fonts/bricolage-grotesque';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -27,6 +27,7 @@ import { getAuthenticatedDestination } from '@/src/features/auth/model/startupRo
 import { getProfile } from '@/src/features/profile/api/profileRepository';
 import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
+import { queryKeys } from '@/src/lib/query/queryKeys';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -44,6 +45,7 @@ export default function EmailOnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useAppLanguage();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { inviteCode: inviteCodeParam } = useLocalSearchParams<{ inviteCode?: string | string[] }>();
   const inviteCode = getInviteCodeFromParam(inviteCodeParam);
   const isSignUp = mode === 'sign-up';
@@ -60,10 +62,11 @@ export default function EmailOnboardingScreen() {
       const session = isSignUp
         ? await signUpWithEmailPassword(emailValidation.value, passwordValidation.value)
         : await signInWithEmailPassword(emailValidation.value, passwordValidation.value);
-      const profile = await getProfile(session.user.id);
-      return getAuthenticatedDestination(profile);
+      const profile = await getProfile(session.user.id, session.access_token);
+      return { destination: getAuthenticatedDestination(profile), profile, userId: session.user.id };
     },
-    onSuccess: (destination) => {
+    onSuccess: ({ destination, profile, userId }) => {
+      queryClient.setQueryData(queryKeys.profile(userId), profile);
       if (!inviteCode) {
         router.replace(destination);
         return;

@@ -1,4 +1,5 @@
 import { type DailyAccent } from '@/src/features/missions/model/dailyMission';
+import type { AppLanguage } from '@/src/lib/localization/languagePreference';
 
 export type DiaryColor = DailyAccent & {
   id: string;
@@ -36,8 +37,12 @@ export type DiaryEntry = {
   sharedRooms: DiarySharedRoom[];
 };
 
-export function getDiaryEntryMemo(entry: DiaryEntry): string {
-  return entry.note ?? entry.photos.find((photo) => photo.caption)?.caption ?? `${entry.color.nameKo}을 발견한 오늘의 장면이에요.`;
+export function getDiaryEntryMemo(entry: DiaryEntry, language: AppLanguage = 'ko'): string {
+  const existingMemo = entry.note ?? entry.photos.find((photo) => photo.caption)?.caption;
+  if (existingMemo) return existingMemo;
+  return language === 'ko'
+    ? `${entry.color.nameKo}을 발견한 오늘의 장면이에요.`
+    : `A scene from the day you found ${entry.color.nameEn}.`;
 }
 
 export function removeDiaryPhoto(entry: DiaryEntry, photoId: string): DiaryEntry {

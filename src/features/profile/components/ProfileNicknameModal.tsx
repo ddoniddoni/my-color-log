@@ -6,6 +6,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { validateNickname } from '@/src/features/profile/model/profile';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type ProfileNicknameModalProps = {
   isSaving: boolean;
@@ -17,8 +18,9 @@ type ProfileNicknameModalProps = {
 
 export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visible }: ProfileNicknameModalProps) {
   const styles = useProfileNicknameStyles();
+  const { t } = useAppLanguage();
   return (
-    <AppModal accessibilityLabel="닉네임 수정 닫기" contentStyle={styles.card} isBusy={isSaving} onClose={onClose} visible={visible}>
+    <AppModal accessibilityLabel={t('닉네임 수정 닫기')} contentStyle={styles.card} isBusy={isSaving} onClose={onClose} visible={visible}>
       <NicknameForm key={`${nickname}:${visible ? 'open' : 'closed'}`} isSaving={isSaving} nickname={nickname} onClose={onClose} onSave={onSave} />
     </AppModal>
   );
@@ -26,6 +28,7 @@ export function ProfileNicknameModal({ isSaving, nickname, onClose, onSave, visi
 
 function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNicknameModalProps, 'visible'>) {
   const { colors } = useAppTheme();
+  const { t } = useAppLanguage();
   const styles = useProfileNicknameStyles();
   const nicknameRef = useRef(nickname);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -48,11 +51,11 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
           <AppText style={styles.eyebrow}>PROFILE EDIT</AppText>
           <AppText accessibilityRole="header" style={styles.title}>나를 부를 이름</AppText>
         </View>
-        <Pressable accessibilityLabel="닉네임 수정 닫기" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
+        <Pressable accessibilityLabel={t('닉네임 수정 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
       </View>
       <AppText style={styles.description}>친구방에서 이 이름으로 보여요. 2~12자로 입력해 주세요.</AppText>
       <TextInput
-        accessibilityLabel="새 닉네임"
+        accessibilityLabel={t('새 닉네임')}
         autoFocus
         defaultValue={nickname}
         editable={!isSaving}
@@ -62,14 +65,14 @@ function NicknameForm({ isSaving, nickname, onClose, onSave }: Omit<ProfileNickn
           if (validationMessage) setValidationMessage(null);
         }}
         onSubmitEditing={save}
-        placeholder="닉네임"
+        placeholder={t('닉네임')}
         placeholderTextColor={colors.textTertiary}
         returnKeyType="done"
         style={styles.input}
       />
       {validationMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{validationMessage}</AppText> : null}
-      <Pressable accessibilityLabel="닉네임 저장" accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={save} style={[styles.saveButton, isSaving && styles.disabledButton]}>
-        <AppText style={styles.saveButtonText}>{isSaving ? '저장 중…' : '저장하기'}</AppText>
+      <Pressable accessibilityLabel={t('닉네임 저장')} accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={save} style={[styles.saveButton, isSaving && styles.disabledButton]}>
+        <AppText localize={false} style={styles.saveButtonText}>{isSaving ? t('저장 중…') : t('저장하기')}</AppText>
       </Pressable>
       {Platform.OS === 'ios' ? <AppText style={styles.hint}>완료를 누르거나 저장하기를 눌러 반영할 수 있어요.</AppText> : null}
     </>

@@ -8,6 +8,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type DiaryPhotoViewerProps = {
   entry: DiaryEntry | null;
@@ -22,7 +23,8 @@ type DiaryPhotoViewerProps = {
 
 export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, onDeletePhoto, onEditPhoto, onSelectPhoto, timeZone }: DiaryPhotoViewerProps) {
   const styles = useDiaryPhotoViewerStyles();
-  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat('ko-KR', {
+  const { format, language, t } = useAppLanguage();
+  const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
     day: '2-digit',
     hour: '2-digit',
     hour12: false,
@@ -30,7 +32,7 @@ export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, 
     month: '2-digit',
     timeZone,
     year: 'numeric',
-  }), [timeZone]);
+  }), [language, timeZone]);
   const selectedIndex = entry?.photos.findIndex((photo) => photo.id === selectedPhotoId) ?? -1;
   const photo = selectedIndex >= 0 && entry ? entry.photos[selectedIndex] : null;
   const previousPhoto = selectedIndex > 0 && entry ? entry.photos[selectedIndex - 1] : null;
@@ -39,13 +41,13 @@ export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, 
   if (!photo || !entry) return null;
 
   return (
-    <AppModal accessibilityLabel="사진 전체 보기 닫기" contentStyle={styles.card} onClose={onClose} visible>
+    <AppModal accessibilityLabel={t('사진 전체 보기 닫기')} contentStyle={styles.card} onClose={onClose} visible>
       <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.photoSection}>
-              <Image accessibilityLabel={`${entry.color.nameKo} 사진`} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
-              <Pressable accessibilityLabel="사진 전체 보기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} hitSlop={10} onPress={onClose} style={[styles.closeButton, isDeleting && styles.disabledAction]}><CloseIcon /></Pressable>
-              {previousPhoto ? <Pressable accessibilityLabel="이전 사진" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(previousPhoto.id)} style={[styles.photoNav, styles.previousButton, isDeleting && styles.disabledAction]}><Chevron direction="left" /></Pressable> : null}
-              {nextPhoto ? <Pressable accessibilityLabel="다음 사진" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(nextPhoto.id)} style={[styles.photoNav, styles.nextButton, isDeleting && styles.disabledAction]}><Chevron direction="right" /></Pressable> : null}
+              <Image accessibilityLabel={format('{colorName} 색', { colorName: language === 'ko' ? entry.color.nameKo : entry.color.nameEn })} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
+              <Pressable accessibilityLabel={t('사진 전체 보기 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} hitSlop={10} onPress={onClose} style={[styles.closeButton, isDeleting && styles.disabledAction]}><CloseIcon /></Pressable>
+              {previousPhoto ? <Pressable accessibilityLabel={t('이전 사진')} accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(previousPhoto.id)} style={[styles.photoNav, styles.previousButton, isDeleting && styles.disabledAction]}><Chevron direction="left" /></Pressable> : null}
+              {nextPhoto ? <Pressable accessibilityLabel={t('다음 사진')} accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onSelectPhoto(nextPhoto.id)} style={[styles.photoNav, styles.nextButton, isDeleting && styles.disabledAction]}><Chevron direction="right" /></Pressable> : null}
             </View>
 
             <View style={styles.metaSection}>
@@ -58,12 +60,12 @@ export function DiaryPhotoViewer({ entry, isDeleting, selectedPhotoId, onClose, 
               </View>
               <View style={styles.divider} />
               <AppText style={styles.memoLabel}>USER MEMO</AppText>
-              <AppText style={styles.memoValue}>{photo.caption ?? '이 사진에 남긴 메모가 없어요.'}</AppText>
+              <AppText localize={false} style={styles.memoValue}>{photo.caption ?? t('이 사진에 남긴 메모가 없어요.')}</AppText>
               <View style={styles.divider} />
-              <View style={styles.colorRow}><View style={[styles.colorDot, { backgroundColor: entry.color.accent }]} /><AppText style={styles.colorText}>{entry.color.nameKo} · {entry.color.nameEn}</AppText></View>
+              <View style={styles.colorRow}><View style={[styles.colorDot, { backgroundColor: entry.color.accent }]} /><AppText localize={false} style={styles.colorText}>{language === 'ko' ? `${entry.color.nameKo} · ${entry.color.nameEn}` : entry.color.nameEn}</AppText></View>
               <View style={styles.actions}>
-                <Pressable accessibilityLabel="사진 메모 수정" accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onEditPhoto(photo)} style={[styles.editAction, isDeleting && styles.disabledAction]}><AppText style={styles.editActionText}>메모 수정</AppText></Pressable>
-                <Pressable accessibilityLabel="이 사진 삭제" accessibilityRole="button" accessibilityState={{ busy: isDeleting, disabled: isDeleting }} disabled={isDeleting} onPress={() => onDeletePhoto(photo)} style={[styles.deleteAction, isDeleting && styles.disabledAction]}><AppText style={styles.deleteActionText}>{isDeleting ? '삭제 중…' : '사진 삭제'}</AppText></Pressable>
+                <Pressable accessibilityLabel={t('사진 메모 수정')} accessibilityRole="button" accessibilityState={{ disabled: isDeleting }} disabled={isDeleting} onPress={() => onEditPhoto(photo)} style={[styles.editAction, isDeleting && styles.disabledAction]}><AppText style={styles.editActionText}>메모 수정</AppText></Pressable>
+                <Pressable accessibilityLabel={t('사진 삭제')} accessibilityRole="button" accessibilityState={{ busy: isDeleting, disabled: isDeleting }} disabled={isDeleting} onPress={() => onDeletePhoto(photo)} style={[styles.deleteAction, isDeleting && styles.disabledAction]}><AppText style={styles.deleteActionText}>{isDeleting ? '삭제 중…' : '사진 삭제'}</AppText></Pressable>
               </View>
             </View>
       </ScrollView>

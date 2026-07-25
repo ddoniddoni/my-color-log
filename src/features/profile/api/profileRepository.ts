@@ -1,11 +1,20 @@
 import { parseProfile, type Profile, validateNickname } from '@/src/features/profile/model/profile';
+import { logError } from '@/src/lib/logging/logger';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 const profileColumns = 'id, nickname, timezone, is_onboarded';
 
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await getSupabaseClient().from('profiles').select(profileColumns).eq('id', userId).maybeSingle();
-  if (error) throw new Error('profile_fetch_failed');
+export async function getProfile(userId: string, accessToken?: string): Promise<Profile | null> {
+  const query = getSupabaseClient().from('profiles').select(profileColumns).eq('id', userId).maybeSingle();
+  const { data, error } = accessToken
+    ? await query.setHeader('Authorization', `Bearer ${accessToken}`)
+    : await query;
+
+  if (error) {
+    logError('profile_fetch_failed', { code: error.code, message: error.message });
+    throw new Error('profile_fetch_failed');
+  }
+
   return data ? parseProfile(data) : null;
 }
 

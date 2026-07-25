@@ -85,6 +85,7 @@ describe('room today board parser', () => {
     expect(getRoomMemberProgress(0)).toEqual({ countLabel: '0 / 6', description: '오늘의 색을 찾는 중' });
     expect(getRoomMemberProgress(6)).toEqual({ countLabel: '6 / 9', description: '여섯 장을 완성했어요' });
     expect(getRoomMemberProgress(9)).toEqual({ countLabel: '9 / 9', description: '오늘의 캔버스가 가득 찼어요' });
+    expect(getRoomMemberProgress(6, 'en')).toEqual({ countLabel: '6 / 9', description: 'Six photos complete' });
   });
 
   it('limits the visible recent photos to the latest positions', () => {

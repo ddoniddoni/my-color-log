@@ -6,6 +6,7 @@ import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing, type ThemeColors } from '@/src/design/tokens';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type PhotoSourceModalProps = {
   errorMessage: string | null;
@@ -18,24 +19,25 @@ type PhotoSourceModalProps = {
 
 export function PhotoSourceModal({ errorMessage, isImporting, onCamera, onClose, onGallery, visible }: PhotoSourceModalProps) {
   const styles = usePhotoSourceStyles();
+  const { t } = useAppLanguage();
   return (
-    <AppModal accessibilityLabel="사진 추가 방법 닫기" contentStyle={styles.card} isBusy={isImporting} onClose={onClose} visible={visible}>
+    <AppModal accessibilityLabel={t('사진 추가 방법 닫기')} contentStyle={styles.card} isBusy={isImporting} onClose={onClose} visible={visible}>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>ADD TO TODAY</AppText>
               <AppText accessibilityRole="header" style={styles.title}>오늘의 장면 추가</AppText>
               <AppText style={styles.description}>새로 찍거나, 이미 발견한 사진을 골라 보세요.</AppText>
             </View>
-            <Pressable accessibilityLabel="사진 추가 방법 닫기" accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeButtonText}>×</AppText></Pressable>
+            <Pressable accessibilityLabel={t('사진 추가 방법 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeButtonText}>×</AppText></Pressable>
           </View>
 
-          <Pressable accessibilityLabel="카메라로 사진 찍기" accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onCamera} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
+          <Pressable accessibilityLabel={t('카메라로 사진 찍기')} accessibilityRole="button" accessibilityState={{ disabled: isImporting }} disabled={isImporting} onPress={onCamera} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
             <View style={styles.sourceIcon}><CameraIcon /></View>
             <View style={styles.sourceCopy}><AppText style={styles.sourceTitle}>사진 찍기</AppText><AppText style={styles.sourceDescription}>지금 발견한 색을 바로 남겨요.</AppText></View>
             <AppText style={styles.sourceArrow}>→</AppText>
           </Pressable>
 
-          <Pressable accessibilityLabel="갤러리에서 사진 선택" accessibilityRole="button" accessibilityState={{ busy: isImporting, disabled: isImporting }} disabled={isImporting} onPress={onGallery} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
+          <Pressable accessibilityLabel={t('갤러리에서 사진 선택')} accessibilityRole="button" accessibilityState={{ busy: isImporting, disabled: isImporting }} disabled={isImporting} onPress={onGallery} style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed, isImporting && styles.disabled]}>
             <View style={styles.sourceIcon}><GalleryIcon /></View>
             <View style={styles.sourceCopy}><AppText style={styles.sourceTitle}>{isImporting ? '사진 불러오는 중…' : '갤러리에서 선택'}</AppText><AppText style={styles.sourceDescription}>선택 후 정사각형 구도를 다시 맞춰요.</AppText></View>
             <AppText style={styles.sourceArrow}>→</AppText>

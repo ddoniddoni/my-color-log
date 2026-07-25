@@ -1,4 +1,4 @@
-import { getCalendarCells, getSelectedDiaryDateKey, moveMonth } from '@/src/features/diary/model/calendar';
+import { getCalendarCells, getSelectedDiaryDateKey, moveMonth, moveYear } from '@/src/features/diary/model/calendar';
 
 describe('diary calendar model', () => {
   it('pads a month into complete Sunday-first calendar rows', () => {
@@ -14,6 +14,12 @@ describe('diary calendar model', () => {
   it('moves across the December and January year boundary', () => {
     expect(moveMonth({ year: 2026, month: 1 }, -1)).toEqual({ year: 2025, month: 12 });
     expect(moveMonth({ year: 2026, month: 12 }, 1)).toEqual({ year: 2027, month: 1 });
+  });
+
+  it('moves the year selector without exceeding supported calendar years', () => {
+    expect(moveYear(2026, -1)).toBe(2025);
+    expect(moveYear(1, -1)).toBe(1);
+    expect(moveYear(9_999, 1)).toBe(9_999);
   });
 
   it('keeps today selected in the current month even when the latest entry is older', () => {

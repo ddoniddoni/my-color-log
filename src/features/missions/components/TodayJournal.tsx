@@ -23,6 +23,7 @@ import { type NetworkStatus } from '@/src/features/sync/model/networkStatus';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 import { getTimeZoneDisplayName } from '@/src/utils/dates/timezone';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
+import { formatDateKey } from '@/src/lib/localization/dateFormat';
 
 type TodayJournalProps = {
   mission: DailyMission;
@@ -41,7 +42,7 @@ type TodayJournalProps = {
 
 export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, networkStatus, pendingPhotoCount, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, timeZone }: TodayJournalProps) {
   const theme = useAppTheme();
-  const { language } = useAppLanguage();
+  const { format, language, t } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -69,7 +70,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
           <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}>
             <ProfileSketch color={theme.colors.ink} fill={theme.colors.canvas} />
           </View>
-          <AppText style={[styles.headerDate, { color: theme.colors.ink, fontFamily: boldFont }]}>{formatHeaderDate(mission.challengeDate)}</AppText>
+          <AppText localize={false} style={[styles.headerDate, { color: theme.colors.ink, fontFamily: boldFont }]}>{formatDateKey(mission.challengeDate, language, 'numeric')}</AppText>
         </View>
         <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}>
           <SettingsSketch color={theme.colors.ink} />
@@ -83,7 +84,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         }}
         style={[styles.content, { paddingHorizontal: journalLayout.horizontalPadding }, isCompact && styles.contentCompact]}>
         <View style={styles.titleGroup}>
-          <AppText numberOfLines={2} style={[styles.title, { color: theme.colors.ink, fontFamily: heavyFont }, isCompact && styles.titleCompact]}>{photos.length === 9 ? language === 'ko' ? '오늘의 색을 가득 채웠어요.' : 'You filled today’s color.' : language === 'ko' ? `오늘의 ${colorName}을\n찾아봐요.` : `Find today’s\n${colorName}.`}</AppText>
+          <AppText localize={false} numberOfLines={2} style={[styles.title, { color: theme.colors.ink, fontFamily: heavyFont }, isCompact && styles.titleCompact]}>{photos.length === 9 ? t('오늘의 색을 가득 채웠어요.') : format('오늘의 {colorName}을\n찾아봐요.', { colorName })}</AppText>
           <AppText numberOfLines={1} style={[styles.weekday, { color: theme.colors.textSecondary, fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>{getTimeZoneDisplayName(timeZone)} · {mission.challengeDate}</AppText>
         </View>
 
@@ -91,7 +92,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
           ? <EmptyJournalCanvas bodyFont={bodyFont} boldFont={boldFont} colorName={colorName} colors={theme.colors} language={language} mission={mission} size={journalLayout.mosaicSize} />
           : <View style={[styles.mosaicFrame, mosaicStyle]}>
               <NinePhotoMosaic
-                accessibilityLabel={`오늘의 사진 ${photos.length}장, 9칸 기록판`}
+                accessibilityLabel={format('오늘의 사진 {count}장, 9칸 기록판', { count: photos.length })}
                 onPhotoLongPress={(photo) => {
                   const todayPhoto = photos.find((item) => item.id === photo.id);
                   if (todayPhoto) onPhotoLongPress(todayPhoto);
@@ -106,6 +107,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
                   accessibilityLabel: getPhotoAccessibilityLabel({
                     caption: photo.caption,
                     colorName,
+                    language,
                     position: photo.position,
                     status: photo.status,
                   }),
@@ -115,7 +117,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
         <View style={[styles.noteSection, { borderBottomColor: theme.colors.ink }, isCompact && styles.noteSectionCompact]}>
           <AppText numberOfLines={isCompact ? 1 : 2} style={[styles.note, { color: theme.colors.ink, fontFamily: bodyFont }, isCompact && styles.noteCompact]}>{missionPrompt}</AppText>
-          <AppText style={[styles.countdown, { color: theme.colors.textSecondary, fontFamily: bodyFont }]}>{language === 'ko' ? '자정까지 ' : 'Until midnight: '}{formatCountdown(millisecondsUntilMidnight)}</AppText>
+          <AppText localize={false} style={[styles.countdown, { color: theme.colors.textSecondary, fontFamily: bodyFont }]}>{format('자정까지 {countdown}', { countdown: formatCountdown(millisecondsUntilMidnight) })}</AppText>
         </View>
 
         {!isCompact ? <View style={styles.tags}>
@@ -132,6 +134,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
               networkStatus,
               pendingPhotoCount,
               totalPhotoCount: photos.length,
+              language,
             })}</AppText>}
         </View>
       </View>
@@ -140,8 +143,9 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 }
 
 function EmptyJournalCanvas({ bodyFont, boldFont, colorName, colors, language, mission, size }: { bodyFont: string | undefined; boldFont: string | undefined; colorName: string; colors: ThemeColors; language: 'en' | 'ko'; mission: DailyMission; size: number }) {
+  const { format, t } = useAppLanguage();
   return (
-    <View accessible accessibilityLabel={language === 'ko' ? `아직 ${colorName} 사진이 없는 기록 영역` : `Empty photo board for ${colorName}`} style={[styles.canvas, { backgroundColor: colors.surface, borderColor: colors.ink, height: size, width: size }]}>
+    <View accessible accessibilityLabel={format('아직 {colorName} 사진이 없는 기록 영역', { colorName })} style={[styles.canvas, { backgroundColor: colors.surface, borderColor: colors.ink, height: size, width: size }]}>
       <View pointerEvents="none" style={styles.canvasGuide}>
         <View style={[styles.guideLine, { backgroundColor: mission.color.accent }]} />
         <View style={[styles.guideLine, styles.guideLineShort, { backgroundColor: mission.color.accent }]} />
@@ -150,8 +154,8 @@ function EmptyJournalCanvas({ bodyFont, boldFont, colorName, colors, language, m
         <View style={[styles.colorDiscInner, { borderColor: colors.surface }]} />
       </View>
       <View style={styles.canvasCopy}>
-        <AppText style={[styles.canvasTitle, { color: colors.ink, fontFamily: boldFont }]}>{language === 'ko' ? '첫 번째 장면을\n남겨 보세요.' : 'Save your\nfirst scene.'}</AppText>
-        <AppText style={[styles.canvasDescription, { color: colors.textSecondary, fontFamily: bodyFont }]}>{language === 'ko' ? `${colorName}을 발견한\n오늘의 순간을 모아요.` : `Collect moments\nwhere you find ${colorName}.`}</AppText>
+        <AppText localize={false} style={[styles.canvasTitle, { color: colors.ink, fontFamily: boldFont }]}>{t('첫 번째 장면을\n남겨 보세요.')}</AppText>
+        <AppText localize={false} style={[styles.canvasDescription, { color: colors.textSecondary, fontFamily: bodyFont }]}>{format('{colorName}을 발견한\n오늘의 순간을 모아요.', { colorName })}</AppText>
       </View>
       <View pointerEvents="none" style={styles.canvasDoodle}><PencilSketch color={mission.color.accent} /></View>
     </View>
@@ -179,10 +183,6 @@ function PencilSketch({ color }: { color: string }) {
   return <Svg height={82} viewBox="0 0 82 82" width={82}><Path d="m18 61 8-2 34-34-6-6-34 34-2 8ZM54 19l4-4a3 3 0 0 1 4 4l-4 4" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} /><Path d="M14 67c11-1 22 4 30 1" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
 
-function formatHeaderDate(dateKey: string): string {
-  const [year, month, day] = dateKey.split('-');
-  return `${year}.${month}.${day}`;
-}
 
 const styles = StyleSheet.create({
   page: { flex: 1 },

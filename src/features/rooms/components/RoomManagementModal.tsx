@@ -7,6 +7,7 @@ import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { getInviteExpiryLabel, type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomManagementState } from '@/src/features/rooms/model/roomLifecycle';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export type RoomManagementPendingAction = 'ending' | 'leaving' | 'removing_member' | 'reissuing_invite' | 'revoking_invite' | 'transferring' | 'updating_settings';
 
@@ -154,6 +155,7 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
 
 function RoomOwnerSettings({ onNotice, onRequestConfirmation, onUpdateSettings, pendingAction, room }: Pick<RoomManagementModalProps, 'onNotice' | 'onUpdateSettings' | 'pendingAction' | 'room'> & { onRequestConfirmation: (confirmation: RoomManagementConfirmation) => void }) {
   const { colors } = useAppTheme();
+  const { t } = useAppLanguage();
   const styles = useRoomManagementStyles();
   const nameRef = useRef(room.name);
   const emojiRef = useRef(room.emoji ?? '');
@@ -190,11 +192,11 @@ function RoomOwnerSettings({ onNotice, onRequestConfirmation, onUpdateSettings, 
         <AppText style={styles.sectionLabel}>ROOM IDENTITY</AppText>
         <View style={styles.fieldGroup}>
           <AppText style={styles.fieldLabel}>방 이름</AppText>
-          <TextInput accessibilityLabel="방 이름" defaultValue={room.name} editable={!isPending} maxLength={20} onChangeText={(value) => { nameRef.current = value; }} placeholder="방 이름" placeholderTextColor={colors.textTertiary} style={styles.textInput} />
+          <TextInput accessibilityLabel={t('방 이름')} defaultValue={room.name} editable={!isPending} maxLength={20} onChangeText={(value) => { nameRef.current = value; }} placeholder={t('방 이름')} placeholderTextColor={colors.textTertiary} style={styles.textInput} />
         </View>
         <View style={styles.fieldGroup}>
           <AppText style={styles.fieldLabel}>방 이모지 · 선택</AppText>
-          <TextInput accessibilityLabel="방 이모지" defaultValue={room.emoji ?? ''} editable={!isPending} maxLength={8} onChangeText={(value) => { emojiRef.current = value; }} placeholder="🎨" placeholderTextColor={colors.textTertiary} style={[styles.textInput, styles.emojiInput]} />
+          <TextInput accessibilityLabel={t('방 이모지')} defaultValue={room.emoji ?? ''} editable={!isPending} maxLength={8} onChangeText={(value) => { emojiRef.current = value; }} placeholder="🎨" placeholderTextColor={colors.textTertiary} style={[styles.textInput, styles.emojiInput]} />
         </View>
         <PrimaryButton accessibilityLabel="방 정보 저장" disabled={isPending} label={pendingAction === 'updating_settings' ? '저장 중' : '방 정보 저장'} onPress={saveSettings} />
       </View>

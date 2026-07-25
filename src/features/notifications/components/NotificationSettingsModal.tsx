@@ -5,6 +5,7 @@ import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing, type ThemeColors } from '@/src/design/tokens';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 import {
   getReminderPickerDate,
   getReminderTimeLabel,
@@ -30,6 +31,7 @@ export function NotificationSettingsModal({ isLoading, isSaving, onClose, onSave
 
 function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settings, visible }: NotificationSettingsModalProps) {
   const styles = useNotificationSettingsStyles();
+  const { language, t } = useAppLanguage();
   const [draft, setDraft] = useState(settings);
   const [pickerKind, setPickerKind] = useState<ReminderKind | null>(null);
   const isBusy = isLoading || isSaving;
@@ -45,13 +47,13 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
   };
 
   return (
-    <AppModal accessibilityLabel="알림 설정 닫기" contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
+    <AppModal accessibilityLabel={t('알림 설정 닫기')} contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
       <View style={styles.titleRow}>
         <View style={styles.titleCopy}>
           <AppText style={styles.eyebrow}>REMINDERS</AppText>
           <AppText accessibilityRole="header" style={styles.title}>알림 설정</AppText>
         </View>
-        <Pressable accessibilityLabel="알림 설정 닫기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={styles.closeButton}>
+        <Pressable accessibilityLabel={t('알림 설정 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={styles.closeButton}>
           <AppText style={styles.closeText}>×</AppText>
         </Pressable>
       </View>
@@ -86,7 +88,7 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
             <AppText style={styles.reminderDescription}>친구가 오늘의 사진을 처음 올렸을 때 알려드려요.</AppText>
           </View>
           <Pressable
-            accessibilityLabel={`친구방 사진 알림 ${draft.roomPhotoPushEnabled ? '끄기' : '켜기'}`}
+            accessibilityLabel={language === 'ko' ? `친구방 사진 알림 ${draft.roomPhotoPushEnabled ? '끄기' : '켜기'}` : `${draft.roomPhotoPushEnabled ? 'Turn off' : 'Turn on'} room photo notifications`}
             accessibilityRole="switch"
             accessibilityState={{ checked: draft.roomPhotoPushEnabled, disabled: isBusy }}
             disabled={isBusy}
@@ -100,10 +102,10 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
       </ScrollView>
 
       <View style={styles.actions}>
-        <Pressable accessibilityLabel="알림 설정 취소" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
+        <Pressable accessibilityLabel={t('알림 설정 취소')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.cancelButton, isBusy && styles.disabledButton]}>
           <AppText style={styles.cancelText}>취소</AppText>
         </Pressable>
-        <Pressable accessibilityLabel="알림 설정 저장" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void save()} style={[styles.saveButton, isBusy && styles.disabledButton]}>
+        <Pressable accessibilityLabel={t('알림 설정 저장')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void save()} style={[styles.saveButton, isBusy && styles.disabledButton]}>
           <AppText style={styles.saveText}>{isLoading ? '불러오는 중…' : isSaving ? '저장 중…' : '저장'}</AppText>
         </Pressable>
       </View>
@@ -125,17 +127,18 @@ function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggl
   reminder: NotificationSettings[ReminderKind];
 }) {
   const styles = useNotificationSettingsStyles();
+  const { language } = useAppLanguage();
   return (
     <View style={styles.reminderRow}>
       <View style={styles.reminderCopy}>
         <AppText style={styles.reminderLabel}>{label}</AppText>
         <AppText style={styles.reminderDescription}>{description}</AppText>
-        <Pressable accessibilityLabel={`${label} 시간 선택`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => onSelectTime(kind)} style={({ pressed }) => [styles.timeButton, pressed && !disabled && styles.timeButtonPressed, disabled && styles.disabledButton]}>
-          <AppText style={styles.timeText}>{getReminderTimeLabel(reminder)}</AppText>
+        <Pressable accessibilityLabel={language === 'ko' ? `${label} 시간 선택` : `Choose ${label.toLowerCase()} time`} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => onSelectTime(kind)} style={({ pressed }) => [styles.timeButton, pressed && !disabled && styles.timeButtonPressed, disabled && styles.disabledButton]}>
+          <AppText localize={false} style={styles.timeText}>{getReminderTimeLabel(reminder, language)}</AppText>
         </Pressable>
       </View>
       <Pressable
-        accessibilityLabel={`${label} 알림 ${reminder.enabled ? '끄기' : '켜기'}`}
+        accessibilityLabel={language === 'ko' ? `${label} 알림 ${reminder.enabled ? '끄기' : '켜기'}` : `${reminder.enabled ? 'Turn off' : 'Turn on'} ${label.toLowerCase()} reminder`}
         accessibilityRole="switch"
         accessibilityState={{ checked: reminder.enabled, disabled }}
         disabled={disabled}
@@ -149,6 +152,7 @@ function ReminderRow({ description, disabled, kind, label, onSelectTime, onToggl
 
 function InlineTimePicker({ kind, onChange, reminder }: { kind: ReminderKind; onChange: (date: Date) => void; reminder: NotificationSettings[ReminderKind] }) {
   const styles = useNotificationSettingsStyles();
+  const { language } = useAppLanguage();
   const changeTime = (hours: number, minutes: number): void => {
     const nextDate = getReminderPickerDate(reminder);
     nextDate.setHours(nextDate.getHours() + hours, nextDate.getMinutes() + minutes);
@@ -160,7 +164,7 @@ function InlineTimePicker({ kind, onChange, reminder }: { kind: ReminderKind; on
       <AppText style={styles.pickerLabel}>{kind === 'morning' ? '아침 알림 시간' : '저녁 알림 시간'}</AppText>
       <View style={styles.timeControls}>
         <TimeAdjustButton label="한 시간 늦게" onPress={() => changeTime(1, 0)} symbol="+" />
-        <View style={styles.timeValue}><AppText style={styles.timeValueText}>{getReminderTimeLabel(reminder)}</AppText><AppText style={styles.timeHint}>시간</AppText></View>
+        <View style={styles.timeValue}><AppText localize={false} style={styles.timeValueText}>{getReminderTimeLabel(reminder, language)}</AppText><AppText style={styles.timeHint}>시간</AppText></View>
         <TimeAdjustButton label="한 시간 일찍" onPress={() => changeTime(-1, 0)} symbol="−" />
       </View>
       <View style={styles.timeControls}>

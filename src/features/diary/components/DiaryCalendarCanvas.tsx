@@ -24,6 +24,7 @@ import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { DiaryCollageModal } from '@/src/features/diary/components/DiaryCollageModal';
 import { DiaryEditModal, type DiaryEditTarget } from '@/src/features/diary/components/DiaryEditModal';
+import { DiaryMonthPickerModal } from '@/src/features/diary/components/DiaryMonthPickerModal';
 import { DiaryPhotoViewer } from '@/src/features/diary/components/DiaryPhotoViewer';
 import { useDiaryEdits } from '@/src/features/diary/hooks/useDiaryEdits';
 import { useDiaryMonth } from '@/src/features/diary/hooks/useDiaryMonth';
@@ -31,10 +32,15 @@ import { getDiaryEntryMemo, type DiaryEntry, type DiaryPhoto, type DiarySharedRo
 import { getCalendarCells, getSelectedDiaryDateKey, moveMonth, type MonthCursor } from '@/src/features/diary/model/calendar';
 import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { formatDateKey, formatMonthLabel } from '@/src/lib/localization/dateFormat';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 import { getTimeZoneDisplayName, isFutureDateInTimeZone } from '@/src/utils/dates/timezone';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+const WEEKDAYS = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  ko: ['일', '월', '화', '수', '목', '금', '토'],
+} as const;
 
 type DiaryNotice = {
   description: string;
@@ -56,6 +62,7 @@ type DiaryOverlay =
 
 export function DiaryCalendarCanvas() {
   const styles = useDiaryStyles();
+  const { format, language, t } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -70,6 +77,7 @@ export function DiaryCalendarCanvas() {
   const [cursor, setCursor] = useState<MonthCursor>({ month: todayMonth, year: todayYear });
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<DiaryOverlay>({ kind: 'none' });
+  const [isMonthPickerVisible, setIsMonthPickerVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const diarySectionTop = useRef(0);
   const isMountedRef = useRef(true);
@@ -86,6 +94,7 @@ export function DiaryCalendarCanvas() {
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
+  const weekdays = WEEKDAYS[language];
 
   useEffect(() => () => {
     isMountedRef.current = false;
@@ -95,6 +104,13 @@ export function DiaryCalendarCanvas() {
     setCursor((current) => moveMonth(current, offset));
     setSelectedDateKey(null);
     setOverlay({ kind: 'none' });
+  };
+
+  const selectDiaryMonth = (nextCursor: MonthCursor): void => {
+    setCursor(nextCursor);
+    setSelectedDateKey(null);
+    setOverlay({ kind: 'none' });
+    setIsMonthPickerVisible(false);
   };
 
   const selectDiaryDate = (dateKey: string): void => {
@@ -139,17 +155,24 @@ export function DiaryCalendarCanvas() {
       <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
         <View style={styles.dateGroup}>
           <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}><ProfileSketch /></View>
-          <AppText style={[styles.headerDate, { fontFamily: boldFont }]}>{todayKey.replaceAll('-', '.')}</AppText>
+          <AppText localize={false} style={[styles.headerDate, { fontFamily: boldFont }]}>{formatDateKey(todayKey, language, 'numeric')}</AppText>
         </View>
         <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}><SettingsSketch /></View>
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 48) }]} ref={scrollViewRef} showsVerticalScrollIndicator={false}>
         <View style={styles.monthHeader}>
+          <Pressable
+            accessibilityHint={t('원하는 연도와 월을 바로 선택할 수 있어요.')}
+            accessibilityLabel={formatMonthLabel(cursor.year, cursor.month, language)}
+            accessibilityRole="button"
+            onPress={() => setIsMonthPickerVisible(true)}
+            style={({ pressed }) => [styles.monthTitleButton, pressed && styles.monthTitleButtonPressed]}>
           <View style={styles.monthTitleGroup}>
-            <View style={styles.monthUnderline}><AppText style={[styles.monthTitle, { fontFamily: heavyFont }]}>{cursor.month}월</AppText></View>
-            <AppText style={styles.yearLabel}>{cursor.year}</AppText>
+            <View style={styles.monthUnderline}><AppText localize={false} style={[styles.monthTitle, { fontFamily: heavyFont }]}>{language === 'ko' ? `${cursor.month}월` : formatMonthLabel(cursor.year, cursor.month, language).split(' ')[0]}</AppText></View>
+            <AppText localize={false} style={styles.yearLabel}>{language === 'ko' ? cursor.year : String(cursor.year)}</AppText>
           </View>
+          </Pressable>
           <View style={styles.monthControls}>
             <MonthControl direction="previous" onPress={() => moveDiaryMonth(-1)} />
             <MonthControl direction="next" onPress={() => moveDiaryMonth(1)} />
@@ -158,7 +181,7 @@ export function DiaryCalendarCanvas() {
 
         <View style={styles.calendarGrid}>
           <View style={styles.weekRow}>
-            {WEEKDAYS.map((weekday, index) => <View key={weekday} style={[styles.weekdayCell, index === WEEKDAYS.length - 1 && styles.rightEdge]}><AppText style={styles.weekdayText}>{weekday}</AppText></View>)}
+            {weekdays.map((weekday, index) => <View key={weekday} style={[styles.weekdayCell, index === weekdays.length - 1 && styles.rightEdge]}><AppText localize={false} style={styles.weekdayText}>{weekday}</AppText></View>)}
           </View>
           <View style={styles.dayGrid}>
             {calendar.map((cell, index) => {
@@ -166,11 +189,13 @@ export function DiaryCalendarCanvas() {
               const entry = dateKey ? entriesByDate.get(dateKey) : undefined;
               const isToday = isCurrentMonth && cell.day === todayDay;
               const isSelected = dateKey !== null && dateKey === selectedCalendarDate;
-              const isLastColumn = (index + 1) % WEEKDAYS.length === 0;
-              const isLastRow = index >= calendar.length - WEEKDAYS.length;
+              const isLastColumn = (index + 1) % weekdays.length === 0;
+              const isLastRow = index >= calendar.length - weekdays.length;
               const label = cell.day
-                ? `${cursor.month}월 ${cell.day}일${entry ? `, ${entry.color.nameKo} 사진 ${entry.photos.length}장` : ', 기록 없음'}${isToday ? ', 오늘' : ''}${isSelected ? ', 선택됨' : ''}`
-                : '빈 날짜 칸';
+                ? language === 'ko'
+                  ? `${cursor.month}월 ${cell.day}일${entry ? `, ${entry.color.nameKo} 사진 ${entry.photos.length}장` : ', 기록 없음'}${isToday ? ', 오늘' : ''}${isSelected ? ', 선택됨' : ''}`
+                  : `${formatDateKey(dateKey ?? '', language, 'monthDay')}${entry ? `, ${entry.color.nameEn} ${entry.photos.length} photos` : ', no record'}${isToday ? ', today' : ''}${isSelected ? ', selected' : ''}`
+                : t('빈 날짜 칸');
 
               return (
                 <Pressable
@@ -200,7 +225,13 @@ export function DiaryCalendarCanvas() {
         <MonthSummary entries={entries} bodyFont={bodyFont} boldFont={boldFont} />
 
         <View onLayout={(event) => { diarySectionTop.current = event.nativeEvent.layout.y; }} style={styles.diarySection}>
-          <AppText style={[styles.diaryHeading, { fontFamily: boldFont }]}>{selectedEntry ? `${formatEntryDate(selectedEntry.dateKey)}의 다이어리` : selectedCalendarDate ? `${formatEntryDate(selectedCalendarDate)}의 다이어리` : `${cursor.month}월의 다이어리`}</AppText>
+          <AppText localize={false} style={[styles.diaryHeading, { fontFamily: boldFont }]}>{selectedEntry
+            ? format('{date}의 다이어리', { date: formatDateKey(selectedEntry.dateKey, language, 'monthDay') })
+            : selectedCalendarDate
+              ? format('{date}의 다이어리', { date: formatDateKey(selectedCalendarDate, language, 'monthDay') })
+              : language === 'ko'
+                ? format('{month}월의 다이어리', { month: cursor.month })
+                : `${formatMonthLabel(cursor.year, cursor.month, language)} diary`}</AppText>
           {sessionState.status === 'loading' || diaryQuery.isPending
             ? <DiaryLoadingCard />
             : sessionState.status === 'error' || diaryQuery.isError
@@ -253,6 +284,7 @@ export function DiaryCalendarCanvas() {
         }}
         target={overlay.kind === 'edit' ? overlay.target : null}
       />
+      {isMonthPickerVisible ? <DiaryMonthPickerModal cursor={cursor} onClose={() => setIsMonthPickerVisible(false)} onSelect={selectDiaryMonth} visible /> : null}
       <AppConfirmationDialog
         cancelLabel="취소"
         confirmLabel="사진 삭제"
@@ -278,12 +310,13 @@ export function DiaryCalendarCanvas() {
 
 function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; bodyFont: string | undefined; boldFont: string | undefined }) {
   const styles = useDiaryStyles();
+  const { format } = useAppLanguage();
   const photoCount = entries.reduce((total, entry) => total + entry.photos.length, 0);
   return (
-    <View accessible accessibilityLabel={`이번 달 ${entries.length}일 기록, 사진 ${photoCount}장`} style={styles.monthSummaryCard}>
+    <View accessible accessibilityLabel={format('이번 달 {count}일 기록, 사진 {photoCount}장', { count: entries.length, photoCount })} style={styles.monthSummaryCard}>
       <View style={styles.summaryCopy}>
-        <AppText style={[styles.summaryTitle, { fontFamily: boldFont }]}>{entries.length > 0 ? `${entries.length}일의 색을 모았어요` : '이번 달 첫 색을 기다리고 있어요'}</AppText>
-        <AppText style={[styles.summaryDescription, { fontFamily: bodyFont }]}>{entries.length > 0 ? `${photoCount}장의 사진이 나만의 다이어리에 남아 있어요.` : '오늘 발견한 색을 기록하면 달력에 채워져요.'}</AppText>
+        <AppText localize={false} style={[styles.summaryTitle, { fontFamily: boldFont }]}>{entries.length > 0 ? format('{count}일의 색을 모았어요', { count: entries.length }) : format('이번 달 첫 색을 기다리고 있어요', {})}</AppText>
+        <AppText localize={false} style={[styles.summaryDescription, { fontFamily: bodyFont }]}>{entries.length > 0 ? format('{count}장의 사진이 나만의 다이어리에 남아 있어요.', { count: photoCount }) : format('오늘 발견한 색을 기록하면 달력에 채워져요.', {})}</AppText>
       </View>
       <View style={styles.summaryMark}><PaletteMark /></View>
     </View>
@@ -292,34 +325,36 @@ function MonthSummary({ bodyFont, boldFont, entries }: { entries: DiaryEntry[]; 
 
 function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoom, onPhotoPress, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; entry: DiaryEntry; onEditNote: () => void; onOpenSharedRoom: (room: DiarySharedRoom) => void; onPhotoPress: (photoId: string) => void; timeZone: string }) {
   const styles = useDiaryStyles();
+  const { format, language, t } = useAppLanguage();
   const photoCount = entry.photos.length;
+  const colorName = language === 'ko' ? entry.color.nameKo : entry.color.nameEn;
   const [isCollageVisible, setIsCollageVisible] = useState(false);
   const mosaicPhotos: NinePhotoMosaicPhoto[] = entry.photos.flatMap((photo) => (
     photo.signedUrl ? [{
-      accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, colorName: entry.color.nameKo, position: photo.position }),
+      accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, colorName, language, position: photo.position }),
       capturedAt: photo.capturedAt,
       id: photo.id,
       position: photo.position,
       uri: photo.signedUrl,
     }] : []
   ));
-  const memo = getDiaryEntryMemo(entry);
+  const memo = getDiaryEntryMemo(entry, language);
 
   return (
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
         <AppText style={styles.timestamp}>{entry.dateKey} · {getTimeZoneDisplayName(timeZone)}</AppText>
-        <View accessible accessibilityLabel={`${entry.color.nameKo} 색`} accessibilityRole="image" style={[styles.colorBadge, { backgroundColor: entry.color.accent }]} />
+        <View accessible accessibilityLabel={format('{colorName} 색', { colorName })} accessibilityRole="image" style={[styles.colorBadge, { backgroundColor: entry.color.accent }]} />
       </View>
-      <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{entry.color.nameKo}</AppText>
-      <AppText style={[styles.entryDescription, { fontFamily: bodyFont }]}>{memo}</AppText>
-      {photoCount > 0 ? <Pressable accessibilityLabel="내 기록 콜라주 내보내기" accessibilityRole="button" onPress={() => setIsCollageVisible(true)} style={styles.collageExportAction}>
-        <View><AppText style={styles.collageExportTitle}>내 기록 콜라주</AppText><AppText style={styles.collageExportDescription}>내 사진 {photoCount}장을 한 장으로 만들어요</AppText></View>
+      <AppText localize={false} style={[styles.entryTitle, { fontFamily: boldFont }]}>{colorName}</AppText>
+      <AppText localize={false} style={[styles.entryDescription, { fontFamily: bodyFont }]}>{memo}</AppText>
+      {photoCount > 0 ? <Pressable accessibilityLabel={t('내 기록 콜라주 내보내기')} accessibilityRole="button" onPress={() => setIsCollageVisible(true)} style={styles.collageExportAction}>
+        <View><AppText style={styles.collageExportTitle}>내 기록 콜라주</AppText><AppText localize={false} style={styles.collageExportDescription}>{format('내 사진 {count}장을 한 장으로 만들어요', { count: photoCount })}</AppText></View>
         <AppText style={styles.collageExportArrow}>↗</AppText>
       </Pressable> : null}
       {photoCount > 0 ? (
         <NinePhotoMosaic
-          accessibilityLabel={`${entry.dateKey}의 ${entry.color.nameKo} 사진 ${photoCount}장, 9칸 기록판`}
+          accessibilityLabel={format('{date}의 {colorName} 사진 {count}장, 9칸 기록판', { colorName, count: photoCount, date: formatDateKey(entry.dateKey, language, 'full') })}
           onPhotoPress={(photo) => onPhotoPress(photo.id)}
           photos={mosaicPhotos}
         />
@@ -355,7 +390,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoo
           </View>
         </View>
       ) : null}
-      <Pressable accessibilityLabel="오늘의 메모 수정" accessibilityRole="button" onPress={onEditNote} style={styles.noteEditAction}>
+      <Pressable accessibilityLabel={t('오늘의 메모 수정')} accessibilityRole="button" onPress={onEditNote} style={styles.noteEditAction}>
         <AppText style={styles.noteEditActionText}>{entry.note ? '오늘의 메모 수정' : '오늘의 메모 쓰기'}</AppText>
         <AppText style={styles.noteEditArrow}>→</AppText>
       </Pressable>
@@ -366,6 +401,7 @@ function DiaryEntryCard({ bodyFont, boldFont, entry, onEditNote, onOpenSharedRoo
 
 function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture, timeZone }: { bodyFont: string | undefined; boldFont: string | undefined; dateKey: string | null; isFuture: boolean; timeZone: string }) {
   const styles = useDiaryStyles();
+  const { language } = useAppLanguage();
   const title = dateKey ? isFuture ? '아직 오지 않은 날이에요' : '아직 기록이 없어요' : '이번 달 첫 기록';
   const description = dateKey
     ? isFuture
@@ -376,7 +412,7 @@ function EmptyDiaryCard({ bodyFont, boldFont, dateKey, isFuture, timeZone }: { b
   return (
     <View style={styles.diaryCard}>
       <View style={styles.diaryCardHeader}>
-        <AppText style={styles.timestamp}>{dateKey ? `${dateKey} · ${getTimeZoneDisplayName(timeZone)}` : 'EMPTY PAGE'}</AppText>
+        <AppText localize={false} style={styles.timestamp}>{dateKey ? `${formatDateKey(dateKey, language, 'numeric')} · ${getTimeZoneDisplayName(timeZone)}` : 'EMPTY PAGE'}</AppText>
         <View accessible accessibilityLabel="기록 별표" accessibilityRole="image"><StarIcon /></View>
       </View>
       <AppText style={[styles.entryTitle, { fontFamily: boldFont }]}>{title}</AppText>
@@ -407,9 +443,10 @@ function DiaryErrorCard({ onRetry }: { onRetry: () => void }) {
 
 function MonthControl({ direction, onPress }: { direction: 'next' | 'previous'; onPress: () => void }) {
   const styles = useDiaryStyles();
+  const { t } = useAppLanguage();
   const label = direction === 'previous' ? '이전 달 보기' : '다음 달 보기';
   return (
-    <Pressable accessibilityLabel={label} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.monthControl, pressed && styles.monthControlPressed]}>
+    <Pressable accessibilityLabel={t(label)} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.monthControl, pressed && styles.monthControlPressed]}>
       <ChevronIcon direction={direction === 'previous' ? 'left' : 'right'} />
     </Pressable>
   );
@@ -419,10 +456,6 @@ function getDateKey(cursor: MonthCursor, day: number): string {
   return `${cursor.year}-${String(cursor.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-function formatEntryDate(dateKey: string): string {
-  const [, month, day] = dateKey.split('-');
-  return `${Number(month)}월 ${Number(day)}일`;
-}
 
 function ProfileSketch() {
   const { colors } = useAppTheme();
@@ -470,6 +503,8 @@ function createStyles(colors: ThemeColors) {
   settingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   content: { gap: 32, paddingHorizontal: 16, paddingTop: 16 },
   monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
+  monthTitleButton: { minHeight: 44, justifyContent: 'center', paddingRight: spacing[2] },
+  monthTitleButtonPressed: { opacity: 0.62 },
   monthTitleGroup: { alignItems: 'baseline', flexDirection: 'row', gap: 8 },
   monthUnderline: { borderBottomColor: colors.ink, borderBottomWidth: 2, paddingBottom: 1 },
   monthTitle: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, lineHeight: 36 },
@@ -479,10 +514,10 @@ function createStyles(colors: ThemeColors) {
   monthControlPressed: { backgroundColor: colors.surfaceMuted, transform: [{ scale: 0.92 }] },
   calendarGrid: { backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 8, borderWidth: 1.5, overflow: 'hidden' },
   weekRow: { flexDirection: 'row' },
-  weekdayCell: { alignItems: 'center', borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 29, justifyContent: 'center', width: `${100 / WEEKDAYS.length}%` },
+  weekdayCell: { alignItems: 'center', borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 29, justifyContent: 'center', width: `${100 / 7}%` },
   weekdayText: { color: colors.ink, fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 47, paddingHorizontal: 7, paddingTop: 6, position: 'relative', width: `${100 / WEEKDAYS.length}%` },
+  dayCell: { borderBottomColor: colors.ink, borderBottomWidth: 1, borderRightColor: colors.ink, borderRightWidth: 1, height: 47, paddingHorizontal: 7, paddingTop: 6, position: 'relative', width: `${100 / 7}%` },
   dayCellPressed: { opacity: 0.72 },
   selectedDayCell: { backgroundColor: colors.ink, borderColor: colors.ink, borderWidth: 2, paddingHorizontal: 6, paddingTop: 5 },
   rightEdge: { borderRightWidth: 0 },

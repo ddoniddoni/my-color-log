@@ -28,7 +28,6 @@ type MyProfileCanvasProps = {
   onLanguagePress: () => void;
   onNotificationsPress: () => void;
   onProfileEditPress: () => void;
-  onPrivacyPress: () => void;
   onRoomsPress: () => void;
   onSignOutPress: () => void;
   onThemePress: () => void;
@@ -47,7 +46,6 @@ export function MyProfileCanvas({
   onLanguagePress,
   onNotificationsPress,
   onProfileEditPress,
-  onPrivacyPress,
   onRoomsPress,
   onSignOutPress,
   onThemePress,
@@ -57,6 +55,7 @@ export function MyProfileCanvas({
   themePreferenceLabel,
 }: MyProfileCanvasProps) {
   const theme = useAppTheme();
+  const { language, t } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -70,15 +69,15 @@ export function MyProfileCanvas({
     <View style={[styles.page, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.appBarShadow, { backgroundColor: theme.colors.black }]}>
         <View style={[styles.appBar, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.ink, paddingTop: Math.max(insets.top, 8) }]}>
-          <View accessible accessibilityLabel="메뉴" accessibilityRole="image" style={styles.appBarIcon}><MenuIcon color={theme.colors.ink} /></View>
+          <View accessible accessibilityLabel={t('메뉴')} accessibilityRole="image" style={styles.appBarIcon}><MenuIcon color={theme.colors.ink} /></View>
           <AppText style={[styles.brand, { color: theme.colors.ink, fontFamily: boldFont }]}>Color Log</AppText>
-          <View accessible accessibilityLabel="설정" accessibilityRole="image" style={styles.appBarIcon}><GearIcon color={theme.colors.ink} /></View>
+          <View accessible accessibilityLabel={t('설정')} accessibilityRole="image" style={styles.appBarIcon}><GearIcon color={theme.colors.ink} /></View>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView alwaysBounceVertical={false} bounces={false} contentContainerStyle={styles.content} overScrollMode="never" showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
-          <View accessible accessibilityLabel={`${nickname}의 프로필 그림`} accessibilityRole="image" style={[styles.avatar, { borderColor: theme.colors.ink }]}><DoodleAvatar color={theme.colors.ink} fill={theme.colors.surface} /></View>
+          <View accessible accessibilityLabel={language === 'ko' ? `${nickname}의 프로필 그림` : `${nickname}’s profile illustration`} accessibilityRole="image" style={[styles.avatar, { borderColor: theme.colors.ink }]}><DoodleAvatar color={theme.colors.ink} fill={theme.colors.surface} /></View>
           <AppText style={[styles.nickname, { color: theme.colors.ink, fontFamily: boldFont }]}>{nickname}</AppText>
           <AppText numberOfLines={1} style={[styles.email, { color: theme.colors.textSecondary, fontFamily: bodyFont }]}>{email}</AppText>
         </View>
@@ -95,19 +94,15 @@ export function MyProfileCanvas({
           <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} detail={languagePreferenceLabel} disabled={deletingAccount} label="언어" onPress={onLanguagePress} />
           <MarkerLine colors={theme.colors} />
-          <MenuRow colors={theme.colors} disabled={deletingAccount} label="사진과 친구방" onPress={onPrivacyPress} />
-          <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} destructive disabled={deletingAccount || signingOut} label={signingOut ? '로그아웃 중…' : '로그아웃'} onPress={onSignOutPress} />
           <MarkerLine colors={theme.colors} strong />
         </View>
 
         <View style={styles.accountManagement}>
-          <Pressable accessibilityLabel="계정 삭제" accessibilityRole="button" accessibilityState={{ disabled: deletingAccount }} disabled={deletingAccount} onPress={onDeleteAccountPress} style={({ pressed }) => [styles.accountDelete, pressed && styles.accountDeletePressed, deletingAccount && styles.accountDeleteDisabled]}>
+          <Pressable accessibilityLabel={t('계정 삭제')} accessibilityRole="button" accessibilityState={{ disabled: deletingAccount }} disabled={deletingAccount} onPress={onDeleteAccountPress} style={({ pressed }) => [styles.accountDelete, pressed && styles.accountDeletePressed, deletingAccount && styles.accountDeleteDisabled]}>
             <AppText style={[styles.accountDeleteText, { color: theme.colors.danger, fontFamily: bodyFont }]}>{deletingAccount ? '계정 삭제 중…' : '계정 삭제'}</AppText>
           </Pressable>
         </View>
-
-        <View pointerEvents="none" style={styles.doodle}><PenDoodle color={theme.colors.ink} /></View>
       </ScrollView>
     </View>
   );
@@ -136,8 +131,9 @@ function RoomSummaryCard({ bodyFont, boldFont, colors, onPress, rooms, status }:
 }
 
 function MenuRow({ colors, destructive = false, detail, disabled = false, label, onPress }: { colors: ThemeColors; destructive?: boolean; detail?: string; disabled?: boolean; label: string; onPress: () => void }) {
+  const { t } = useAppLanguage();
   return (
-    <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && !disabled && styles.menuRowPressed, disabled && styles.menuRowDisabled]}>
+    <Pressable accessibilityLabel={t(label)} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && !disabled && styles.menuRowPressed, disabled && styles.menuRowDisabled]}>
       <View style={styles.menuCopy}>
         <AppText style={[styles.menuLabel, { color: destructive ? colors.danger : colors.ink }, disabled && { color: colors.textSecondary }]}>{label}</AppText>
         {detail ? <AppText style={[styles.menuDetail, { color: colors.textSecondary }]}>{detail}</AppText> : null}
@@ -171,22 +167,18 @@ function LogoutIcon({ color }: { color: string }) {
   return <Svg height={21} viewBox="0 0 24 24" width={21}><Path d="M11 5H6.8A1.8 1.8 0 0 0 5 6.8v10.4A1.8 1.8 0 0 0 6.8 19H11m2-4 4-3-4-3m4 3H9" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} /></Svg>;
 }
 
-function PenDoodle({ color }: { color: string }) {
-  return <Svg height={60} viewBox="0 0 60 64" width={60}><Path d="m13 47 7-2 29-29-5-5-29 29-2 7Zm30-36 4-4a4 4 0 0 1 6 6l-4 4M11 54c9-2 22 2 34-1" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.1} /></Svg>;
-}
-
 const styles = StyleSheet.create({
   page: { flex: 1 },
   appBarShadow: { paddingBottom: 3 },
   appBar: { alignItems: 'center', borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 50, paddingBottom: 8, paddingHorizontal: 16 },
   appBarIcon: { alignItems: 'center', height: 32, justifyContent: 'center', width: 32 },
   brand: { fontSize: 20, fontWeight: '700', letterSpacing: -0.4, lineHeight: 26, transform: [{ rotate: '-1deg' }] },
-  content: { alignItems: 'stretch', gap: 28, paddingBottom: 132, paddingHorizontal: 16, paddingTop: 34 },
+  content: { alignItems: 'stretch', flexGrow: 1, gap: 16, paddingBottom: 20, paddingHorizontal: 16, paddingTop: 20 },
   profileSection: { alignItems: 'center', gap: 4 },
   avatar: { alignItems: 'center', borderRadius: 999, borderWidth: 1.5, height: 70, justifyContent: 'center', marginBottom: 4, width: 70 },
   nickname: { fontSize: 18, fontWeight: '700', letterSpacing: -0.4, lineHeight: 24 },
   email: { fontFamily: 'monospace', fontSize: 10, lineHeight: 14, maxWidth: '78%' },
-  roomCard: { borderWidth: 3, gap: 10, padding: 16 },
+  roomCard: { borderWidth: 3, gap: 6, padding: 12 },
   roomCardPressed: { transform: [{ scale: 0.99 }] },
   roomLabel: { fontFamily: 'monospace', fontSize: 10, letterSpacing: 1, lineHeight: 12, textTransform: 'uppercase' },
   roomValueRow: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
@@ -197,16 +189,15 @@ const styles = StyleSheet.create({
   markerLine: { height: 2, transform: [{ rotate: '-0.5deg' }], width: '100%' },
   markerLineStrong: { opacity: 0.22 },
   markerLineSoft: { opacity: 0.1 },
-  menuRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 50, paddingVertical: 10 },
+  menuRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 44, paddingVertical: 6 },
   menuRowPressed: { paddingLeft: 6, transform: [{ scale: 0.99 }] },
   menuRowDisabled: { opacity: 0.48 },
   menuCopy: { flex: 1, gap: 1 },
   menuLabel: { fontFamily: 'BricolageGrotesque_700Bold', fontSize: 18, fontWeight: '700', letterSpacing: -0.45, lineHeight: 24 },
   menuDetail: { fontFamily: 'monospace', fontSize: 10, lineHeight: 14 },
-  accountManagement: { alignItems: 'center', paddingTop: 2 },
+  accountManagement: { alignItems: 'center' },
   accountDelete: { alignItems: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
   accountDeletePressed: { opacity: 0.64 },
   accountDeleteDisabled: { opacity: 0.48 },
   accountDeleteText: { fontFamily: 'monospace', fontSize: 11, lineHeight: 14, textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
-  doodle: { alignSelf: 'center', marginTop: -2, opacity: 0.2 },
 });

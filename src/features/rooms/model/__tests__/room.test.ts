@@ -60,6 +60,7 @@ describe('room RPC errors', () => {
   it('keeps the owner-only error distinct from a missing session', () => {
     expect(toRoomError({ code: '42501', message: 'room_owner_required' }).message).toBe('room_owner_required');
     expect(getRoomErrorMessage(new Error('room_owner_required'))).toBe('방장만 방을 종료할 수 있어요. 방장 권한을 다시 확인해 주세요.');
+    expect(getRoomErrorMessage(new Error('room_owner_required'), 'en')).toBe('Only the room owner can end this room. Check the owner role and try again.');
   });
 
   it('maps a real authentication error after known room errors', () => {

@@ -16,6 +16,7 @@ import { type ActiveRoom, type RoomInvitePreview, validateInviteCode, validateRo
 import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 const MAX_ACTIVE_ROOMS = 3;
 
@@ -29,6 +30,7 @@ type RoomListDialog =
 
 export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps) {
   const theme = useAppTheme();
+  const { language, t } = useAppLanguage();
   const styles = useRoomListStyles();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -71,7 +73,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
   const previewInviteMutation = useMutation({
     mutationFn: getRoomInvitePreview,
-    onError: (error) => showNotice('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
+    onError: (error) => showNotice(t('초대를 확인하지 못했어요'), getRoomErrorMessage(error, language)),
     onSuccess: (preview) => {
       if (!preview) {
         showNotice('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
@@ -142,7 +144,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
     if (dialog?.kind !== 'end_confirmation' || endRoomMutation.isPending) return;
     const { room } = dialog;
     setDialog(null);
-    endRoomMutation.mutate(room.id, { onError: (error) => showNotice('방을 종료하지 못했어요', getRoomErrorMessage(error)) });
+    endRoomMutation.mutate(room.id, { onError: (error) => showNotice(t('방을 종료하지 못했어요'), getRoomErrorMessage(error, language)) });
   };
 
   if (sessionState.status === 'loading' || roomsQuery.isPending) {
@@ -160,7 +162,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
           <AppText style={styles.eyebrow}>PRIVATE COLOR ROOMS</AppText>
           <AppText style={styles.headerTitle}>친구방</AppText>
         </View>
-        <View accessible accessibilityLabel={`참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개`} style={styles.countBadge}>
+        <View accessible accessibilityLabel={language === 'ko' ? `참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개` : `${rooms.length} active rooms out of ${MAX_ACTIVE_ROOMS}`} style={styles.countBadge}>
           <AppText style={styles.countText}>{rooms.length} / {MAX_ACTIVE_ROOMS}</AppText>
         </View>
       </View>
@@ -171,7 +173,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
             <AppText style={styles.emptyEyebrow}>YOUR FIRST ROOM</AppText>
             <AppText style={styles.emptyTitle}>방을 개설하세요</AppText>
             <AppText style={styles.emptyDescription}>가까운 친구들과 같은 오늘의 색을 모을 수 있는 비공개 공간이에요.</AppText>
-            <Pressable accessibilityLabel="새 친구방 만들기" accessibilityRole="button" onPress={requestCreate} style={styles.primaryButton}>
+            <Pressable accessibilityLabel={t('새 친구방 만들기')} accessibilityRole="button" onPress={requestCreate} style={styles.primaryButton}>
               <AppText style={styles.primaryButtonText}>새 친구방 만들기</AppText>
               <AppText style={styles.primaryButtonArrow}>→</AppText>
             </Pressable>
@@ -200,25 +202,25 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
         <View style={styles.joinSection}>
           <View style={styles.sectionHeader}>
             <AppText style={styles.sectionTitle}>{rooms.length > 0 ? '새 방 추가' : '초대 코드로 참여'}</AppText>
-            <AppText style={styles.sectionMeta}>{isAtRoomLimit ? 'LIMIT REACHED' : 'UP TO 3 ROOMS'}</AppText>
+            <AppText localize={false} style={styles.sectionMeta}>{isAtRoomLimit ? language === 'ko' ? '한도 도달' : 'LIMIT REACHED' : language === 'ko' ? '최대 3개' : 'UP TO 3 ROOMS'}</AppText>
           </View>
           <View style={styles.actionRow}>
-            <Pressable accessibilityLabel="새 친구방 만들기" accessibilityRole="button" accessibilityState={{ disabled: isAtRoomLimit }} disabled={isAtRoomLimit} onPress={requestCreate} style={[styles.secondaryButton, isAtRoomLimit && styles.disabledButton]}>
+            <Pressable accessibilityLabel={t('새 친구방 만들기')} accessibilityRole="button" accessibilityState={{ disabled: isAtRoomLimit }} disabled={isAtRoomLimit} onPress={requestCreate} style={[styles.secondaryButton, isAtRoomLimit && styles.disabledButton]}>
               <AppText style={styles.secondaryButtonText}>방 만들기</AppText>
             </Pressable>
             <View style={styles.inviteInputWrap}>
               <TextInput
-                accessibilityLabel="친구방 초대 코드"
+                accessibilityLabel={t('친구방 초대 코드')}
                 editable={!isAtRoomLimit && !previewInviteMutation.isPending}
                 keyboardType="number-pad"
                 maxLength={6}
                 onChangeText={(value) => setInviteCode(value.replace(/\D/g, ''))}
-                placeholder="6자리 코드"
+                placeholder={t('6자리 코드')}
                 placeholderTextColor={theme.colors.textTertiary}
                 style={styles.inviteInput}
                 value={inviteCode}
               />
-              <Pressable accessibilityLabel="초대 코드 확인" accessibilityRole="button" accessibilityState={{ disabled: isAtRoomLimit || previewInviteMutation.isPending }} disabled={isAtRoomLimit || previewInviteMutation.isPending} onPress={previewInvite} style={[styles.inviteButton, (isAtRoomLimit || previewInviteMutation.isPending) && styles.disabledButton]}>
+              <Pressable accessibilityLabel={t('초대 코드 확인')} accessibilityRole="button" accessibilityState={{ disabled: isAtRoomLimit || previewInviteMutation.isPending }} disabled={isAtRoomLimit || previewInviteMutation.isPending} onPress={previewInvite} style={[styles.inviteButton, (isAtRoomLimit || previewInviteMutation.isPending) && styles.disabledButton]}>
                 <AppText style={styles.inviteButtonText}>{previewInviteMutation.isPending ? '…' : '입장'}</AppText>
               </Pressable>
             </View>
@@ -231,7 +233,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
         emoji={roomEmoji}
         isPending={createRoomMutation.isPending}
         onClose={() => !createRoomMutation.isPending && setIsCreateVisible(false)}
-        onCreate={() => createRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 만들지 못했어요', getRoomErrorMessage(error)) })}
+        onCreate={() => createRoomMutation.mutate(undefined, { onError: (error) => showNotice(t('방을 만들지 못했어요'), getRoomErrorMessage(error, language)) })}
         onEmojiChange={setRoomEmoji}
         onNameChange={setRoomName}
         roomName={roomName}
@@ -240,7 +242,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
       <JoinRoomModal
         isPending={joinRoomMutation.isPending}
         onClose={() => !joinRoomMutation.isPending && setInvitePreview(null)}
-        onJoin={() => joinRoomMutation.mutate(inviteCode, { onError: (error) => showNotice('방에 참여하지 못했어요', getRoomErrorMessage(error)) })}
+        onJoin={() => joinRoomMutation.mutate(inviteCode, { onError: (error) => showNotice(t('방에 참여하지 못했어요'), getRoomErrorMessage(error, language)) })}
         preview={invitePreview}
       />
       <AppConfirmationDialog
@@ -250,7 +252,7 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
         isBusy={endRoomMutation.isPending}
         onClose={() => setDialog(null)}
         onConfirm={dialog?.kind === 'end_confirmation' ? endSelectedRoom : () => setDialog(null)}
-        title={dialog?.kind === 'end_confirmation' ? `${dialog.room.name} 방을 종료할까요?` : dialog?.kind === 'notice' ? dialog.title : ''}
+        title={dialog?.kind === 'end_confirmation' ? t('{roomName} 방을 종료할까요?').replace('{roomName}', dialog.room.name) : dialog?.kind === 'notice' ? dialog.title : ''}
         tone={dialog?.kind === 'end_confirmation' ? 'destructive' : 'default'}
         visible={dialog !== null}
       />
@@ -260,27 +262,30 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
 function RoomListItem({ isEnding, onEnd, onPress, room, userId }: { isEnding: boolean; onEnd: () => void; onPress: () => void; room: ActiveRoom; userId: string }) {
   const styles = useRoomListStyles();
+  const { language } = useAppLanguage();
   const myMembership = room.members.find((member) => member.id === userId) ?? null;
   const isOwner = myMembership?.role === 'owner';
+  const detailLabel = language === 'ko' ? `${room.name} 방 상세 보기` : `View ${room.name} room details`;
+  const memberLabel = language === 'ko' ? `${room.members.length}명 참여 · ${isOwner ? '내가 방장' : '멤버'}` : `${room.members.length} members · ${isOwner ? 'You’re the owner' : 'Member'}`;
   return (
     <View style={styles.roomCard}>
-      <Pressable accessibilityLabel={`${room.name} 방 상세 보기`} accessibilityRole="button" onPress={onPress} style={styles.roomOpenButton}>
+      <Pressable accessibilityLabel={detailLabel} accessibilityRole="button" onPress={onPress} style={styles.roomOpenButton}>
         <View style={styles.roomSymbol}><AppText style={styles.roomSymbolText}>{room.emoji ?? room.name.slice(0, 1)}</AppText></View>
         <View style={styles.roomCopy}>
           <AppText numberOfLines={1} style={styles.roomName}>{room.name}</AppText>
-          <AppText style={styles.roomMeta}>{room.members.length}명 참여 · {isOwner ? '내가 방장' : '멤버'}</AppText>
+          <AppText localize={false} style={styles.roomMeta}>{memberLabel}</AppText>
         </View>
         <AppText style={styles.roomArrow}>→</AppText>
       </Pressable>
       {isOwner ? (
         <Pressable
-          accessibilityLabel={`${room.name} 방 종료`}
+          accessibilityLabel={language === 'ko' ? `${room.name} 방 종료` : `End ${room.name} room`}
           accessibilityRole="button"
           accessibilityState={{ disabled: isEnding }}
           disabled={isEnding}
           onPress={onEnd}
           style={[styles.roomEndButton, isEnding && styles.disabledButton]}>
-          <AppText style={styles.roomEndButtonText}>{isEnding ? '종료 중' : '방 종료'}</AppText>
+          <AppText localize={false} style={styles.roomEndButtonText}>{isEnding ? language === 'ko' ? '종료 중' : 'Ending…' : language === 'ko' ? '방 종료' : 'End room'}</AppText>
         </Pressable>
       ) : null}
     </View>

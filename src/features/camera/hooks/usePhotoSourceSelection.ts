@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { importGalleryPhoto, type GalleryImportContext } from '@/src/features/camera/api/galleryPhotoRepository';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export function usePhotoSourceSelection() {
   const router = useRouter();
+  const { t } = useAppLanguage();
   const [context, setContext] = useState<GalleryImportContext | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isGalleryImporting, setIsGalleryImporting] = useState(false);
@@ -54,12 +56,12 @@ export function usePhotoSourceSelection() {
         },
       });
     } catch {
-      setErrorMessage('갤러리 사진을 불러오지 못했어요. 다른 사진을 선택해 주세요.');
+      setErrorMessage(t('갤러리 사진을 불러오지 못했어요. 다른 사진을 선택해 주세요.'));
       setIsSourceModalVisible(true);
     } finally {
       setIsGalleryImporting(false);
     }
-  }, [context, isGalleryImporting, router]);
+  }, [context, isGalleryImporting, router, t]);
 
   return {
     chooseCamera,

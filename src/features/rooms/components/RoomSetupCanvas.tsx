@@ -39,6 +39,8 @@ import { getRoomPhotoMosaicSlots, type RoomBoardMember, type RoomBoardPhoto, typ
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
+import { formatDateKey } from '@/src/lib/localization/dateFormat';
 import { DEFAULT_TIME_ZONE, getTimeZoneDisplayName } from '@/src/utils/dates/timezone';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 
@@ -49,6 +51,7 @@ type RoomSetupDialog = { description: string; title: string };
 
 export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: string; roomId: string }) {
   const styles = useRoomSetupStyles();
+  const { language } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -219,7 +222,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
       showNotice('방 이모지를 확인해 주세요', emojiValidation.message);
       return;
     }
-    createRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 만들지 못했어요', getRoomErrorMessage(error)) });
+    createRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 만들지 못했어요', getRoomErrorMessage(error, language)) });
   };
 
   const handlePreviewInvite = (): void => {
@@ -229,7 +232,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
       return;
     }
     previewInviteMutation.mutate(code, {
-      onError: (error) => showNotice('초대를 확인하지 못했어요', getRoomErrorMessage(error)),
+      onError: (error) => showNotice('초대를 확인하지 못했어요', getRoomErrorMessage(error, language)),
       onSuccess: (preview) => {
         if (!preview) {
           showNotice('사용할 수 없는 초대예요', '코드가 만료됐거나 더 이상 입장할 수 없어요.');
@@ -242,7 +245,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
 
   const handleJoinRoom = (): void => {
     const code = inviteCode.join('');
-    joinRoomMutation.mutate(code, { onError: (error) => showNotice('방에 참여하지 못했어요', getRoomErrorMessage(error)) });
+    joinRoomMutation.mutate(code, { onError: (error) => showNotice('방에 참여하지 못했어요', getRoomErrorMessage(error, language)) });
   };
 
   const handleShareRoomInvite = async (room: ActiveRoom): Promise<void> => {
@@ -297,14 +300,14 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
         <RoomManagementModal
           currentUserId={userId}
           onClose={() => setIsRoomManagementVisible(false)}
-          onEnd={() => endRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 종료하지 못했어요', getRoomErrorMessage(error)) })}
-          onLeave={() => leaveRoomMutation.mutate(undefined, { onError: (error) => showNotice('방에서 나가지 못했어요', getRoomErrorMessage(error)) })}
+          onEnd={() => endRoomMutation.mutate(undefined, { onError: (error) => showNotice('방을 종료하지 못했어요', getRoomErrorMessage(error, language)) })}
+          onLeave={() => leaveRoomMutation.mutate(undefined, { onError: (error) => showNotice('방에서 나가지 못했어요', getRoomErrorMessage(error, language)) })}
           onNotice={showNotice}
-          onRemoveMember={(memberUserId) => removeRoomMemberMutation.mutate(memberUserId, { onError: (error) => showNotice('멤버를 내보내지 못했어요', getRoomErrorMessage(error)) })}
-          onReissueInvite={() => createRoomInviteMutation.mutate(undefined, { onError: (error) => showNotice('새 초대 코드를 만들지 못했어요', getRoomErrorMessage(error)) })}
-          onRevokeInvite={() => revokeRoomInvitesMutation.mutate(undefined, { onError: (error) => showNotice('초대 코드를 취소하지 못했어요', getRoomErrorMessage(error)) })}
-          onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => showNotice('방장을 넘기지 못했어요', getRoomErrorMessage(error)) })}
-          onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => showNotice('방 정보를 저장하지 못했어요', getRoomErrorMessage(error)) })}
+          onRemoveMember={(memberUserId) => removeRoomMemberMutation.mutate(memberUserId, { onError: (error) => showNotice('멤버를 내보내지 못했어요', getRoomErrorMessage(error, language)) })}
+          onReissueInvite={() => createRoomInviteMutation.mutate(undefined, { onError: (error) => showNotice('새 초대 코드를 만들지 못했어요', getRoomErrorMessage(error, language)) })}
+          onRevokeInvite={() => revokeRoomInvitesMutation.mutate(undefined, { onError: (error) => showNotice('초대 코드를 취소하지 못했어요', getRoomErrorMessage(error, language)) })}
+          onTransfer={(newOwnerId) => transferRoomOwnershipMutation.mutate(newOwnerId, { onError: (error) => showNotice('방장을 넘기지 못했어요', getRoomErrorMessage(error, language)) })}
+          onUpdateSettings={(name, emoji) => updateRoomSettingsMutation.mutate({ emoji, name }, { onError: (error) => showNotice('방 정보를 저장하지 못했어요', getRoomErrorMessage(error, language)) })}
           pendingAction={pendingRoomAction}
           room={room}
           visible={isRoomManagementVisible}
@@ -526,16 +529,17 @@ type ActiveRoomCanvasProps = {
 
 function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, initialPhotoId, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, onShowNotice, room, topInset }: ActiveRoomCanvasProps) {
   const styles = useRoomSetupStyles();
-  const formattedDate = dateKey.replaceAll('-', '.');
+  const { language, t } = useAppLanguage();
+  const formattedDate = formatDateKey(dateKey, language, 'numeric');
 
   return (
     <View style={styles.page}>
       <View style={[styles.roomTopBar, { paddingTop: Math.max(topInset, 8) }]}>
-        <Pressable accessibilityLabel="친구방 목록으로 돌아가기" accessibilityRole="button" hitSlop={10} onPress={onBack} style={styles.roomBackButton}>
+        <Pressable accessibilityLabel={t('친구방 목록으로 돌아가기')} accessibilityRole="button" hitSlop={10} onPress={onBack} style={styles.roomBackButton}>
           <AppText style={styles.roomBackText}>‹</AppText>
         </Pressable>
         <View style={styles.roomDateGroup}>
-          <View accessible accessibilityLabel="우리 방 아이콘" accessibilityRole="image" style={styles.roomMark}>
+          <View accessible accessibilityLabel={t('우리 방 아이콘')} accessibilityRole="image" style={styles.roomMark}>
             <AppText style={[styles.roomMarkText, { fontFamily: boldFont }]}>{room.emoji ?? room.name.slice(0, 1)}</AppText>
           </View>
           <View style={styles.roomDateCopy}>
@@ -543,7 +547,7 @@ function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, 
             <AppText numberOfLines={1} style={styles.roomTimeZone}>{getTimeZoneDisplayName(room.timeZone)}</AppText>
           </View>
         </View>
-        <Pressable accessibilityLabel="친구방 관리 열기" accessibilityRole="button" onPress={onOpenManagement} style={styles.roomSettingsMark}><GearIcon /></Pressable>
+        <Pressable accessibilityLabel={t('친구방 관리 열기')} accessibilityRole="button" onPress={onOpenManagement} style={styles.roomSettingsMark}><GearIcon /></Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.activeRoomContent} showsVerticalScrollIndicator={false}>
@@ -592,6 +596,7 @@ type RoomBoardPhotoSelection = {
 
 function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId, inviteShareAction, isError, isLoading, isRefreshing, onRetry, onShowNotice, timeZone }: RoomTodayBoardSectionProps) {
   const { colors } = useAppTheme();
+  const { language } = useAppLanguage();
   const styles = useRoomSetupStyles();
   const router = useRouter();
   const photoSource = usePhotoSourceSelection();
@@ -628,7 +633,12 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
 
   const showRules = (): void => {
     if (!board) return;
-    onShowNotice(`오늘의 ${board.mission.colorNameKo}`, `${board.mission.promptKo}\n\n사진은 내 다이어리에 먼저 저장되고, 우리 방에서는 함께 볼 수 있어요.`);
+    const colorName = language === 'ko' ? board.mission.colorNameKo : board.mission.colorNameEn;
+    const prompt = language === 'ko' ? board.mission.promptKo : `Find a scene touched by ${board.mission.colorNameEn}.`;
+    const sharingNotice = language === 'ko'
+      ? '사진은 내 다이어리에 먼저 저장되고, 우리 방에서는 함께 볼 수 있어요.'
+      : 'Photos save to your diary first, then appear here for the room to view together.';
+    onShowNotice(language === 'ko' ? `오늘의 ${colorName}` : `Today’s ${colorName}`, `${prompt}\n\n${sharingNotice}`);
   };
 
   return (
@@ -643,7 +653,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
                 const isSelected = member.id === selectedMember?.id;
                 return (
                   <Pressable
-                    accessibilityLabel={`${member.nickname} 사진 보드 탭`}
+                    accessibilityLabel={language === 'ko' ? `${member.nickname} 사진 보드 탭` : `${member.nickname} photo board tab`}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: isSelected }}
                     key={member.id}
@@ -652,7 +662,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
                     <View style={[styles.boardTabAvatar, isSelected && styles.boardTabAvatarSelected]}><AppText style={[styles.boardTabInitial, { fontFamily: boldFont }, isSelected && styles.boardTabInitialSelected]}>{member.nickname.slice(0, 1)}</AppText></View>
                     <View style={styles.boardTabCopy}>
                       <AppText numberOfLines={1} style={[styles.boardTabName, { fontFamily: boldFont }, isSelected && styles.boardTabNameSelected]}>{member.nickname}</AppText>
-                      <AppText style={[styles.boardTabStatus, isSelected && styles.boardTabStatusSelected]}>{isSelected ? 'ACTIVE NOW' : member.photos.length === 0 ? 'FINDING COLOR' : `${member.photos.length} PHOTOS`}</AppText>
+                      <AppText localize={false} style={[styles.boardTabStatus, isSelected && styles.boardTabStatusSelected]}>{isSelected ? language === 'ko' ? '현재 보고 있어요' : 'ACTIVE NOW' : member.photos.length === 0 ? language === 'ko' ? '색을 찾는 중' : 'FINDING COLOR' : language === 'ko' ? `사진 ${member.photos.length}장` : `${member.photos.length} PHOTOS`}</AppText>
                     </View>
                   </Pressable>
                 );
@@ -663,15 +673,15 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
               <View style={styles.canvasActions}>
                 <Pressable accessibilityLabel="우리 방 초대 공유" accessibilityRole="button" accessibilityState={{ busy: inviteShareAction.isSharing, disabled: inviteShareAction.isSharing }} disabled={inviteShareAction.isSharing} onPress={inviteShareAction.onShare} style={[styles.canvasActionButton, inviteShareAction.isSharing && styles.canvasActionButtonDisabled]}>
                   <PersonAddIcon />
-                  <AppText style={styles.canvasActionLabel}>{inviteShareAction.isSharing ? 'Sharing…' : 'Invite'}</AppText>
+                  <AppText localize={false} style={styles.canvasActionLabel}>{inviteShareAction.isSharing ? language === 'ko' ? '공유 중…' : 'Sharing…' : language === 'ko' ? '초대' : 'Invite'}</AppText>
                 </Pressable>
                 <Pressable accessibilityLabel="오늘의 미션 규칙 보기" accessibilityRole="button" onPress={showRules} style={styles.canvasActionButton}>
                   <TuneIcon />
-                  <AppText style={styles.canvasActionLabel}>Rules</AppText>
+                  <AppText localize={false} style={styles.canvasActionLabel}>{language === 'ko' ? '규칙' : 'Rules'}</AppText>
                 </Pressable>
                 <Pressable accessibilityLabel="친구방 지난 기록 보기" accessibilityRole="button" onPress={() => router.push({ pathname: '/room-history', params: { roomId: board.roomId } })} style={styles.canvasActionButton}>
                   <HistoryIcon />
-                  <AppText style={styles.canvasActionLabel}>History</AppText>
+                  <AppText localize={false} style={styles.canvasActionLabel}>{language === 'ko' ? '기록' : 'History'}</AppText>
                 </Pressable>
               </View>
             </View>
@@ -706,6 +716,7 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
 }
 
 function RoomMemberMosaic({ member, onCapture, onOpenPhoto }: { member: RoomBoardMember; onCapture: (() => void) | null; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
+  const { language } = useAppLanguage();
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
     photo.signedUrl ? [{
       accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
@@ -717,7 +728,7 @@ function RoomMemberMosaic({ member, onCapture, onOpenPhoto }: { member: RoomBoar
   ));
   return (
     <NinePhotoMosaic
-      accessibilityLabel={`${member.nickname}의 오늘 사진 ${photos.length}장, 9칸 기록판`}
+      accessibilityLabel={language === 'ko' ? `${member.nickname}의 오늘 사진 ${photos.length}장, 9칸 기록판` : `${member.nickname}’s ${photos.length} photos today, 9-slot record board`}
       onEmptyPress={onCapture ?? undefined}
       onPhotoPress={(photo) => {
         const roomPhoto = member.photos.find((candidate) => candidate.id === photo.id);
@@ -739,29 +750,30 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
   visible: boolean;
 }) {
   const { colors } = useAppTheme();
+  const { t } = useAppLanguage();
   const styles = useRoomSetupStyles();
   return (
     <Modal animationType="fade" onRequestClose={() => { if (!isPending) onClose(); }} statusBarTranslucent transparent visible={visible}>
       <View style={styles.modalOverlay}>
-        <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel={t('방 만들기 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderCopy}>
               <AppText style={styles.modalEyebrow}>NEW PRIVATE ROOM</AppText>
               <AppText style={styles.modalTitle}>친구방 만들기</AppText>
             </View>
-            <Pressable accessibilityLabel="방 만들기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
+            <Pressable accessibilityLabel={t('방 만들기 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
               <AppText style={styles.modalCloseText}>×</AppText>
             </Pressable>
           </View>
           <AppText style={styles.modalDescription}>2~6명이 함께하는 비공개 방이에요. 사진 원본은 언제나 내 다이어리에 남아요.</AppText>
           <AppText style={styles.inputLabel}>방 이름</AppText>
-          <TextInput accessibilityLabel="방 이름" autoFocus maxLength={20} onChangeText={onNameChange} placeholder="예: 퇴근길 색수집단" placeholderTextColor={colors.textTertiary} style={styles.modalInput} value={roomName} />
+          <TextInput accessibilityLabel={t('방 이름')} autoFocus maxLength={20} onChangeText={onNameChange} placeholder={t('예: 퇴근길 색수집단')} placeholderTextColor={colors.textTertiary} style={styles.modalInput} value={roomName} />
           <AppText style={styles.inputLabel}>표시 이모지 (선택)</AppText>
-          <TextInput accessibilityLabel="방 표시 이모지" maxLength={8} onChangeText={onEmojiChange} placeholder="🎨" placeholderTextColor={colors.textTertiary} style={styles.modalInput} value={emoji} />
+          <TextInput accessibilityLabel={t('방 표시 이모지')} maxLength={8} onChangeText={onEmojiChange} placeholder="🎨" placeholderTextColor={colors.textTertiary} style={styles.modalInput} value={emoji} />
           <View style={styles.modalActions}>
-            <Pressable accessibilityLabel="친구방 만들기 취소" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>취소</AppText></Pressable>
-            <Pressable accessibilityLabel="친구방 만들기" accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onCreate} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '만드는 중' : '방 만들기'}</AppText></Pressable>
+            <Pressable accessibilityLabel={t('친구방 만들기 취소')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>취소</AppText></Pressable>
+            <Pressable accessibilityLabel={t('친구방 만들기')} accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onCreate} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '만드는 중' : '방 만들기'}</AppText></Pressable>
           </View>
         </View>
       </View>
@@ -771,25 +783,26 @@ export function CreateRoomModal({ emoji, isPending, onClose, onCreate, onEmojiCh
 
 export function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPending: boolean; onClose: () => void; onJoin: () => void; preview: RoomInvitePreview | null }) {
   const styles = useRoomSetupStyles();
+  const { language, t } = useAppLanguage();
   return (
     <Modal animationType="fade" onRequestClose={() => { if (!isPending) onClose(); }} statusBarTranslucent transparent visible={preview !== null}>
       <View style={styles.modalOverlay}>
-        <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityLabel={t('친구방 참여 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
         {preview ? <View accessibilityViewIsModal style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderCopy}>
               <AppText style={styles.modalEyebrow}>PRIVATE INVITATION</AppText>
               <AppText style={styles.modalTitle}>{preview.roomEmoji ? `${preview.roomEmoji} ${preview.roomName}` : preview.roomName}</AppText>
             </View>
-            <Pressable accessibilityLabel="친구방 참여 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
+            <Pressable accessibilityLabel={t('친구방 참여 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.modalCloseButton}>
               <AppText style={styles.modalCloseText}>×</AppText>
             </Pressable>
           </View>
-          <AppText style={styles.modalDescription}>{preview.ownerNickname} 님의 방 · 현재 {preview.memberCount}/{preview.maxMembers}명</AppText>
+          <AppText localize={false} style={styles.modalDescription}>{language === 'ko' ? `${preview.ownerNickname} 님의 방 · 현재 ${preview.memberCount}/${preview.maxMembers}명` : `${preview.ownerNickname}’s room · ${preview.memberCount}/${preview.maxMembers} members`}</AppText>
           <View style={styles.privacyNotice}><AppText style={styles.privacyNoticeTitle}>참여 전에 확인해 주세요</AppText><AppText style={styles.privacyNoticeText}>참여하면 이 방의 멤버에게 내 오늘 기록이 함께 보여요. 내 다이어리 원본은 그대로 유지돼요.</AppText></View>
           <View style={styles.modalActions}>
-            <Pressable accessibilityLabel="친구방 참여 취소" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>다음에</AppText></Pressable>
-            <Pressable accessibilityLabel="이 친구방에 참여" accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onJoin} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '참여 중' : '이 방에 참여'}</AppText></Pressable>
+            <Pressable accessibilityLabel={t('친구방 참여 취소')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={styles.modalSecondaryButton}><AppText style={styles.modalSecondaryText}>다음에</AppText></Pressable>
+            <Pressable accessibilityLabel={t('이 친구방에 참여')} accessibilityRole="button" accessibilityState={{ busy: isPending, disabled: isPending }} disabled={isPending} onPress={onJoin} style={[styles.modalPrimaryButton, isPending && styles.modalButtonDisabled]}><AppText style={styles.modalPrimaryText}>{isPending ? '참여 중' : '이 방에 참여'}</AppText></Pressable>
           </View>
         </View> : null}
       </View>

@@ -59,7 +59,7 @@ export function AppConfirmationDialog({
               : [styles.primaryButton, { backgroundColor: theme.colors.ink, boxShadow: `3px 3px 0px ${theme.colors.black}` }],
             isBusy && styles.disabledButton,
           ]}>
-          <AppText style={[styles.confirmButtonText, { color: tone === 'destructive' ? theme.colors.danger : theme.colors.white }]}>{confirmLabel}</AppText>
+          <AppText style={[styles.confirmButtonText, { color: tone === 'destructive' ? theme.colors.danger : theme.colors.surface }]}>{confirmLabel}</AppText>
         </Pressable>
       </View>
     </AppModal>

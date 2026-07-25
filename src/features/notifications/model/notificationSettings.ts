@@ -1,3 +1,5 @@
+import type { AppLanguage } from '@/src/lib/localization/languagePreference';
+
 export type ReminderKind = 'morning' | 'evening';
 
 export type DailyReminder = {
@@ -46,7 +48,11 @@ export function updateRoomPhotoPushEnabled(settings: NotificationSettings, enabl
   return { ...settings, roomPhotoPushEnabled: enabled };
 }
 
-export function getReminderTimeLabel(reminder: DailyReminder): string {
+export function getReminderTimeLabel(reminder: DailyReminder, language: AppLanguage = 'ko'): string {
+  if (language === 'en') {
+    const hour = reminder.hour % 12 || 12;
+    return `${hour}:${String(reminder.minute).padStart(2, '0')} ${reminder.hour < 12 ? 'AM' : 'PM'}`;
+  }
   const period = reminder.hour < 12 ? '오전' : '오후';
   const hour = reminder.hour % 12 || 12;
   return `${period} ${hour}:${String(reminder.minute).padStart(2, '0')}`;

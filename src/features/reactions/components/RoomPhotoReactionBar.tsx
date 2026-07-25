@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/src/components/ui/AppText';
-import { colors } from '@/src/design/tokens';
+import { useAppTheme } from '@/src/design/ThemeProvider';
+import { type ThemeColors } from '@/src/design/tokens';
 import { useRoomPhotoReactions } from '@/src/features/reactions/hooks/useRoomPhotoReactions';
 import { ROOM_PHOTO_REACTION_CHOICES } from '@/src/features/reactions/model/roomPhotoReaction';
 
@@ -13,6 +15,7 @@ type RoomPhotoReactionBarProps = {
 };
 
 export function RoomPhotoReactionBar({ isOwnPhoto, photoId, roomId, userId }: RoomPhotoReactionBarProps) {
+  const styles = useRoomPhotoReactionStyles();
   const reactions = useRoomPhotoReactions({ photoId, roomId, userId });
   const summaries = reactions.data ?? [];
 
@@ -47,18 +50,25 @@ export function RoomPhotoReactionBar({ isOwnPhoto, photoId, roomId, userId }: Ro
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { borderTopColor: 'rgba(0, 0, 0, 0.18)', borderTopWidth: 1, gap: 8, marginTop: 2, paddingTop: 11 },
-  label: { color: 'rgba(0, 0, 0, 0.58)', fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
+function useRoomPhotoReactionStyles() {
+  const { colors } = useAppTheme();
+  return useMemo(() => createStyles(colors), [colors]);
+}
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  wrap: { borderTopColor: colors.borderStrong, borderTopWidth: 1, gap: 8, marginTop: 2, paddingTop: 11 },
+  label: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
   row: { flexDirection: 'row', gap: 7 },
-  button: { alignItems: 'center', borderColor: 'rgba(0, 0, 0, 0.46)', borderWidth: 1, flex: 1, flexDirection: 'row', gap: 3, justifyContent: 'center', minHeight: 44, paddingHorizontal: 3 },
-  buttonSelected: { backgroundColor: colors.black, borderColor: colors.black },
+  button: { alignItems: 'center', borderColor: colors.borderStrong, borderWidth: 1, flex: 1, flexDirection: 'row', gap: 3, justifyContent: 'center', minHeight: 44, paddingHorizontal: 3 },
+  buttonSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   buttonPressed: { opacity: 0.62 },
   buttonLoading: { opacity: 0.48 },
-  symbol: { color: colors.black, fontSize: 17, fontWeight: '700', lineHeight: 20 },
-  symbolSelected: { color: colors.white },
-  count: { color: colors.black, fontFamily: 'monospace', fontSize: 11, fontWeight: '700' },
-  countSelected: { color: colors.white },
-  hint: { color: 'rgba(0, 0, 0, 0.55)', fontSize: 11, lineHeight: 15 },
+  symbol: { color: colors.ink, fontSize: 17, fontWeight: '700', lineHeight: 20 },
+  symbolSelected: { color: colors.surface },
+  count: { color: colors.ink, fontFamily: 'monospace', fontSize: 11, fontWeight: '700' },
+  countSelected: { color: colors.surface },
+  hint: { color: colors.textSecondary, fontSize: 11, lineHeight: 15 },
   error: { color: colors.danger, fontSize: 11, lineHeight: 16 },
-});
+  });
+}

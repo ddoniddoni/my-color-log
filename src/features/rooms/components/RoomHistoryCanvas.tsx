@@ -28,24 +28,20 @@ import { useRoomDayBoard } from '@/src/features/rooms/hooks/useActiveRoomDayBoar
 import { useRoomHistory } from '@/src/features/rooms/hooks/useActiveRoomHistory';
 import { useRoom } from '@/src/features/rooms/hooks/useRoom';
 import { type RoomHistoryDay } from '@/src/features/rooms/model/roomHistory';
-import { type RoomBoardMember, type RoomBoardPhoto } from '@/src/features/rooms/model/roomTodayBoard';
+import { type RoomBoardMember, type RoomBoardMission, type RoomBoardPhoto } from '@/src/features/rooms/model/roomTodayBoard';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
 import { DEFAULT_TIME_ZONE } from '@/src/utils/dates/timezone';
+import { formatDateKey } from '@/src/lib/localization/dateFormat';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type RoomBoardPhotoSelection = {
   memberId: string;
   photoId: string;
 };
 
-const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-  weekday: 'short',
-});
-
 export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { initialDateKey?: string; initialPhotoId?: string; roomId: string }) {
   const styles = useRoomHistoryStyles();
+  const { language } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -145,9 +141,9 @@ export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { 
                   <View style={styles.missionCard}>
                     <View style={[styles.missionColor, { backgroundColor: board.mission.colorHex }]} />
                     <View style={styles.missionCopy}>
-                      <AppText style={styles.missionEyebrow}>{board.dateKey.replaceAll('-', '.')} · DAILY MISSION</AppText>
-                      <AppText style={[styles.missionTitle, { fontFamily: boldFont }]}>{board.mission.colorNameKo}</AppText>
-                      <AppText style={[styles.missionPrompt, { fontFamily: bodyFont }]}>{board.mission.promptKo}</AppText>
+                      <AppText localize={false} style={styles.missionEyebrow}>{formatDateKey(board.dateKey, language, 'numeric')} · {language === 'ko' ? '오늘의 미션' : 'DAILY MISSION'}</AppText>
+                      <AppText localize={false} style={[styles.missionTitle, { fontFamily: boldFont }]}>{language === 'ko' ? board.mission.colorNameKo : board.mission.colorNameEn}</AppText>
+                      <AppText localize={false} style={[styles.missionPrompt, { fontFamily: bodyFont }]}>{getRoomMissionPrompt(board.mission, language)}</AppText>
                     </View>
                   </View>
 
@@ -202,18 +198,19 @@ const HistoryDateItem = memo(function HistoryDateItem({ boldFont, day, isSelecte
   onSelect: (dateKey: string) => void;
 }) {
   const styles = useRoomHistoryStyles();
+  const { format, language } = useAppLanguage();
   const handlePress = useCallback(() => onSelect(day.dateKey), [day.dateKey, onSelect]);
 
   return (
     <Pressable
-      accessibilityLabel={`${day.dateKey} 기록 보기`}
+      accessibilityLabel={format('{date} 기록 보기', { date: formatDateKey(day.dateKey, language, 'full') })}
       accessibilityRole="tab"
       accessibilityState={{ selected: isSelected }}
       onPress={handlePress}
       style={[styles.dateCard, isSelected && styles.dateCardSelected]}>
       <View style={[styles.dateColor, { backgroundColor: day.mission.colorHex }]} />
-      <AppText style={[styles.dateText, { fontFamily: boldFont }, isSelected && styles.dateTextSelected]}>{formatDate(day.dateKey)}</AppText>
-      <AppText style={[styles.dateCount, isSelected && styles.dateCountSelected]}>{day.participantCount}명 참여</AppText>
+      <AppText localize={false} style={[styles.dateText, { fontFamily: boldFont }, isSelected && styles.dateTextSelected]}>{formatDateKey(day.dateKey, language, 'shortWithWeekday')}</AppText>
+      <AppText localize={false} style={[styles.dateCount, isSelected && styles.dateCountSelected]}>{format('{count}명 참여', { count: day.participantCount })}</AppText>
     </Pressable>
   );
 });
@@ -226,11 +223,12 @@ const HistoryMemberItem = memo(function HistoryMemberItem({ boldFont, dateKey, i
   onSelect: (memberId: string) => void;
 }) {
   const styles = useRoomHistoryStyles();
+  const { format, language } = useAppLanguage();
   const handlePress = useCallback(() => onSelect(member.id), [member.id, onSelect]);
 
   return (
     <Pressable
-      accessibilityLabel={`${member.nickname}의 ${dateKey} 사진 보드`}
+      accessibilityLabel={format('{name}의 {date} 사진 보드', { date: formatDateKey(dateKey, language, 'full'), name: member.nickname })}
       accessibilityRole="tab"
       accessibilityState={{ selected: isSelected }}
       onPress={handlePress}
@@ -238,13 +236,14 @@ const HistoryMemberItem = memo(function HistoryMemberItem({ boldFont, dateKey, i
       <View style={[styles.memberAvatar, isSelected && styles.memberAvatarSelected]}><AppText style={[styles.memberInitial, { fontFamily: boldFont }, isSelected && styles.memberInitialSelected]}>{member.nickname.slice(0, 1)}</AppText></View>
       <View>
         <AppText style={[styles.memberName, { fontFamily: boldFont }, isSelected && styles.memberNameSelected]}>{member.nickname}</AppText>
-        <AppText style={[styles.memberStatus, isSelected && styles.memberStatusSelected]}>{member.photos.length} PHOTOS</AppText>
+        <AppText localize={false} style={[styles.memberStatus, isSelected && styles.memberStatusSelected]}>{language === 'ko' ? `사진 ${member.photos.length}장` : `${member.photos.length} PHOTOS`}</AppText>
       </View>
     </Pressable>
   );
 });
 
 function RoomHistoryMosaic({ member, onOpenPhoto }: { member: RoomBoardMember; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
+  const { format } = useAppLanguage();
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
     photo.signedUrl ? [{
       accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
@@ -257,7 +256,7 @@ function RoomHistoryMosaic({ member, onOpenPhoto }: { member: RoomBoardMember; o
 
   return (
     <NinePhotoMosaic
-      accessibilityLabel={`${member.nickname}의 기록 사진 ${photos.length}장, 9칸 기록판`}
+      accessibilityLabel={format('{name}의 기록 사진 {count}장, 9칸 기록판', { count: photos.length, name: member.nickname })}
       onPhotoPress={(photo) => {
         const roomPhoto = member.photos.find((candidate) => candidate.id === photo.id);
         if (roomPhoto) onOpenPhoto(roomPhoto);
@@ -273,8 +272,8 @@ function HistoryState({ message }: { message: string }) {
   return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.ink} /><AppText style={styles.stateText}>{message}</AppText></View>;
 }
 
-function formatDate(dateKey: string): string {
-  return dateFormatter.format(new Date(`${dateKey}T12:00:00Z`)).replace(/\s/g, ' ');
+function getRoomMissionPrompt(mission: RoomBoardMission, language: 'en' | 'ko'): string {
+  return language === 'ko' ? mission.promptKo : `Find a scene touched by ${mission.colorNameEn}.`;
 }
 
 function BackIcon() {

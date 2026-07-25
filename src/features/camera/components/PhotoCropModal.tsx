@@ -17,6 +17,7 @@ import {
   type PhotoCropMoveDirection,
 } from '@/src/features/camera/model/photoCrop';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type PhotoCropModalProps = {
   isApplying: boolean;
@@ -27,6 +28,7 @@ type PhotoCropModalProps = {
 
 export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCropModalProps) {
   const styles = usePhotoCropStyles();
+  const { t } = useAppLanguage();
   const { height, width } = useWindowDimensions();
   const [adjustment, setAdjustment] = useState(createPhotoCropAdjustment);
   const crop = useMemo(
@@ -64,7 +66,7 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
               <AppText style={styles.title}>사진 구도 맞추기</AppText>
               <AppText style={styles.description}>확대하고 방향 버튼으로 정사각형 안의 장면을 옮겨 보세요.</AppText>
             </View>
-            <Pressable accessibilityLabel="사진 자르기 닫기" accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} hitSlop={8} onPress={onClose} style={styles.closeButton}>
+            <Pressable accessibilityLabel={t('사진 자르기 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} hitSlop={8} onPress={onClose} style={styles.closeButton}>
               <AppText style={styles.closeButtonText}>×</AppText>
             </Pressable>
           </View>
@@ -80,11 +82,11 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
           </View>
 
           <View style={styles.zoomControls}>
-            <Pressable accessibilityLabel="사진 축소" accessibilityRole="button" accessibilityState={{ disabled: isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM }} disabled={isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM} onPress={() => changeZoom(-PHOTO_CROP_ZOOM_STEP)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed, (isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM) && styles.disabled]}>
+            <Pressable accessibilityLabel={t('사진 축소')} accessibilityRole="button" accessibilityState={{ disabled: isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM }} disabled={isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM} onPress={() => changeZoom(-PHOTO_CROP_ZOOM_STEP)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed, (isApplying || adjustment.zoom <= MIN_PHOTO_CROP_ZOOM) && styles.disabled]}>
               <AppText style={styles.zoomButtonText}>−</AppText>
             </Pressable>
             <AppText style={styles.zoomLabel}>{Math.round(adjustment.zoom * 100)}%</AppText>
-            <Pressable accessibilityLabel="사진 확대" accessibilityRole="button" accessibilityState={{ disabled: isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM }} disabled={isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM} onPress={() => changeZoom(PHOTO_CROP_ZOOM_STEP)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed, (isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM) && styles.disabled]}>
+            <Pressable accessibilityLabel={t('사진 확대')} accessibilityRole="button" accessibilityState={{ disabled: isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM }} disabled={isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM} onPress={() => changeZoom(PHOTO_CROP_ZOOM_STEP)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed, (isApplying || adjustment.zoom >= MAX_PHOTO_CROP_ZOOM) && styles.disabled]}>
               <AppText style={styles.zoomButtonText}>+</AppText>
             </Pressable>
           </View>
@@ -93,15 +95,15 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
             <CropDirectionButton direction="up" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
             <View style={styles.directionMiddle}>
               <CropDirectionButton direction="left" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
-              <View accessible accessibilityLabel="정사각형 자르기 프레임" accessibilityRole="image" style={styles.directionCenter}><CropFrameIcon /></View>
+              <View accessible accessibilityLabel={t('정사각형 자르기 프레임')} accessibilityRole="image" style={styles.directionCenter}><CropFrameIcon /></View>
               <CropDirectionButton direction="right" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
             </View>
             <CropDirectionButton direction="down" disabled={isApplying || adjustment.zoom === MIN_PHOTO_CROP_ZOOM} onPress={moveFocus} />
           </View>
 
           <View style={styles.actions}>
-            <Pressable accessibilityLabel="사진 자르기 취소" accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.cancelButtonText}>취소</AppText></Pressable>
-            <Pressable accessibilityLabel="사진 구도 적용" accessibilityRole="button" accessibilityState={{ busy: isApplying, disabled: isApplying }} disabled={isApplying} onPress={() => onApply(crop)} style={({ pressed }) => [styles.applyButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.applyButtonText}>{isApplying ? '적용 중...' : '구도 적용'}</AppText></Pressable>
+            <Pressable accessibilityLabel={t('사진 자르기 취소')} accessibilityRole="button" accessibilityState={{ disabled: isApplying }} disabled={isApplying} onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.cancelButtonText}>취소</AppText></Pressable>
+            <Pressable accessibilityLabel={t('사진 구도 적용')} accessibilityRole="button" accessibilityState={{ busy: isApplying, disabled: isApplying }} disabled={isApplying} onPress={() => onApply(crop)} style={({ pressed }) => [styles.applyButton, pressed && styles.pressed, isApplying && styles.disabled]}><AppText style={styles.applyButtonText}>{isApplying ? '적용 중...' : '구도 적용'}</AppText></Pressable>
           </View>
         </View>
       </View>
@@ -111,10 +113,11 @@ export function PhotoCropModal({ isApplying, onApply, onClose, photo }: PhotoCro
 
 function CropDirectionButton({ direction, disabled, onPress }: { direction: PhotoCropMoveDirection; disabled: boolean; onPress: (direction: PhotoCropMoveDirection) => void }) {
   const styles = usePhotoCropStyles();
+  const { t } = useAppLanguage();
   const label = direction === 'up' ? '자르기 영역 위로 이동' : direction === 'down' ? '자르기 영역 아래로 이동' : direction === 'left' ? '자르기 영역 왼쪽으로 이동' : '자르기 영역 오른쪽으로 이동';
 
   return (
-    <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => onPress(direction)} style={({ pressed }) => [styles.directionButton, pressed && styles.pressed, disabled && styles.disabled]}>
+    <Pressable accessibilityLabel={t(label)} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={() => onPress(direction)} style={({ pressed }) => [styles.directionButton, pressed && styles.pressed, disabled && styles.disabled]}>
       <DirectionArrow direction={direction} />
     </Pressable>
   );

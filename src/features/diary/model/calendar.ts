@@ -20,6 +20,10 @@ export function moveMonth(cursor: MonthCursor, offset: number): MonthCursor {
   return { month: moved.getUTCMonth() + 1, year: moved.getUTCFullYear() };
 }
 
+export function moveYear(year: number, offset: number): number {
+  return Math.min(9_999, Math.max(1, year + offset));
+}
+
 export function getSelectedDiaryDateKey({ entries, isCurrentMonth, selectedDateKey, todayKey }: {
   entries: readonly DatedDiaryEntry[];
   isCurrentMonth: boolean;

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useColorScheme } from 'react-native';
 
 import { colors, darkColors, type ThemeColors } from '@/src/design/tokens';
+import type { AppLanguage } from '@/src/lib/localization/languagePreference';
 import {
   getThemePreference,
   saveThemePreference,
@@ -67,7 +68,12 @@ export function useAppTheme(): AppTheme {
   return theme;
 }
 
-export function getThemePreferenceLabel(preference: ThemePreference): string {
+export function getThemePreferenceLabel(preference: ThemePreference, language: AppLanguage = 'ko'): string {
+  if (language === 'en') {
+    if (preference === 'dark') return 'Dark';
+    if (preference === 'light') return 'Light';
+    return 'Use device setting';
+  }
   if (preference === 'dark') return '어둡게';
   if (preference === 'light') return '밝게';
   return '시스템 설정';

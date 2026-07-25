@@ -21,7 +21,10 @@ export function AppText({ children, variant = 'body', color = 'primary', localiz
     primary: theme.colors.textPrimary,
     secondary: theme.colors.textSecondary,
     tertiary: theme.colors.textTertiary,
-    inverse: theme.colors.white,
+    // Primary actions use `ink` as their fill. In dark mode `ink` is light,
+    // so the inverse label must be the themed surface rather than hard-coded
+    // white to preserve contrast in both themes.
+    inverse: theme.colors.surface,
   };
 
   return <Text {...props} style={[styles.base, typography[variant], { color: colorMap[color] }, style]}>{localize ? localizeChildren(children, t) : children}</Text>;

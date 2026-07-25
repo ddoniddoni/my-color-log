@@ -54,7 +54,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     try {
       replaceReviewedPhoto(await rotateCapturedPhoto(photo));
     } catch {
-      setErrorMessage('사진을 회전하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.');
+      setErrorMessage(t('사진을 회전하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.'));
     } finally {
       setIsEditing(false);
     }
@@ -68,7 +68,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
       replaceReviewedPhoto(await cropCapturedPhoto(photo, crop));
       setIsCropVisible(false);
     } catch {
-      setErrorMessage('사진 구도를 적용하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.');
+      setErrorMessage(t('사진 구도를 적용하지 못했어요. 원본은 그대로 남아 있어요. 다시 시도해 주세요.'));
     } finally {
       setIsEditing(false);
     }
@@ -90,7 +90,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         },
       });
     } catch {
-      setErrorMessage('사진을 정리하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      setErrorMessage(t('사진을 정리하지 못했어요. 잠시 후 다시 시도해 주세요.'));
       setIsSaving(false);
     }
   };
@@ -117,7 +117,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
       await queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(photo.userId) });
       router.replace('/(tabs)');
     } catch {
-      setErrorMessage('사진을 기록 목록에 추가하지 못했어요. 다시 시도해 주세요.');
+      setErrorMessage(t('사진을 기록 목록에 추가하지 못했어요. 다시 시도해 주세요.'));
       setIsSaving(false);
     }
   };
@@ -133,7 +133,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
       await discardCapturedPhoto(photo);
       router.replace('/(tabs)');
     } catch {
-      setErrorMessage('사진을 정리하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      setErrorMessage(t('사진을 정리하지 못했어요. 잠시 후 다시 시도해 주세요.'));
       setIsSaving(false);
     }
   };
@@ -143,14 +143,14 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   }
 
   if (photoQuery.isError || !photo) {
-    return <View style={styles.loadingPage}><AppText style={styles.loadingText}>사진을 불러오지 못했어요.</AppText><Pressable accessibilityLabel="오늘 화면으로 돌아가기" accessibilityRole="button" onPress={() => router.replace('/(tabs)')} style={styles.backButton}><AppText style={styles.backButtonText}>오늘로 돌아가기</AppText></Pressable></View>;
+    return <View style={styles.loadingPage}><AppText style={styles.loadingText}>사진을 불러오지 못했어요.</AppText><Pressable accessibilityLabel={t('오늘 화면으로 돌아가기')} accessibilityRole="button" onPress={() => router.replace('/(tabs)')} style={styles.backButton}><AppText style={styles.backButtonText}>오늘로 돌아가기</AppText></Pressable></View>;
   }
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.page}>
       <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 6) }]}>
         <View style={styles.brandGroup}><ScribbleMark /><AppText style={styles.brandText}>Color Log</AppText></View>
-        <Pressable accessibilityLabel="촬영 결과 닫기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} hitSlop={10} onPress={() => void closeReview()} style={styles.closeButton}><CloseIcon /></Pressable>
+        <Pressable accessibilityLabel={t('촬영 결과 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} hitSlop={10} onPress={() => void closeReview()} style={styles.closeButton}><CloseIcon /></Pressable>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 18) }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.titleRow}>
@@ -165,7 +165,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           <View style={styles.photoStage}>
             {isColorIsolationEnabled ? <View pointerEvents="none" style={styles.photoFilterBackdrop} /> : <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} /><View pointerEvents="none" style={styles.photoDimmer} /></>}
             <View pointerEvents="none" style={styles.photoPreviewPaper}>
-              <View accessibilityLabel={isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진'} accessible style={styles.photoPreview}>
+              <View accessibilityLabel={t(isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진')} accessible style={styles.photoPreview}>
                 {isColorIsolationEnabled ? <ColorIsolationPreview colorHex={reviewContext.colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
               </View>
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
@@ -173,8 +173,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
             <View pointerEvents="none" style={styles.photoReviewBadge}><AppText style={styles.photoReviewBadgeText}>촬영 결과 확인</AppText></View>
             {!isColorIsolationEnabled ? (
               <>
-                <Pressable accessibilityLabel="사진 자르기" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} hitSlop={6} onPress={() => setIsCropVisible(true)} style={({ pressed }) => [styles.cropMark, pressed && styles.pressed, isBusy && styles.disabled]}><CropIcon /></Pressable>
-                <Pressable accessibilityLabel="사진을 오른쪽으로 90도 회전" accessibilityRole="button" accessibilityState={{ busy: isEditing, disabled: isBusy }} disabled={isBusy} hitSlop={6} onPress={() => void rotatePhoto()} style={({ pressed }) => [styles.resetMark, pressed && styles.pressed, isBusy && styles.disabled]}><AgainIcon /></Pressable>
+                <Pressable accessibilityLabel={t('사진 자르기')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} hitSlop={6} onPress={() => setIsCropVisible(true)} style={({ pressed }) => [styles.cropMark, pressed && styles.pressed, isBusy && styles.disabled]}><CropIcon /></Pressable>
+                <Pressable accessibilityLabel={t('사진을 오른쪽으로 90도 회전')} accessibilityRole="button" accessibilityState={{ busy: isEditing, disabled: isBusy }} disabled={isBusy} hitSlop={6} onPress={() => void rotatePhoto()} style={({ pressed }) => [styles.resetMark, pressed && styles.pressed, isBusy && styles.disabled]}><AgainIcon /></Pressable>
               </>
             ) : null}
           </View>
@@ -183,7 +183,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>{t('발견한 색')} {colorTag}</AppText></View>
 
         <Pressable
-          accessibilityLabel="오늘의 색만 보기"
+          accessibilityLabel={t('오늘의 색만 보기')}
           accessibilityRole="switch"
           accessibilityState={{ checked: isColorIsolationEnabled, disabled: !isColorIsolationPreviewAvailable }}
           disabled={!isColorIsolationPreviewAvailable}
@@ -202,7 +202,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         <View style={styles.memoGroup}>
           <AppText style={styles.memoLabel}>메모 추가</AppText>
           <TextInput
-            accessibilityLabel="사진 메모"
+            accessibilityLabel={t('사진 메모')}
             maxLength={80}
             onChangeText={setCaption}
             placeholder={t('뒷마당에서 발견했어요...')}
@@ -217,8 +217,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{errorMessage}</AppText> : null}
 
         <View style={styles.actions}>
-          <Pressable accessibilityLabel="사진 다시 촬영" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>다시</AppText></View></Pressable>
-          <Pressable accessibilityLabel="이 사진 사용" accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isBusy }} disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? '저장 중…' : '사용'}</AppText></View></Pressable>
+          <Pressable accessibilityLabel={t('사진 다시 촬영')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>다시</AppText></View></Pressable>
+          <Pressable accessibilityLabel={t('이 사진 사용')} accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isBusy }} disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? '저장 중…' : '사용'}</AppText></View></Pressable>
         </View>
       </ScrollView>
       {isCropVisible ? <PhotoCropModal isApplying={isEditing} onApply={(crop) => void applyCrop(crop)} onClose={() => setIsCropVisible(false)} photo={photo} /> : null}
@@ -290,7 +290,7 @@ function createStyles(colors: ThemeColors) {
   photoPreviewPaper: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, padding: 8, position: 'absolute', width: 152 },
   photoPreview: { height: 136, width: 136 },
   photoFileName: { color: colors.textTertiary, fontFamily: 'monospace', fontSize: 7, marginTop: 5 },
-  photoReviewBadge: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 7, boxShadow: '0px 1px 2px colors.border', justifyContent: 'center', minHeight: 24, paddingHorizontal: 14, position: 'absolute', top: 10 },
+  photoReviewBadge: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 7, boxShadow: `0px 1px 2px ${colors.border}`, justifyContent: 'center', minHeight: 24, paddingHorizontal: 14, position: 'absolute', top: 10 },
   photoReviewBadgeText: { color: colors.ink, fontSize: 8, fontWeight: '700' },
   cropMark: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', position: 'absolute', right: 12, width: 36 },
   resetMark: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 12, height: 36, justifyContent: 'center', left: 12, width: 36 },

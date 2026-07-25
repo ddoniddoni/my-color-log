@@ -1,5 +1,5 @@
 import { parseLanguagePreference } from '@/src/lib/localization/languagePreference';
-import { translateText } from '@/src/lib/localization/translations';
+import { translateTemplate, translateText } from '@/src/lib/localization/translations';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -30,5 +30,6 @@ describe('language preference', () => {
     expect(translateText('en', '이메일을 입력해 주세요.')).toBe('Enter your email.');
     expect(translateText('en', '이메일 주소를 확인해 주세요.')).toBe('Check your email address.');
     expect(translateText('en', '비밀번호 표시')).toBe('Show password');
+    expect(translateTemplate('en', '내 사진 {count}장을 한 장으로 만들어요', { count: 3 })).toBe('Turn 3 of my photos into one image');
   });
 });

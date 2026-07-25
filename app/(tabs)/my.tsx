@@ -89,7 +89,6 @@ export default function MyScreen() {
         onLanguagePress={() => setIsLanguageSettingsVisible(true)}
         onNotificationsPress={() => setIsNotificationSettingsVisible(true)}
         onProfileEditPress={() => setIsProfileEditVisible(true)}
-        onPrivacyPress={() => showNotice('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.')}
         onRoomsPress={() => router.push('/(tabs)/room')}
         onSignOutPress={() => setDialog({ kind: 'sign_out_confirmation' })}
         onThemePress={() => setIsThemeSettingsVisible(true)}
@@ -97,7 +96,7 @@ export default function MyScreen() {
         roomsStatus={roomsQuery.isPending ? 'loading' : roomsQuery.isError ? 'error' : 'ready'}
         signingOut={signOutMutation.isPending}
         languagePreferenceLabel={language.language === 'ko' ? '한국어' : 'English'}
-        themePreferenceLabel={getThemePreferenceLabel(theme.preference)}
+        themePreferenceLabel={getThemePreferenceLabel(theme.preference, language.language)}
       />
       <ProfileNicknameModal
         isSaving={updateNicknameMutation.isPending}
@@ -157,7 +156,6 @@ export default function MyScreen() {
         onSelect={(preference) => {
           setIsThemeSaving(true);
           void theme.setPreference(preference)
-            .then(() => setIsThemeSettingsVisible(false))
             .catch(() => showNotice('테마를 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.'))
             .finally(() => setIsThemeSaving(false));
         }}
@@ -170,7 +168,6 @@ export default function MyScreen() {
         onSelect={(nextLanguage) => {
           setIsLanguageSaving(true);
           void language.setLanguage(nextLanguage)
-            .then(() => setIsLanguageSettingsVisible(false))
             .catch(() => showNotice('언어를 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.'))
             .finally(() => setIsLanguageSaving(false));
         }}
