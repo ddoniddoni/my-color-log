@@ -18,6 +18,7 @@ import { validateNickname } from '@/src/features/profile/model/profile';
 import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { getDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export default function NicknameScreen() {
   const [nickname, setNickname] = useState('');
@@ -28,6 +29,7 @@ export default function NicknameScreen() {
     BricolageGrotesque_800ExtraBold,
   });
   const insets = useSafeAreaInsets();
+  const { t } = useAppLanguage();
   const router = useRouter();
   const { inviteCode: inviteCodeParam } = useLocalSearchParams<{ inviteCode?: string | string[] }>();
   const inviteCode = getInviteCodeFromParam(inviteCodeParam);
@@ -65,29 +67,29 @@ export default function NicknameScreen() {
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
           <AppText style={[styles.wordmark, { fontFamily: heavyFont }]}>Color Log</AppText>
           <View style={styles.memberBadge}>
-            <AppText style={[styles.memberText, { fontFamily: bodyFont }]}>New Member</AppText>
+            <AppText style={[styles.memberText, { fontFamily: bodyFont }]}>새 멤버</AppText>
             <View style={styles.memberAvatar}><FaceIcon /></View>
           </View>
         </View>
 
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <SketchAvatar />
+            <SketchAvatar accessibilityLabel={t('프로필 그림')} />
 
             <View style={styles.copy}>
-              <AppText style={[styles.title, { fontFamily: boldFont }]}>What&apos;s your name?</AppText>
+              <AppText style={[styles.title, { fontFamily: boldFont }]}>어떻게 불러드릴까요?</AppText>
               <View pointerEvents="none" style={styles.titleMarker} />
-              <AppText style={[styles.description, { fontFamily: bodyFont }]}>This is how you&apos;ll appear in your journal.</AppText>
+              <AppText style={[styles.description, { fontFamily: bodyFont }]}>다이어리에서 이 이름으로 보여요.</AppText>
             </View>
 
             <View style={styles.nicknameField}>
               <TextInput
-                accessibilityLabel="닉네임"
+                accessibilityLabel={t('닉네임')}
                 autoCapitalize="none"
                 maxLength={12}
                 onChangeText={setNickname}
                 onSubmitEditing={handleSubmit}
-                placeholder="Type here..."
+                placeholder={t('여기에 입력해 주세요...')}
                 placeholderTextColor="#555555"
                 returnKeyType="done"
                 style={[styles.input, { fontFamily: boldFont, textAlign: 'center' }, showValidation && styles.inputError]}
@@ -107,17 +109,17 @@ export default function NicknameScreen() {
 
             <View style={styles.actions}>
               <Pressable
-                accessibilityLabel="닉네임으로 시작하기"
+                accessibilityLabel={t('닉네임으로 시작하기')}
                 accessibilityRole="button"
                 accessibilityState={{ busy: mutation.isPending, disabled: mutation.isPending }}
                 disabled={mutation.isPending}
                 onPress={handleSubmit}
                 style={({ pressed }) => [styles.startButton, mutation.isPending && styles.startButtonDisabled, pressed && !mutation.isPending && styles.startButtonPressed]}
               >
-                <AppText style={[styles.startText, { fontFamily: boldFont }]}>{mutation.isPending ? 'Starting…' : 'Start'}</AppText>
+                <AppText style={[styles.startText, { fontFamily: boldFont }]}>{mutation.isPending ? '시작하는 중…' : '시작하기'}</AppText>
                 <View pointerEvents="none" style={styles.buttonStar}><StarIcon /></View>
               </Pressable>
-              <AppText style={[styles.laterText, { fontFamily: bodyFont }]}>I&apos;ll do this later</AppText>
+              <AppText style={[styles.laterText, { fontFamily: bodyFont }]}>나중에 할게요</AppText>
             </View>
           </View>
         </ScrollView>
@@ -126,9 +128,9 @@ export default function NicknameScreen() {
   );
 }
 
-function SketchAvatar() {
+function SketchAvatar({ accessibilityLabel }: { accessibilityLabel: string }) {
   return (
-    <View accessible accessibilityLabel="프로필 그림" accessibilityRole="image" style={styles.avatarGroup}>
+    <View accessible accessibilityLabel={accessibilityLabel} accessibilityRole="image" style={styles.avatarGroup}>
       <View pointerEvents="none" style={styles.avatarScribble}><AvatarScribble /></View>
       <View style={styles.avatar}>
         <View style={styles.eyes}><View style={styles.eye} /><View style={styles.eye} /></View>

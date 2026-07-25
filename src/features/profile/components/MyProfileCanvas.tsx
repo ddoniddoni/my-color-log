@@ -17,12 +17,15 @@ import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { getRoomOverview, type ProfileRoomSummary, type RoomSummaryStatus } from '@/src/features/profile/model/roomOverview';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type MyProfileCanvasProps = {
   deletingAccount: boolean;
   email: string;
+  languagePreferenceLabel: string;
   nickname: string;
   onDeleteAccountPress: () => void;
+  onLanguagePress: () => void;
   onNotificationsPress: () => void;
   onProfileEditPress: () => void;
   onPrivacyPress: () => void;
@@ -38,8 +41,10 @@ type MyProfileCanvasProps = {
 export function MyProfileCanvas({
   deletingAccount,
   email,
+  languagePreferenceLabel,
   nickname,
   onDeleteAccountPress,
+  onLanguagePress,
   onNotificationsPress,
   onProfileEditPress,
   onPrivacyPress,
@@ -88,6 +93,8 @@ export function MyProfileCanvas({
           <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} detail={themePreferenceLabel} disabled={deletingAccount} label="화면 테마" onPress={onThemePress} />
           <MarkerLine colors={theme.colors} />
+          <MenuRow colors={theme.colors} detail={languagePreferenceLabel} disabled={deletingAccount} label="언어" onPress={onLanguagePress} />
+          <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} disabled={deletingAccount} label="사진과 친구방" onPress={onPrivacyPress} />
           <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} destructive disabled={deletingAccount || signingOut} label={signingOut ? '로그아웃 중…' : '로그아웃'} onPress={onSignOutPress} />
@@ -107,7 +114,8 @@ export function MyProfileCanvas({
 }
 
 function RoomSummaryCard({ bodyFont, boldFont, colors, onPress, rooms, status }: { bodyFont: string | undefined; boldFont: string | undefined; colors: ThemeColors; onPress: () => void; rooms: readonly ProfileRoomSummary[]; status: RoomSummaryStatus }) {
-  const overview = getRoomOverview(rooms, status);
+  const { language } = useAppLanguage();
+  const overview = getRoomOverview(rooms, status, language);
 
   return (
     <Pressable

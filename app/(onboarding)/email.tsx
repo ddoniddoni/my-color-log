@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { signInWithEmailPassword, signUpWithEmailPassword } from '@/src/features/auth/api/authRepository';
@@ -26,6 +26,7 @@ import { validateEmail, validatePassword, validatePasswordConfirmation } from '@
 import { getAuthenticatedDestination } from '@/src/features/auth/model/startupRoute';
 import { getProfile } from '@/src/features/profile/api/profileRepository';
 import { getInviteCodeFromParam } from '@/src/features/rooms/model/roomInviteLink';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -41,6 +42,7 @@ export default function EmailOnboardingScreen() {
     BricolageGrotesque_800ExtraBold,
   });
   const insets = useSafeAreaInsets();
+  const { t } = useAppLanguage();
   const router = useRouter();
   const { inviteCode: inviteCodeParam } = useLocalSearchParams<{ inviteCode?: string | string[] }>();
   const inviteCode = getInviteCodeFromParam(inviteCodeParam);
@@ -133,6 +135,7 @@ export default function EmailOnboardingScreen() {
               passwordConfirmation={passwordConfirmation}
               passwordValidation={passwordValidation}
               pending={authMutation.isPending}
+              t={t}
             />
           ) : (
             <LoginForm
@@ -150,6 +153,7 @@ export default function EmailOnboardingScreen() {
               password={password}
               passwordValidation={passwordValidation}
               pending={authMutation.isPending}
+              t={t}
             />
           )}
         </ScrollView>
@@ -173,6 +177,7 @@ type FormSharedProps = {
   password: string;
   passwordValidation: ReturnType<typeof validatePassword>;
   pending: boolean;
+  t: (text: string) => string;
 };
 
 type SignupFormProps = FormSharedProps & {
@@ -199,6 +204,7 @@ function SignupForm({
   passwordConfirmation,
   passwordValidation,
   pending,
+  t,
 }: SignupFormProps) {
   return (
     <View style={styles.signupCard}>
@@ -218,17 +224,16 @@ function SignupForm({
           error={hasSubmitted && !emailValidation.isValid}
           icon={<AppText style={styles.atIcon}>@</AppText>}
           keyboardType="email-address"
-          label="Email Address"
+          label={t('이메일 주소')}
           onChangeText={onChangeEmail}
-          placeholder="you@doodle.app"
+          placeholder={t('이메일을 입력해 주세요.')}
           textContentType="emailAddress"
           value={email}
         />
         <ScribbleField
           autoComplete="new-password"
           error={hasSubmitted && !passwordValidation.isValid}
-          icon={<LockIcon />}
-          label="Secret Scribble"
+          label={t('비밀번호')}
           onChangeText={onChangePassword}
           placeholder="••••••••"
           secureTextEntry
@@ -238,8 +243,7 @@ function SignupForm({
         <ScribbleField
           autoComplete="new-password"
           error={hasSubmitted && !confirmationValidation.isValid}
-          icon={<TraceIcon />}
-          label="Trace it Again"
+          label={t('비밀번호 확인')}
           onChangeText={onChangePasswordConfirmation}
           onSubmitEditing={onSubmit}
           placeholder="••••••••"
@@ -251,11 +255,11 @@ function SignupForm({
       </View>
 
       <FormErrors formError={formError} mutationError={mutationError} />
-      <SketchActionButton label={pending ? 'Saving…' : 'Next'} onPress={onSubmit} pending={pending} />
+      <SketchActionButton label={pending ? t('가입 중…') : t('회원가입')} onPress={onSubmit} pending={pending} />
       <View style={styles.signupSwitchRow}>
-        <AppText style={styles.switchCaption}>Already have a pen name? </AppText>
-        <Pressable accessibilityLabel="로그인 화면으로 전환" accessibilityRole="button" hitSlop={8} onPress={onSwitchMode}>
-          <AppText style={styles.switchCaption}>Log in</AppText>
+        <AppText style={styles.switchCaption}>이미 계정이 있나요? </AppText>
+        <Pressable accessibilityLabel={t('로그인 화면으로 전환')} accessibilityRole="button" onPress={onSwitchMode} style={({ pressed }) => [styles.switchLinkButton, pressed && styles.switchLinkButtonPressed]}>
+          <AppText style={[styles.switchCaption, styles.switchLinkText]}>로그인</AppText>
         </Pressable>
       </View>
       <DoodleRow />
@@ -278,6 +282,7 @@ function LoginForm({
   password,
   passwordValidation,
   pending,
+  t,
 }: FormSharedProps) {
   return (
     <View style={styles.loginCard}>
@@ -286,7 +291,7 @@ function LoginForm({
           <AppText style={[styles.loginBrand, { fontFamily: boldFontFamily }]}>Color Log</AppText>
           <StarIcon size={17} style={styles.loginStar} />
         </View>
-        <AppText style={[styles.loginTagline, { fontFamily }]}>CAPTURE YOUR TODAY&apos;S LIGHT</AppText>
+        <AppText style={[styles.loginTagline, { fontFamily }]}>오늘의 빛을 기록해요</AppText>
       </View>
 
       <View style={styles.loginFields}>
@@ -296,17 +301,16 @@ function LoginForm({
           error={hasSubmitted && !emailValidation.isValid}
           icon={<PenIcon />}
           keyboardType="email-address"
-          label="Your ID"
+          label={t('이메일')}
           onChangeText={onChangeEmail}
-          placeholder="scribble your id here..."
+          placeholder={t('이메일을 입력해 주세요.')}
           textContentType="emailAddress"
           value={email}
         />
         <ScribbleField
           autoComplete="password"
           error={hasSubmitted && !passwordValidation.isValid}
-          icon={<LockIcon />}
-          label="Secret Password"
+          label={t('비밀번호')}
           onChangeText={onChangePassword}
           onSubmitEditing={onSubmit}
           placeholder="••••••••"
@@ -318,11 +322,11 @@ function LoginForm({
       </View>
 
       <FormErrors formError={formError} mutationError={mutationError} />
-      <SketchActionButton label={pending ? 'Loading…' : 'Login'} onPress={onSubmit} pending={pending} />
+      <SketchActionButton label={pending ? t('로그인 중…') : t('로그인')} onPress={onSubmit} pending={pending} />
       <View style={styles.loginUtilityRow}>
         <AppText style={styles.loginUtility}>처음이신가요? </AppText>
-        <Pressable accessibilityLabel="회원가입 화면으로 전환" accessibilityRole="button" hitSlop={8} onPress={onSwitchMode}>
-          <AppText style={[styles.loginUtility, styles.loginUtilityLink]}>회원가입</AppText>
+        <Pressable accessibilityLabel={t('회원가입 화면으로 전환')} accessibilityRole="button" onPress={onSwitchMode} style={({ pressed }) => [styles.loginUtilityLinkButton, pressed && styles.loginUtilityLinkButtonPressed]}>
+          <AppText localize={false} numberOfLines={1} style={[styles.loginUtility, styles.loginUtilityLink]}>{t('회원가입')}</AppText>
         </Pressable>
       </View>
       <DoodleRow login />
@@ -334,7 +338,7 @@ type ScribbleFieldProps = {
   autoCapitalize?: 'none';
   autoComplete: 'email' | 'new-password' | 'password';
   error: boolean;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   keyboardType?: 'email-address';
   label: string;
   onChangeText: (value: string) => void;
@@ -361,6 +365,11 @@ function ScribbleField({
   textContentType,
   value,
 }: ScribbleFieldProps) {
+  const { t } = useAppLanguage();
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const isPasswordField = secureTextEntry === true;
+  const visibilityLabel = isPasswordVisible ? t('비밀번호 숨기기') : t('비밀번호 표시');
+
   return (
     <View style={styles.fieldGroup}>
       <AppText style={styles.fieldLabel}>{label}</AppText>
@@ -376,12 +385,23 @@ function ScribbleField({
           placeholder={placeholder}
           placeholderTextColor="#71716E"
           returnKeyType={returnKeyType}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={isPasswordField && !isPasswordVisible}
           style={styles.input}
           textContentType={textContentType}
           value={value}
         />
-        <View pointerEvents="none" style={styles.inputIcon}>{icon}</View>
+        {isPasswordField ? (
+          <Pressable
+            accessibilityLabel={visibilityLabel}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isPasswordVisible }}
+            hitSlop={4}
+            onPress={() => setIsPasswordVisible((visible) => !visible)}
+            style={({ pressed }) => [styles.passwordVisibilityButton, pressed && styles.passwordVisibilityButtonPressed]}
+          >
+            <PasswordVisibilityIcon isVisible={isPasswordVisible} />
+          </Pressable>
+        ) : icon ? <View pointerEvents="none" style={styles.inputIcon}>{icon}</View> : null}
       </View>
     </View>
   );
@@ -411,12 +431,30 @@ function SketchActionButton({ label, onPress, pending }: { label: string; onPres
 function SignupHeader({ fontFamily, topInset }: { fontFamily: string | undefined; topInset: number }) {
   return (
     <View style={[styles.signupHeader, { paddingTop: Math.max(topInset, 8) }]}>
-      <PenIcon color="#000000" />
-          <AppText style={[styles.headerWordmark, { fontFamily }]}>Color Log</AppText>
-      <GearIcon />
+      <View accessibilityLabel="Color Log" accessibilityRole="header" style={styles.headerWordmark}>
+        {HEADER_WORDMARK_LETTERS.map(({ id, letter, offsetY, rotation }) => (
+          <View
+            key={id}
+            style={[styles.headerWordmarkLetterWrap, { transform: [{ rotate: rotation }, { translateY: offsetY }] }, letter === ' ' ? styles.headerWordmarkGap : null]}>
+            <AppText style={[styles.headerWordmarkLetter, { fontFamily }]}>{letter}</AppText>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
+
+const HEADER_WORDMARK_LETTERS = [
+  { id: 'color-c', letter: 'C', offsetY: 1, rotation: '-7deg' },
+  { id: 'color-o', letter: 'O', offsetY: -1, rotation: '4deg' },
+  { id: 'color-l', letter: 'L', offsetY: 2, rotation: '-4deg' },
+  { id: 'color-o-second', letter: 'O', offsetY: -2, rotation: '6deg' },
+  { id: 'color-r', letter: 'R', offsetY: 1, rotation: '-5deg' },
+  { id: 'word-gap', letter: ' ', offsetY: 0, rotation: '0deg' },
+  { id: 'log-l', letter: 'L', offsetY: -2, rotation: '5deg' },
+  { id: 'log-o', letter: 'O', offsetY: 2, rotation: '-5deg' },
+  { id: 'log-g', letter: 'G', offsetY: -1, rotation: '7deg' },
+] as const;
 
 function DoodleRow({ login = false }: { login?: boolean }) {
   return (
@@ -436,20 +474,18 @@ function StarIcon({ color = '#000000', size, style }: { color?: string; size: nu
   return <View style={style}><Svg height={size} viewBox="0 0 24 24" width={size}><Path d="m12 3 2.1 5.9L20 9l-4.8 3.7 1.6 5.9-4.8-3.5-4.8 3.5 1.6-5.9L4 9l5.9-.1L12 3Z" fill="none" stroke={color} strokeLinejoin="round" strokeWidth={1.6} /></Svg></View>;
 }
 
-function LockIcon() {
-  return <Svg height={19} viewBox="0 0 24 24" width={19}><Rect fill="none" height={11} rx={0.8} stroke="#777777" strokeWidth={1.35} width={13} x={5.5} y={10} /><Path d="M8.5 10V7.7a3.5 3.5 0 0 1 7 0V10" fill="none" stroke="#777777" strokeLinecap="round" strokeWidth={1.35} /></Svg>;
-}
-
-function TraceIcon() {
-  return <Svg height={19} viewBox="0 0 24 24" width={19}><Path d="m4 4 16 16M7 17.5h8.6A2.4 2.4 0 0 0 18 15.1V10" fill="none" stroke="#777777" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.35} /><Path d="M6 11V8.4A2.4 2.4 0 0 1 8.4 6h7.2A2.4 2.4 0 0 1 18 8.4V10" fill="none" stroke="#777777" strokeLinecap="round" strokeWidth={1.35} /></Svg>;
+function PasswordVisibilityIcon({ isVisible }: { isVisible: boolean }) {
+  return (
+    <Svg height={22} viewBox="0 0 24 24" width={22}>
+      <Path d="M2.5 12s3.4-5.7 9.5-5.7S21.5 12 21.5 12s-3.4 5.7-9.5 5.7S2.5 12 2.5 12Z" fill="none" stroke="#777777" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} />
+      <Circle cx={12} cy={12} fill="none" r={2.6} stroke="#777777" strokeWidth={1.5} />
+      {!isVisible ? <Path d="m4 4 16 16" fill="none" stroke="#777777" strokeLinecap="round" strokeWidth={1.7} /> : null}
+    </Svg>
+  );
 }
 
 function PenIcon({ color = '#000000' }: { color?: string }) {
   return <Svg height={20} viewBox="0 0 24 24" width={20}><Path d="m5 19 2.2-.6L18.5 7.1 16.9 5.5 5.6 16.8 5 19Zm12.7-13.5 1.1-1.1a1.1 1.1 0 0 1 1.6 1.6l-1.1 1.1-1.6-1.6Z" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} /></Svg>;
-}
-
-function GearIcon() {
-  return <Svg height={20} viewBox="0 0 24 24" width={20}><Circle cx={12} cy={12} fill="none" r={3} stroke="#000000" strokeWidth={1.6} /><Path d="M12 3.8v1.7m0 13v1.7m8.2-8.2h-1.7m-13 0H3.8m14-5.8-1.2 1.2m-9.2 9.2-1.2 1.2m0-10.4 1.2 1.2m9.2 9.2 1.2 1.2" fill="none" stroke="#000000" strokeLinecap="round" strokeWidth={1.6} /></Svg>;
 }
 
 function PaletteIcon({ color }: { color: string }) {
@@ -489,14 +525,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomColor: '#000000',
     borderBottomWidth: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     minHeight: 42,
     paddingBottom: 8,
     paddingHorizontal: 16,
     boxShadow: '5px 5px 0px #000000',
   },
-  headerWordmark: { color: '#000000', fontSize: 24, fontWeight: '800', letterSpacing: -1, lineHeight: 29, transform: [{ rotate: '-1deg' }] },
+  headerWordmark: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  headerWordmarkLetterWrap: { marginHorizontal: 1.5 },
+  headerWordmarkLetter: { color: '#000000', fontSize: 19, fontWeight: '800', letterSpacing: 0.4, lineHeight: 24 },
+  headerWordmarkGap: { marginHorizontal: 4, opacity: 0 },
   signupContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 40, paddingTop: 40 },
   signupCard: { backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 24, position: 'relative', transform: [{ rotate: '0.5deg' }], width: '100%' },
   tape: { alignItems: 'center', backgroundColor: '#F0F0EE', height: 40, justifyContent: 'center', left: '50%', position: 'absolute', top: -16, transform: [{ translateX: -56 }, { rotate: '-2deg' }], width: 112 },
@@ -512,14 +550,19 @@ const styles = StyleSheet.create({
   inputFrameError: { borderColor: '#B74747', borderWidth: 1.5 },
   input: { color: '#000000', fontFamily: Platform.select({ ios: 'Karla', android: 'sans-serif', default: 'sans-serif' }), fontSize: 16, minHeight: 46, paddingHorizontal: 12, paddingRight: 46 },
   inputIcon: { alignItems: 'center', bottom: 0, justifyContent: 'center', position: 'absolute', right: 14, top: 0 },
+  passwordVisibilityButton: { alignItems: 'center', bottom: 0, justifyContent: 'center', minHeight: 44, position: 'absolute', right: 2, top: 0, width: 44 },
+  passwordVisibilityButtonPressed: { opacity: 0.56 },
   atIcon: { color: '#777777', fontSize: 21, lineHeight: 22 },
   errorText: { color: '#B74747', fontSize: 12, lineHeight: 17, marginTop: 12, textAlign: 'center' },
   actionButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#000000', borderWidth: 1.25, boxShadow: '4px 4px 0px #000000', flexDirection: 'row', gap: 16, justifyContent: 'center', marginTop: 24, minHeight: 52 },
   actionButtonPressed: { boxShadow: '1px 1px 0px #000000', transform: [{ translateX: 2 }, { translateY: 2 }] },
   actionButtonDisabled: { opacity: 0.55 },
   actionText: { color: '#000000', fontFamily: 'BricolageGrotesque_700Bold', fontSize: 22, fontWeight: '700', lineHeight: 27 },
-  signupSwitchRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
-  switchCaption: { color: '#111111', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 9, lineHeight: 13 },
+  signupSwitchRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 12, minHeight: 44 },
+  switchCaption: { color: '#111111', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 12, lineHeight: 17 },
+  switchLinkButton: { alignItems: 'center', flexShrink: 0, justifyContent: 'center', marginHorizontal: -8, minHeight: 44, paddingHorizontal: 8 },
+  switchLinkButtonPressed: { opacity: 0.56 },
+  switchLinkText: { flexShrink: 0, fontWeight: '700', textDecorationLine: 'underline' },
   doodleRow: { alignItems: 'center', flexDirection: 'row', gap: 24, justifyContent: 'center', marginTop: 24 },
   loginContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 40, paddingTop: 32 },
   loginCard: { width: '100%' },
@@ -529,8 +572,10 @@ const styles = StyleSheet.create({
   loginStar: { position: 'absolute', right: -12, top: 27 },
   loginTagline: { color: '#707070', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 8, letterSpacing: 0.25, marginTop: 34, textAlign: 'center' },
   loginFields: { gap: 16 },
-  loginUtilityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
-  loginUtility: { color: '#444444', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 8, fontStyle: 'italic', lineHeight: 12 },
-  loginUtilityLink: { color: '#000000', textDecorationLine: 'underline' },
+  loginUtilityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 16, minHeight: 44 },
+  loginUtility: { color: '#444444', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 12, fontStyle: 'italic', lineHeight: 17 },
+  loginUtilityLink: { color: '#000000', flexShrink: 0, textDecorationLine: 'underline' },
+  loginUtilityLinkButton: { alignItems: 'center', flexShrink: 0, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8, width: 88 },
+  loginUtilityLinkButtonPressed: { opacity: 0.56 },
   loginDoodleRow: { marginTop: 52 },
 });

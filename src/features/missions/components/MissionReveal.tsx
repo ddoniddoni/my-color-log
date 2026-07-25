@@ -13,6 +13,7 @@ import Svg, { Circle, Defs, Path, Pattern, Rect, Text as SvgText } from 'react-n
 import { AppText } from '@/src/components/ui/AppText';
 import { type DailyMission, type MissionRevealColor } from '@/src/features/missions/model/dailyMission';
 import { getRevealTargetRotation, MISSION_REVEAL_SLOT_COUNT } from '@/src/features/missions/model/missionRevealWheel';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type MissionRevealProps = {
   mission: DailyMission;
@@ -24,6 +25,7 @@ type MissionRevealProps = {
 const INITIAL_WHEEL_ROTATION = 165;
 
 export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: MissionRevealProps) {
+  const { language } = useAppLanguage();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_700Bold,
@@ -39,6 +41,7 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
   const displayFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
   const titleFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const targetIndex = palette.findIndex((color) => color.id === mission.color.id);
+  const colorName = language === 'ko' ? mission.color.nameKo : mission.color.nameEn;
 
   const finishReveal = useCallback(() => {
     void onRevealed().catch(() => {
@@ -92,18 +95,18 @@ export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: Mi
           <AppText style={[styles.subtitle, { fontFamily: fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined }]}>색을 돌려 오늘의 장면을 만나보세요.</AppText>
         </View>
 
-        <View accessibilityLabel={`${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${mission.color.nameKo} 룰렛`} accessible={!showResult} style={styles.wheelFrame}>
+        <View accessibilityLabel={language === 'ko' ? `${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${colorName} 룰렛` : `Today’s ${colorName} wheel with ${MISSION_REVEAL_SLOT_COUNT} real colors`} accessible={!showResult} style={styles.wheelFrame}>
           <Animated.View style={[styles.wheel, wheelStyle]}>
-            <WheelArtwork palette={palette} />
+            <WheelArtwork language={language} palette={palette} />
           </Animated.View>
           <View pointerEvents="none" style={styles.pointer}>
             <View style={styles.pointerStem} />
             <View style={styles.pointerTriangle} />
             <View style={styles.pointerDisc}><BrushIcon /></View>
           </View>
-          {showResult ? <Animated.View accessibilityLabel={`오늘의 색은 ${mission.color.nameKo}`} accessibilityLiveRegion="assertive" accessibilityRole="alert" accessible pointerEvents="none" style={[styles.resultCard, { backgroundColor: mission.color.accentTint }, resultStyle]}>
-            <AppText style={styles.resultEyebrow}>TODAY&apos;S COLOR</AppText>
-            <AppText style={styles.resultName}>{mission.color.nameKo}</AppText>
+          {showResult ? <Animated.View accessibilityLabel={language === 'ko' ? `오늘의 색은 ${colorName}` : `Today’s color is ${colorName}`} accessibilityLiveRegion="assertive" accessibilityRole="alert" accessible pointerEvents="none" style={[styles.resultCard, { backgroundColor: mission.color.accentTint }, resultStyle]}>
+            <AppText style={styles.resultEyebrow}>오늘의 색</AppText>
+            <AppText style={styles.resultName}>{colorName}</AppText>
           </Animated.View> : null}
         </View>
 
@@ -135,14 +138,14 @@ function WavyPaper() {
   );
 }
 
-function WheelArtwork({ palette }: { palette: readonly MissionRevealColor[] }) {
+function WheelArtwork({ language, palette }: { language: 'en' | 'ko'; palette: readonly MissionRevealColor[] }) {
   return (
     <Svg height="100%" viewBox="0 0 100 100" width="100%">
       <Circle cx={50} cy={50} fill="#FFFFFF" r={49.5} />
       {palette.map((color, index) => <Path d={createWheelSectorPath(index, palette.length)} fill={color.accent} key={color.id} stroke="#171714" strokeWidth={0.48} />)}
       <Circle cx={50} cy={50} fill="#FFFFFF" r={17} stroke="#171714" strokeWidth={0.8} />
-      <SvgText fill="#171714" fontFamily="Bricolage Grotesque" fontSize={6} fontWeight="700" textAnchor="middle" x={50} y={49}>COLOR</SvgText>
-      <SvgText fill="#171714" fontFamily="monospace" fontSize={3.5} textAnchor="middle" x={50} y={54}>TODAY</SvgText>
+      <SvgText fill="#171714" fontFamily="Bricolage Grotesque" fontSize={language === 'ko' ? 5 : 6} fontWeight="700" textAnchor="middle" x={50} y={49}>{language === 'ko' ? '오늘의' : 'COLOR'}</SvgText>
+      <SvgText fill="#171714" fontFamily="monospace" fontSize={language === 'ko' ? 4.2 : 3.5} textAnchor="middle" x={50} y={54}>{language === 'ko' ? '색' : 'TODAY'}</SvgText>
     </Svg>
   );
 }

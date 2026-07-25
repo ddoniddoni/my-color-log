@@ -9,6 +9,7 @@ import { AppText } from '@/src/components/ui/AppText';
 import { colors, spacing } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { saveCapturedPhotoForReview } from '@/src/features/camera/api/localPhotoRepository';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export type CaptureContext = {
   colorHex: string;
@@ -20,6 +21,7 @@ export type CaptureContext = {
 
 export function CameraCaptureScreen({ captureContext }: { captureContext: CaptureContext }) {
   const router = useRouter();
+  const { t } = useAppLanguage();
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
@@ -108,7 +110,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
       </View>
       <View pointerEvents="none" style={styles.squareGuideArea}>
         <View accessible accessibilityLabel="정사각형 사진 저장 가이드" accessibilityRole="image" style={styles.squareGuide}>
-          <AppText style={styles.squareGuideLabel}>SQUARE FRAME · 정사각형으로 저장돼요</AppText>
+          <AppText style={styles.squareGuideLabel}>{t('정사각형 프레임')} · {t('정사각형으로 저장돼요')}</AppText>
         </View>
       </View>
       <View style={[styles.cameraBottomBar, { paddingBottom: Math.max(insets.bottom, spacing[6]) }]}>
@@ -146,13 +148,13 @@ function CameraPermissionPrompt({ canAskAgain, onCancel, onOpen }: { canAskAgain
           <Rect fill="#FFF" height={28} rx={4} rotation={12} stroke={colors.ink} strokeWidth={1.5} width={28} x={76} y={8} />
           <Path d="M87 18c5-4 9 1 5 5-3 2-3 3-3 5m-1 5h.1" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} />
         </View>
-        <AppText style={styles.permissionTitle}>We need your eyes!</AppText>
-        <AppText style={styles.permissionCopy}>Please allow camera access in settings to start logging colors. We use the lens to pick up the digital ink from the world around you.</AppText>
+        <AppText style={styles.permissionTitle}>카메라 권한이 필요해요</AppText>
+        <AppText style={styles.permissionCopy}>색을 기록하려면 설정에서 카메라 접근을 허용해 주세요.</AppText>
         <View style={styles.permissionDivider} />
         <Pressable accessibilityLabel={canAskAgain ? '카메라 권한 허용' : '기기 설정 열기'} accessibilityRole="button" onPress={onOpen} style={({ pressed }) => [styles.permissionButton, pressed && styles.shutterPressed]}>
-          <AppText style={styles.permissionButtonText}>{canAskAgain ? 'Allow Camera' : 'Open Settings'}</AppText>
+          <AppText style={styles.permissionButtonText}>{canAskAgain ? '카메라 허용' : '설정 열기'}</AppText>
         </Pressable>
-        <Pressable accessibilityLabel="카메라 화면 닫기" accessibilityRole="button" hitSlop={12} onPress={onCancel} style={styles.cancelButton}><AppText style={styles.cancelText}>Cancel</AppText></Pressable>
+        <Pressable accessibilityLabel="카메라 화면 닫기" accessibilityRole="button" hitSlop={12} onPress={onCancel} style={styles.cancelButton}><AppText style={styles.cancelText}>취소</AppText></Pressable>
       </View>
     </View>
   );

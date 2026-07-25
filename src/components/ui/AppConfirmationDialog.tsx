@@ -4,6 +4,7 @@ import { AppModal } from '@/src/components/ui/AppModal';
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing } from '@/src/design/tokens';
+import { useOptionalAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type AppConfirmationDialogProps = {
   cancelLabel?: string;
@@ -31,8 +32,9 @@ export function AppConfirmationDialog({
   visible,
 }: AppConfirmationDialogProps) {
   const theme = useAppTheme();
+  const { t } = useOptionalAppLanguage();
   return (
-    <AppModal accessibilityLabel={`${title} 닫기`} contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
+    <AppModal accessibilityLabel={`${t(title)} ${t('닫기')}`} contentStyle={styles.card} isBusy={isBusy} onClose={onClose} visible={visible}>
       <View style={styles.copy}>
         <AppText style={[styles.eyebrow, { color: theme.colors.textSecondary }]}>{eyebrow}</AppText>
         <AppText accessibilityRole="header" style={[styles.title, { color: theme.colors.ink }]}>{title}</AppText>
@@ -40,12 +42,12 @@ export function AppConfirmationDialog({
       </View>
       <View style={styles.actions}>
         {cancelLabel ? (
-          <Pressable accessibilityLabel={cancelLabel} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, { borderColor: theme.colors.ink }, isBusy && styles.disabledButton]}>
+          <Pressable accessibilityLabel={t(cancelLabel)} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={onClose} style={[styles.secondaryButton, { borderColor: theme.colors.ink }, isBusy && styles.disabledButton]}>
             <AppText style={[styles.secondaryButtonText, { color: theme.colors.ink }]}>{cancelLabel}</AppText>
           </Pressable>
         ) : null}
         <Pressable
-          accessibilityLabel={confirmLabel}
+          accessibilityLabel={t(confirmLabel)}
           accessibilityRole="button"
           accessibilityState={{ disabled: isBusy }}
           disabled={isBusy}

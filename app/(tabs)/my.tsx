@@ -17,11 +17,13 @@ import { useNotificationSettings } from '@/src/features/notifications/hooks/useN
 import { MyProfileCanvas } from '@/src/features/profile/components/MyProfileCanvas';
 import { ProfileNicknameModal } from '@/src/features/profile/components/ProfileNicknameModal';
 import { ThemeSettingsModal } from '@/src/features/profile/components/ThemeSettingsModal';
+import { LanguageSettingsModal } from '@/src/features/profile/components/LanguageSettingsModal';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useUpdateProfileNickname } from '@/src/features/profile/hooks/useUpdateProfileNickname';
 import { useMyRooms } from '@/src/features/rooms/hooks/useActiveRoom';
 import { getThemePreferenceLabel, useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing } from '@/src/design/tokens';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type MyDialog =
   | { description: string; kind: 'notice'; title: string }
@@ -31,6 +33,7 @@ export default function MyScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const theme = useAppTheme();
+  const language = useAppLanguage();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id : undefined;
   const profileQuery = useProfile(userId);
@@ -39,7 +42,9 @@ export default function MyScreen() {
   const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
   const [isThemeSettingsVisible, setIsThemeSettingsVisible] = useState(false);
+  const [isLanguageSettingsVisible, setIsLanguageSettingsVisible] = useState(false);
   const [isThemeSaving, setIsThemeSaving] = useState(false);
+  const [isLanguageSaving, setIsLanguageSaving] = useState(false);
   const [dialog, setDialog] = useState<MyDialog | null>(null);
   const updateNicknameMutation = useUpdateProfileNickname(userId ?? '');
   const notificationSettings = useNotificationSettings();
@@ -81,6 +86,7 @@ export default function MyScreen() {
         email={email}
         nickname={profileQuery.data.nickname}
         onDeleteAccountPress={() => setIsAccountDeletionVisible(true)}
+        onLanguagePress={() => setIsLanguageSettingsVisible(true)}
         onNotificationsPress={() => setIsNotificationSettingsVisible(true)}
         onProfileEditPress={() => setIsProfileEditVisible(true)}
         onPrivacyPress={() => showNotice('사진과 친구방', '내 사진은 기본적으로 비공개예요. 참여 중인 친구방에서만 같은 날짜의 개인 기록을 공유해 볼 수 있고, 방을 나가도 내 다이어리 사진은 그대로 유지돼요.')}
@@ -90,6 +96,7 @@ export default function MyScreen() {
         rooms={(roomsQuery.data ?? []).map((room) => ({ emoji: room.emoji, id: room.id, memberCount: room.members.length, name: room.name }))}
         roomsStatus={roomsQuery.isPending ? 'loading' : roomsQuery.isError ? 'error' : 'ready'}
         signingOut={signOutMutation.isPending}
+        languagePreferenceLabel={language.language === 'ko' ? '한국어' : 'English'}
         themePreferenceLabel={getThemePreferenceLabel(theme.preference)}
       />
       <ProfileNicknameModal
@@ -156,6 +163,18 @@ export default function MyScreen() {
         }}
         preference={theme.preference}
         visible={isThemeSettingsVisible}
+      />
+      <LanguageSettingsModal
+        isSaving={isLanguageSaving}
+        onClose={() => setIsLanguageSettingsVisible(false)}
+        onSelect={(nextLanguage) => {
+          setIsLanguageSaving(true);
+          void language.setLanguage(nextLanguage)
+            .then(() => setIsLanguageSettingsVisible(false))
+            .catch(() => showNotice('언어를 저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.'))
+            .finally(() => setIsLanguageSaving(false));
+        }}
+        visible={isLanguageSettingsVisible}
       />
       <AppConfirmationDialog
         cancelLabel={dialog?.kind === 'sign_out_confirmation' ? '취소' : undefined}

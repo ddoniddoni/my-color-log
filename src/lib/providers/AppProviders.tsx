@@ -10,16 +10,19 @@ import { useProfileTimeZoneSync } from '@/src/features/profile/hooks/useProfileT
 import { PhotoSyncProvider } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { ThemeProvider } from '@/src/design/ThemeProvider';
+import { LanguageProvider } from '@/src/lib/localization/LanguageProvider';
 
 const STALE_TIME_MS = 60_000;
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
-    <ThemeProvider>
-      <SessionBootstrapProvider>
-        <AppProviderContent>{children}</AppProviderContent>
-      </SessionBootstrapProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <SessionBootstrapProvider>
+          <AppProviderContent>{children}</AppProviderContent>
+        </SessionBootstrapProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

@@ -6,10 +6,12 @@ import { Pressable, StyleSheet } from 'react-native';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing } from '@/src/design/tokens';
 import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export default function TabLayout() {
   const reduceMotion = useReducedMotion();
   const theme = useAppTheme();
+  const { t } = useAppLanguage();
   return (
     <Tabs
       screenOptions={{
@@ -29,10 +31,10 @@ export default function TabLayout() {
         tabBarItemStyle: { paddingTop: 1 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.1, marginTop: 2 },
       }}>
-      <Tabs.Screen name="index" options={{ title: '오늘', tabBarAccessibilityLabel: '오늘 탭', tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.today} /> }} />
-      <Tabs.Screen name="room" options={{ title: '친구방', tabBarAccessibilityLabel: '친구방 탭', tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.rooms} /> }} />
-      <Tabs.Screen name="diary" options={{ title: '다이어리', tabBarAccessibilityLabel: '다이어리 탭', tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.diary} /> }} />
-      <Tabs.Screen name="my" options={{ title: 'MY', tabBarAccessibilityLabel: '내 정보 탭', tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.my} /> }} />
+      <Tabs.Screen name="index" options={{ title: t('오늘'), tabBarAccessibilityLabel: `${t('오늘')} ${t('탭')}`, tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.today} /> }} />
+      <Tabs.Screen name="room" options={{ title: t('친구방'), tabBarAccessibilityLabel: `${t('친구방')} ${t('탭')}`, tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.rooms} /> }} />
+      <Tabs.Screen name="diary" options={{ title: t('다이어리'), tabBarAccessibilityLabel: `${t('다이어리')} ${t('탭')}`, tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.diary} /> }} />
+      <Tabs.Screen name="my" options={{ title: t('내 정보'), tabBarAccessibilityLabel: `${t('내 정보')} ${t('탭')}`, tabBarIcon: ({ focused }) => <StitchTabIcon focused={focused} source={tabIcons.my} /> }} />
     </Tabs>
   );
 }

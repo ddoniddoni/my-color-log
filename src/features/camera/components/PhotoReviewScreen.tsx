@@ -17,6 +17,7 @@ import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
 import { useQueuedPhoto } from '@/src/features/sync/hooks/useQueuedPhoto';
 import { comparePhotosForSync, type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { queryKeys } from '@/src/lib/query/queryKeys';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export type PhotoReviewContext = {
   colorHex: string;
@@ -26,6 +27,7 @@ export type PhotoReviewContext = {
 
 export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoReviewContext }) {
   const theme = useAppTheme();
+  const { t } = useAppLanguage();
   const styles = usePhotoReviewStyles();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -153,7 +155,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 18) }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.titleRow}>
           <View>
-            <AppText style={styles.title}>Check your{`\n`}catch!</AppText>
+            <AppText style={styles.title}>촬영한 사진을{`\n`}확인해요!</AppText>
             <View style={styles.titleUnderline} />
           </View>
           <View pointerEvents="none" style={styles.headerSparkle}><SparkleIcon /></View>
@@ -178,7 +180,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           </View>
         </View>
 
-        <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>FOUND {colorTag}</AppText></View>
+        <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>{t('발견한 색')} {colorTag}</AppText></View>
 
         <Pressable
           accessibilityLabel="오늘의 색만 보기"
@@ -198,12 +200,12 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         </Pressable>
 
         <View style={styles.memoGroup}>
-          <AppText style={styles.memoLabel}>ADD A MEMO</AppText>
+          <AppText style={styles.memoLabel}>메모 추가</AppText>
           <TextInput
             accessibilityLabel="사진 메모"
             maxLength={80}
             onChangeText={setCaption}
-            placeholder="Found this in the back garden..."
+            placeholder={t('뒷마당에서 발견했어요...')}
             placeholderTextColor={theme.colors.textTertiary}
             style={styles.memoInput}
             value={caption}
@@ -215,8 +217,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{errorMessage}</AppText> : null}
 
         <View style={styles.actions}>
-          <Pressable accessibilityLabel="사진 다시 촬영" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>Again</AppText></View></Pressable>
-          <Pressable accessibilityLabel="이 사진 사용" accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isBusy }} disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? 'Saving...' : 'Use'}</AppText></View></Pressable>
+          <Pressable accessibilityLabel="사진 다시 촬영" accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>다시</AppText></View></Pressable>
+          <Pressable accessibilityLabel="이 사진 사용" accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isBusy }} disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? '저장 중…' : '사용'}</AppText></View></Pressable>
         </View>
       </ScrollView>
       {isCropVisible ? <PhotoCropModal isApplying={isEditing} onApply={(crop) => void applyCrop(crop)} onClose={() => setIsCropVisible(false)} photo={photo} /> : null}

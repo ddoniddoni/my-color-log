@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, type PressableProps, type StyleProp, type ViewSt
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { radius, spacing } from '@/src/design/tokens';
+import { useOptionalAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
@@ -12,12 +13,13 @@ type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
 
 export function Button({ label, variant = 'primary', style, disabled, accessibilityLabel, ...props }: ButtonProps) {
   const theme = useAppTheme();
+  const { t } = useOptionalAppLanguage();
   const textColor = variant === 'primary' ? 'inverse' : 'primary';
   return (
     <Pressable
       {...props}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={t(accessibilityLabel ?? label)}
       accessibilityState={{ ...props.accessibilityState, disabled: disabled ?? false }}
       disabled={disabled}
       style={({ pressed }) => [

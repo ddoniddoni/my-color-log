@@ -1,30 +1,72 @@
 import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque';
+import { Image } from 'expo-image';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Path, Pattern, Rect } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
+import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 const SURFACE = '#F9F9F9';
 const INK = '#000000';
 const SECONDARY = '#5D5F5F';
-const ONBOARDING_IMAGE = require('../../assets/images/onboarding-color-discovery.png');
+const ONBOARDING_IMAGES = {
+  diary: require('../../assets/images/onboarding-personal-diary.png'),
+  discover: require('../../assets/images/onboarding-discover-color.png'),
+  shared: require('../../assets/images/onboarding-shared-color.png'),
+} as const;
 
 const slides = [
   {
-    title: '매일 새로운 색을\n발견해요',
-    description: '일상 속 스쳐 지나가는 순간들을\n당신만의 특별한 팔레트로 기록해보세요.',
+    accessibilityLabel: { en: 'A person discovering today’s color', ko: '오늘의 색을 발견하는 장면' },
+    copy: {
+      en: {
+        description: 'Turn passing moments into\nyour own personal palette.',
+        title: 'Discover a new\ncolor every day',
+      },
+      ko: {
+        description: '일상 속 스쳐 지나가는 순간들을\n당신만의 특별한 팔레트로 기록해보세요.',
+        title: '매일 새로운 색을\n발견해요',
+      },
+    },
+    id: 'discover',
+    image: ONBOARDING_IMAGES.discover,
+    illustrationRotation: '1.2deg',
   },
   {
-    title: '사진은 나만의\n다이어리에 쌓여요',
-    description: '한 장만 남겨도 오늘의 기록이에요.\n시간이 지날수록 나만의 색이 모여요.',
+    accessibilityLabel: { en: 'A personal diary with a nine-photo grid', ko: '나만의 사진 다이어리 장면' },
+    copy: {
+      en: {
+        description: 'Even one photo becomes today’s record.\nYour colors grow over time.',
+        title: 'Photos gather in\nyour own diary',
+      },
+      ko: {
+        description: '한 장만 남겨도 오늘의 기록이에요.\n시간이 지날수록 나만의 색이 모여요.',
+        title: '사진은 나만의\n다이어리에 쌓여요',
+      },
+    },
+    id: 'diary',
+    image: ONBOARDING_IMAGES.diary,
+    illustrationRotation: '-1.2deg',
   },
   {
-    title: '같은 색으로\n서로 다른 하루를 봐요',
-    description: '친구방에서는 같은 미션을 함께해요.\n내 사진은 언제나 내 다이어리에 남아요.',
+    accessibilityLabel: { en: 'Friends discovering the same color in different days', ko: '같은 색으로 서로 다른 하루를 보는 장면' },
+    copy: {
+      en: {
+        description: 'Share the same daily mission in a room.\nYour photos always stay in your diary.',
+        title: 'See different days\nthrough the same color',
+      },
+      ko: {
+        description: '친구방에서는 같은 미션을 함께해요.\n내 사진은 언제나 내 다이어리에 남아요.',
+        title: '같은 색으로\n서로 다른 하루를 봐요',
+      },
+    },
+    id: 'shared',
+    image: ONBOARDING_IMAGES.shared,
+    illustrationRotation: '1.2deg',
   },
 ] as const;
 
@@ -35,8 +77,10 @@ export default function OnboardingScreen() {
     BricolageGrotesque_700Bold,
   });
   const insets = useSafeAreaInsets();
+  const { language } = useAppLanguage();
   const router = useRouter();
   const slide = slides[currentIndex];
+  const slideCopy = slide.copy[language];
   const isLastSlide = currentIndex === slides.length - 1;
   const regularFont = fontsLoaded ? 'BricolageGrotesque_600SemiBold' : undefined;
   const strongFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
@@ -57,7 +101,7 @@ export default function OnboardingScreen() {
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}>
         <AppText style={[styles.wordmark, { fontFamily: strongFont }]}>Color Log</AppText>
         <Pressable
-          accessibilityLabel="온보딩 건너뛰기"
+          accessibilityLabel={language === 'ko' ? '온보딩 건너뛰기' : 'Skip onboarding'}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => router.replace('/(onboarding)/email')}
@@ -68,34 +112,34 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.main}>
-        <View accessible accessibilityLabel="오늘의 색을 발견하는 장면" accessibilityRole="image" style={styles.illustration}>
-          <View style={styles.illustrationFrame}>
-            <Image resizeMode="contain" source={ONBOARDING_IMAGE} style={styles.illustrationImage} />
+        <View accessible accessibilityLabel={slide.accessibilityLabel[language]} accessibilityRole="image" style={styles.illustration}>
+          <View style={[styles.illustrationFrame, { transform: [{ rotate: slide.illustrationRotation }] }]}>
+            <Image cachePolicy="memory-disk" contentFit="contain" source={slide.image} style={styles.illustrationImage} />
           </View>
           <View pointerEvents="none" style={styles.sparkle}><Sparkle /></View>
           <View pointerEvents="none" style={styles.wave}><Wave /></View>
         </View>
 
         <View style={styles.copy}>
-          <AppText style={[styles.title, { fontFamily: strongFont }]}>{slide.title}</AppText>
-          <AppText style={[styles.description, { fontFamily: regularFont }]}>{slide.description}</AppText>
+          <AppText localize={false} style={[styles.title, { fontFamily: strongFont }]}>{slideCopy.title}</AppText>
+          <AppText localize={false} style={[styles.description, { fontFamily: regularFont }]}>{slideCopy.description}</AppText>
         </View>
 
-        <View accessible accessibilityLabel={`${currentIndex + 1} / ${slides.length} 단계`} accessibilityRole="progressbar" style={styles.progress}>
+        <View accessible accessibilityLabel={language === 'ko' ? `${currentIndex + 1} / ${slides.length} 단계` : `Step ${currentIndex + 1} of ${slides.length}`} accessibilityRole="progressbar" style={styles.progress}>
           {slides.map((item, index) => (
-            <View key={item.title} style={[styles.progressDot, index === currentIndex ? styles.progressDotActive : styles.progressDotInactive]} />
+            <View key={item.id} style={[styles.progressDot, index === currentIndex ? styles.progressDotActive : styles.progressDotInactive]} />
           ))}
         </View>
       </View>
 
       <View style={[styles.bottomAction, { paddingBottom: Math.max(insets.bottom, 48) }]}>
         <Pressable
-          accessibilityLabel={isLastSlide ? '이메일로 시작하기' : '다음 온보딩 화면'}
+          accessibilityLabel={isLastSlide ? (language === 'ko' ? '이메일로 시작하기' : 'Continue with email') : (language === 'ko' ? '다음 온보딩 화면' : 'Next onboarding screen')}
           accessibilityRole="button"
           onPress={handleNext}
           style={({ pressed }) => [styles.nextButton, pressed && styles.nextButtonPressed]}
         >
-          <AppText style={[styles.nextButtonText, { fontFamily: regularFont }]}>{isLastSlide ? '이메일로 시작하기' : 'NEXT'}</AppText>
+          <AppText localize={false} style={[styles.nextButtonText, { fontFamily: regularFont }]}>{isLastSlide ? (language === 'ko' ? '이메일로 시작하기' : 'Continue with email') : (language === 'ko' ? '다음' : 'NEXT')}</AppText>
         </Pressable>
       </View>
     </View>
@@ -140,7 +184,7 @@ const styles = StyleSheet.create({
   closeMark: { color: INK, fontSize: 27, fontWeight: '400', lineHeight: 30, marginTop: -2 },
   main: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingBottom: 80, paddingHorizontal: 16 },
   illustration: { height: 320, marginBottom: 48, maxWidth: 320, position: 'relative', width: '100%' },
-  illustrationFrame: { alignItems: 'center', borderColor: INK, borderWidth: 3, flex: 1, justifyContent: 'center', padding: 16, transform: [{ rotate: '1.2deg' }] },
+  illustrationFrame: { alignItems: 'center', borderColor: INK, borderWidth: 3, flex: 1, justifyContent: 'center', padding: 16 },
   illustrationImage: { height: '100%', width: '100%' },
   sparkle: { position: 'absolute', right: -8, top: -16, transform: [{ rotate: '12deg' }] },
   wave: { bottom: 16, left: -24, opacity: 0.4, position: 'absolute', transform: [{ rotate: '-12deg' }] },
