@@ -20,8 +20,11 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 import { getDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
+const EMPTY_NICKNAME_SELECTION = { end: 0, start: 0 } as const;
+
 export default function NicknameScreen() {
   const [nickname, setNickname] = useState('');
+  const [isNicknameFocused, setIsNicknameFocused] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
@@ -40,7 +43,7 @@ export default function NicknameScreen() {
       if (!validation.isValid) throw new Error('invalid_nickname');
       const session = await getStoredSession();
       if (!session?.user) throw new Error('missing_authenticated_session');
-      return completeProfile(session.user.id, validation.value, getDeviceTimeZone());
+      return completeProfile(session.user.id, validation.value, getDeviceTimeZone(), session.access_token);
     },
     onSuccess: async (profile) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile(profile.id) });
@@ -56,7 +59,13 @@ export default function NicknameScreen() {
     setHasSubmitted(true);
     if (validation.isValid) mutation.mutate();
   };
+  const returnToSignIn = (): void => {
+    mutation.reset();
+    setHasSubmitted(false);
+    router.replace('/(onboarding)/email');
+  };
   const showValidation = hasSubmitted && !validation.isValid;
+  const mutationErrorMessage = getNicknameSaveErrorMessage(mutation.error, t);
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
@@ -85,16 +94,23 @@ export default function NicknameScreen() {
             <View style={styles.nicknameField}>
               <TextInput
                 accessibilityLabel={t('닉네임')}
+                accessibilityHint={t('여기에 입력해 주세요...')}
                 autoCapitalize="none"
                 maxLength={12}
                 onChangeText={setNickname}
+                onBlur={() => setIsNicknameFocused(false)}
+                onFocus={() => setIsNicknameFocused(true)}
                 onSubmitEditing={handleSubmit}
-                placeholder={t('여기에 입력해 주세요...')}
-                placeholderTextColor="#555555"
                 returnKeyType="done"
+                selection={nickname.length === 0 ? EMPTY_NICKNAME_SELECTION : undefined}
                 style={[styles.input, { fontFamily: boldFont, textAlign: 'center' }, showValidation && styles.inputError]}
                 value={nickname}
               />
+              {!isNicknameFocused && nickname.length === 0 ? (
+                <View pointerEvents="none" style={styles.placeholderOverlay}>
+                  <AppText localize={false} numberOfLines={1} style={[styles.placeholderText, { fontFamily: boldFont }]}>{t('여기에 입력해 주세요...')}</AppText>
+                </View>
+              ) : null}
               <View style={styles.markerTrack}>
                 <View style={[styles.markerProgress, { width: `${Math.round((nickname.trim().length / 12) * 100)}%` }]} />
               </View>
@@ -105,7 +121,14 @@ export default function NicknameScreen() {
               <AppText style={styles.counterText}>{nickname.trim().length} / 12</AppText>
             </View>
             {showValidation ? <AppText accessibilityLiveRegion="polite" style={styles.validationText}>{validation.message}</AppText> : null}
-            {mutation.isError && hasSubmitted ? <AppText accessibilityLiveRegion="polite" style={styles.validationText}>연결을 확인한 뒤 다시 시도해 주세요.</AppText> : null}
+            {mutation.isError && hasSubmitted ? (
+              <View style={styles.errorRecovery}>
+                <AppText accessibilityLiveRegion="polite" style={styles.errorMessage}>{mutationErrorMessage}</AppText>
+                <Pressable accessibilityLabel={t('로그인 화면으로 돌아가기')} accessibilityRole="button" onPress={returnToSignIn} style={({ pressed }) => [styles.errorRecoveryButton, pressed && styles.errorRecoveryButtonPressed]}>
+                  <AppText style={styles.errorRecoveryText}>{t('로그인 화면으로 돌아가기')}</AppText>
+                </Pressable>
+              </View>
+            ) : null}
 
             <View style={styles.actions}>
               <Pressable
@@ -126,6 +149,13 @@ export default function NicknameScreen() {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+function getNicknameSaveErrorMessage(error: Error | null, t: (text: string) => string): string {
+  if (error?.message === 'missing_authenticated_session' || error?.message === 'session_restore_failed') {
+    return t('로그인 정보를 찾을 수 없어요. 다시 로그인해 주세요.');
+  }
+  return t('닉네임을 저장하지 못했어요. 다시 로그인한 뒤 시도해 주세요.');
 }
 
 function SketchAvatar({ accessibilityLabel }: { accessibilityLabel: string }) {
@@ -179,7 +209,9 @@ const styles = StyleSheet.create({
   titleMarker: { backgroundColor: '#1B1C1A', borderRadius: 4, bottom: 20, height: 4, opacity: 0.1, position: 'absolute', width: 192, zIndex: -1 },
   description: { color: '#5D3F3B', fontSize: 16, fontStyle: 'italic', lineHeight: 24, marginTop: 8, textAlign: 'center' },
   nicknameField: { position: 'relative', width: '100%' },
-  input: { alignSelf: 'stretch', color: '#1B1C1A', fontSize: 22, fontWeight: '700', minHeight: 52, paddingHorizontal: 16, textAlign: 'center', textAlignVertical: 'center', width: '100%' },
+  input: { alignSelf: 'stretch', color: '#1B1C1A', fontSize: 22, fontWeight: '700', minHeight: 52, paddingHorizontal: 16, textAlign: 'center', textAlignVertical: 'center', width: '100%', writingDirection: 'ltr' },
+  placeholderOverlay: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 16, position: 'absolute', right: 16, top: 0 },
+  placeholderText: { color: '#555555', fontSize: 22, fontWeight: '700', lineHeight: 26, textAlign: 'center' },
   inputError: { color: '#B74747' },
   markerTrack: { backgroundColor: '#1B1C1A', height: 1.5, opacity: 0.7, width: '100%' },
   markerProgress: { backgroundColor: '#1B1C1A', height: '100%' },
@@ -188,6 +220,11 @@ const styles = StyleSheet.create({
   counterError: { borderColor: '#B74747' },
   counterText: { color: '#5D3F3B', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 10, lineHeight: 12 },
   validationText: { color: '#B74747', fontSize: 12, lineHeight: 17, marginTop: -24, textAlign: 'center' },
+  errorRecovery: { alignItems: 'center', gap: 4, marginTop: -24 },
+  errorMessage: { color: '#B74747', fontSize: 12, lineHeight: 17, textAlign: 'center' },
+  errorRecoveryButton: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: 12 },
+  errorRecoveryButtonPressed: { opacity: 0.56 },
+  errorRecoveryText: { color: '#5D3F3B', fontSize: 12, lineHeight: 17, textDecorationLine: 'underline' },
   actions: { alignItems: 'center', gap: 24 },
   startButton: { alignItems: 'center', backgroundColor: '#FAF9F5', borderColor: '#1B1C1A', borderWidth: 3, boxShadow: '8px 8px 0px #1B1C1A', justifyContent: 'center', minHeight: 56, minWidth: 130, paddingHorizontal: 48, position: 'relative', transform: [{ rotate: '-0.8deg' }] },
   startButtonPressed: { boxShadow: '1px 1px 0px #1B1C1A', transform: [{ translateX: 3 }, { translateY: 3 }] },

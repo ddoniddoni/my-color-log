@@ -21,6 +21,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { signInWithEmailPassword, signUpWithEmailPassword } from '@/src/features/auth/api/authRepository';
+import { getAgeEligibilityErrorMessage, validateMinimumSignUpAge } from '@/src/features/auth/model/ageEligibility';
 import { getAuthErrorMessage, type AppAuthErrorCode } from '@/src/features/auth/model/authErrors';
 import { validateEmail, validatePassword, validatePasswordConfirmation } from '@/src/features/auth/model/emailPassword';
 import { getAuthenticatedDestination } from '@/src/features/auth/model/startupRoute';
@@ -36,6 +37,9 @@ export default function EmailOnboardingScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_400Regular,
@@ -52,9 +56,10 @@ export default function EmailOnboardingScreen() {
   const emailValidation = validateEmail(email);
   const passwordValidation = validatePassword(password);
   const confirmationValidation = validatePasswordConfirmation(password, passwordConfirmation);
+  const ageEligibility = validateMinimumSignUpAge({ day: birthDay, month: birthMonth, year: birthYear });
   const isFormValid = emailValidation.isValid
     && passwordValidation.isValid
-    && (!isSignUp || confirmationValidation.isValid);
+    && (!isSignUp || (confirmationValidation.isValid && ageEligibility.isEligible));
 
   const authMutation = useMutation({
     mutationFn: async () => {
@@ -89,15 +94,20 @@ export default function EmailOnboardingScreen() {
     setHasSubmitted(false);
     setPassword('');
     setPasswordConfirmation('');
+    setBirthYear('');
+    setBirthMonth('');
+    setBirthDay('');
     setMode((current) => current === 'sign-up' ? 'sign-in' : 'sign-up');
   };
 
   const formError = getFormError({
+    ageEligibility,
     confirmationValidation,
     emailValidation,
     hasSubmitted,
     isSignUp,
     passwordValidation,
+    t,
   });
   const mutationError = getMutationError(authMutation.error, isSignUp);
   const fontFamily = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
@@ -121,7 +131,11 @@ export default function EmailOnboardingScreen() {
         >
           {isSignUp ? (
             <SignupForm
+              ageEligibility={ageEligibility}
               boldFontFamily={boldFontFamily}
+              birthDay={birthDay}
+              birthMonth={birthMonth}
+              birthYear={birthYear}
               confirmationValidation={confirmationValidation}
               email={email}
               emailValidation={emailValidation}
@@ -130,6 +144,9 @@ export default function EmailOnboardingScreen() {
               hasSubmitted={hasSubmitted}
               mutationError={mutationError}
               onChangeEmail={setEmail}
+              onChangeBirthDay={(value) => setBirthDay(sanitizeNumericInput(value, 2))}
+              onChangeBirthMonth={(value) => setBirthMonth(sanitizeNumericInput(value, 2))}
+              onChangeBirthYear={(value) => setBirthYear(sanitizeNumericInput(value, 4))}
               onChangePassword={setPassword}
               onChangePasswordConfirmation={setPasswordConfirmation}
               onSubmit={handleSubmit}
@@ -184,13 +201,24 @@ type FormSharedProps = {
 };
 
 type SignupFormProps = FormSharedProps & {
+  ageEligibility: ReturnType<typeof validateMinimumSignUpAge>;
+  birthDay: string;
+  birthMonth: string;
+  birthYear: string;
   confirmationValidation: ReturnType<typeof validatePasswordConfirmation>;
+  onChangeBirthDay: (value: string) => void;
+  onChangeBirthMonth: (value: string) => void;
+  onChangeBirthYear: (value: string) => void;
   onChangePasswordConfirmation: (value: string) => void;
   passwordConfirmation: string;
 };
 
 function SignupForm({
+  ageEligibility,
   boldFontFamily,
+  birthDay,
+  birthMonth,
+  birthYear,
   confirmationValidation,
   email,
   emailValidation,
@@ -198,6 +226,9 @@ function SignupForm({
   formError,
   hasSubmitted,
   mutationError,
+  onChangeBirthDay,
+  onChangeBirthMonth,
+  onChangeBirthYear,
   onChangeEmail,
   onChangePassword,
   onChangePasswordConfirmation,
@@ -255,6 +286,16 @@ function SignupForm({
           textContentType="newPassword"
           value={passwordConfirmation}
         />
+        <BirthDateFields
+          day={birthDay}
+          error={hasSubmitted && !ageEligibility.isEligible}
+          month={birthMonth}
+          onChangeDay={onChangeBirthDay}
+          onChangeMonth={onChangeBirthMonth}
+          onChangeYear={onChangeBirthYear}
+          t={t}
+          year={birthYear}
+        />
       </View>
 
       <FormErrors formError={formError} mutationError={mutationError} />
@@ -266,6 +307,99 @@ function SignupForm({
         </Pressable>
       </View>
       <DoodleRow />
+    </View>
+  );
+}
+
+type BirthDateFieldsProps = {
+  day: string;
+  error: boolean;
+  month: string;
+  onChangeDay: (value: string) => void;
+  onChangeMonth: (value: string) => void;
+  onChangeYear: (value: string) => void;
+  t: (text: string) => string;
+  year: string;
+};
+
+function BirthDateFields({
+  day,
+  error,
+  month,
+  onChangeDay,
+  onChangeMonth,
+  onChangeYear,
+  t,
+  year,
+}: BirthDateFieldsProps) {
+  return (
+    <View style={styles.fieldGroup}>
+      <AppText style={styles.fieldLabel}>{t('생년월일')}</AppText>
+      <View style={styles.birthDateRow}>
+        <BirthDateInput
+          accessibilityLabel={t('생년월일 연도')}
+          error={error}
+          maximumLength={4}
+          onChangeText={onChangeYear}
+          placeholder="YYYY"
+          style={styles.birthYearInputFrame}
+          value={year}
+        />
+        <BirthDateInput
+          accessibilityLabel={t('생년월일 월')}
+          error={error}
+          maximumLength={2}
+          onChangeText={onChangeMonth}
+          placeholder="MM"
+          value={month}
+        />
+        <BirthDateInput
+          accessibilityLabel={t('생년월일 일')}
+          error={error}
+          maximumLength={2}
+          onChangeText={onChangeDay}
+          placeholder="DD"
+          value={day}
+        />
+      </View>
+      <AppText style={styles.birthDateHint}>{t('만 14세 이상 여부만 확인하며 생년월일은 저장하지 않아요.')}</AppText>
+    </View>
+  );
+}
+
+type BirthDateInputProps = {
+  accessibilityLabel: string;
+  error: boolean;
+  maximumLength: number;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  style?: object;
+  value: string;
+};
+
+function BirthDateInput({
+  accessibilityLabel,
+  error,
+  maximumLength,
+  onChangeText,
+  placeholder,
+  style,
+  value,
+}: BirthDateInputProps) {
+  return (
+    <View style={[styles.birthDateInputFrame, style, error && styles.inputFrameError]}>
+      <TextInput
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint="YYYY, MM, DD"
+        autoCorrect={false}
+        keyboardType="number-pad"
+        maxLength={maximumLength}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#71716E"
+        style={styles.birthDateInput}
+        value={value}
+      />
     </View>
   );
 }
@@ -500,24 +634,31 @@ function HeartIcon() {
 }
 
 type FormErrorInput = {
+  ageEligibility: ReturnType<typeof validateMinimumSignUpAge>;
   confirmationValidation: ReturnType<typeof validatePasswordConfirmation>;
   emailValidation: ReturnType<typeof validateEmail>;
   hasSubmitted: boolean;
   isSignUp: boolean;
   passwordValidation: ReturnType<typeof validatePassword>;
+  t: (text: string) => string;
 };
 
-function getFormError({ confirmationValidation, emailValidation, hasSubmitted, isSignUp, passwordValidation }: FormErrorInput): string | null {
+function getFormError({ ageEligibility, confirmationValidation, emailValidation, hasSubmitted, isSignUp, passwordValidation, t }: FormErrorInput): string | null {
   if (!hasSubmitted) return null;
   if (!emailValidation.isValid) return emailValidation.message;
   if (!passwordValidation.isValid) return passwordValidation.message;
   if (isSignUp && !confirmationValidation.isValid) return confirmationValidation.message;
+  if (isSignUp && !ageEligibility.isEligible) return t(getAgeEligibilityErrorMessage(ageEligibility));
   return null;
 }
 
 function getMutationError(error: Error | null, isSignUp: boolean): string | null {
   if (!error) return null;
   return getAuthErrorMessage(error.message as AppAuthErrorCode, isSignUp);
+}
+
+function sanitizeNumericInput(value: string, maximumLength: number): string {
+  return value.replace(/\D/g, '').slice(0, maximumLength);
 }
 
 const styles = StyleSheet.create({
@@ -549,6 +690,11 @@ const styles = StyleSheet.create({
   signupFields: { gap: 16 },
   fieldGroup: { gap: 8 },
   fieldLabel: { color: '#000000', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 9, fontWeight: '500', lineHeight: 12, marginLeft: 4 },
+  birthDateRow: { flexDirection: 'row', gap: 8 },
+  birthDateInputFrame: { borderColor: '#8D8D89', borderWidth: 1, flex: 1, minHeight: 48, transform: [{ rotate: '-0.4deg' }] },
+  birthYearInputFrame: { flex: 1.45 },
+  birthDateInput: { color: '#000000', fontFamily: Platform.select({ ios: 'Karla', android: 'sans-serif', default: 'sans-serif' }), fontSize: 16, minHeight: 46, paddingHorizontal: 8, textAlign: 'center' },
+  birthDateHint: { color: '#5D5F5F', fontSize: 11, lineHeight: 16, marginLeft: 4 },
   inputFrame: { borderColor: '#8D8D89', borderWidth: 1, minHeight: 48, position: 'relative', transform: [{ rotate: '-0.4deg' }] },
   inputFrameError: { borderColor: '#B74747', borderWidth: 1.5 },
   input: { color: '#000000', fontFamily: Platform.select({ ios: 'Karla', android: 'sans-serif', default: 'sans-serif' }), fontSize: 16, minHeight: 46, paddingHorizontal: 12, paddingRight: 46 },

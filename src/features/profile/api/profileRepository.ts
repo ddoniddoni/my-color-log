@@ -18,14 +18,18 @@ export async function getProfile(userId: string, accessToken?: string): Promise<
   return data ? parseProfile(data) : null;
 }
 
-export async function completeProfile(userId: string, nickname: string, timeZone: string): Promise<Profile> {
-  const { data, error } = await getSupabaseClient()
+export async function completeProfile(userId: string, nickname: string, timeZone: string, accessToken: string): Promise<Profile> {
+  const query = getSupabaseClient()
     .from('profiles')
     .upsert({ id: userId, nickname, timezone: timeZone, is_onboarded: true }, { onConflict: 'id' })
     .select(profileColumns)
     .single();
 
-  if (error) throw new Error('profile_save_failed');
+  const { data, error } = await query.setHeader('Authorization', `Bearer ${accessToken}`);
+  if (error) {
+    logError('profile_save_failed', { code: error.code, message: error.message });
+    throw new Error('profile_save_failed');
+  }
   return parseProfile(data);
 }
 

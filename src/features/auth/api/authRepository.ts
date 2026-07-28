@@ -1,11 +1,15 @@
 import { type Session } from '@supabase/supabase-js';
 
 import { mapSignInErrorCode, mapSignUpErrorCode } from '@/src/features/auth/model/authErrors';
+import { logError } from '@/src/lib/logging/logger';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 export async function getStoredSession(): Promise<Session | null> {
   const { data, error } = await getSupabaseClient().auth.getSession();
-  if (error) throw new Error('session_restore_failed');
+  if (error) {
+    logError('session_restore_failed', { code: error.code, message: error.message });
+    throw new Error('session_restore_failed');
+  }
   return data.session;
 }
 

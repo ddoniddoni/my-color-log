@@ -129,6 +129,19 @@ begin
 
   if not exists (
     select 1
+    from pg_proc as procedure
+    join pg_namespace as namespace on namespace.oid = procedure.pronamespace
+    where namespace.nspname = 'private'
+      and procedure.proname = 'validate_iana_timezone_column'
+      and procedure.prosecdef
+      and not has_function_privilege('anon', procedure.oid, 'EXECUTE')
+      and not has_function_privilege('authenticated', procedure.oid, 'EXECUTE')
+  ) then
+    raise exception 'security_contract_private_timezone_trigger_privilege';
+  end if;
+
+  if not exists (
+    select 1
     from storage.buckets
     where id = 'entry-photos'
       and not public
@@ -255,6 +268,19 @@ declare
 begin
   if (select auth.uid()) is distinct from actor_user_id then
     raise exception 'security_contract_jwt_context';
+  end if;
+
+  update public.profiles
+  set timezone = 'Asia/Seoul'
+  where id = actor_user_id;
+
+  if not exists (
+    select 1
+    from public.profiles as profile
+    where profile.id = actor_user_id
+      and profile.timezone = 'Asia/Seoul'
+  ) then
+    raise exception 'security_contract_profile_timezone_update_failed';
   end if;
 
   select count(*) into violation_count
