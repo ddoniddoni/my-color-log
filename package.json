@@ -61,6 +61,7 @@
     "test:db:diary-management": "npx --yes supabase@latest db query --linked --file supabase/tests/diary_management_contract.sql",
     "test:db:security": "npx --yes supabase@latest db query --linked --file supabase/tests/rls_security_contract.sql",
     "test:db:timezones": "npx --yes supabase@latest db query --linked --file supabase/tests/global_timezones_contract.sql",
+    "test:db:room-visibility": "npx --yes supabase@latest db query --local --file supabase/tests/room_visibility_contract.sql",
     "test:watch": "jest --watch",
     "check": "npm run typecheck && npm run lint && npm test"
   },
