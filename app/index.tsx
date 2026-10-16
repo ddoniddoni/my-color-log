@@ -23,8 +23,9 @@ export default function StartupScreen() {
   if (!isMinimumSplashDurationComplete || sessionState.status === 'loading') return <BrandSplash />;
   if (sessionState.status === 'error') return <FullScreenStatus title="시작할 수 없어요" description="연결 상태를 확인한 뒤 다시 시도해 주세요." actionLabel="다시 시도" onAction={sessionState.retry} />;
   if (!sessionState.session) return <Redirect href="/(onboarding)" />;
+  if (profileQuery.isPending && profileQuery.fetchStatus === 'paused') return <FullScreenStatus title="연결 후 처음 시작할 수 있어요" description="이 기기에 저장된 프로필이 없어요. 인터넷에 연결하면 기록을 준비할게요." />;
   if (profileQuery.isPending) return <FullScreenStatus title="기록을 준비하고 있어요" description="내 다이어리를 불러오고 있어요." />;
-  if (profileQuery.isError) return <FullScreenStatus title="프로필을 불러올 수 없어요" description="연결되면 다시 시도할 수 있어요." actionLabel="다시 시도" onAction={() => void profileQuery.refetch()} />;
+  if (profileQuery.isError && profileQuery.data === undefined) return <FullScreenStatus title="프로필을 불러올 수 없어요" description="연결되면 다시 시도할 수 있어요." actionLabel="다시 시도" onAction={() => void profileQuery.refetch()} />;
 
   return <Redirect href={getStartupDestination(true, profileQuery.data)} />;
 }

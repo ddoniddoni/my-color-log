@@ -14,6 +14,7 @@ export function getPhotoMoveUpdates(
 ): PhotoPositionUpdate[] | null {
   const selectedPhoto = photos.find((photo) => photo.id === photoId);
   if (!selectedPhoto) throw new Error('photo_not_found');
+  if (selectedPhoto.position > 9) return null;
 
   const targetPosition = selectedPhoto.position + (direction === 'backward' ? -1 : 1);
   if (targetPosition < 1 || targetPosition > 9) return null;

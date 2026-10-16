@@ -70,6 +70,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
     try {
       const photo = await cameraRef.current.takePictureAsync({ base64: false, exif: false, quality: 1, skipProcessing: false });
       const savedPhoto = await saveCapturedPhotoForReview({
+        reviewColor: { hex: captureContext.colorHex, nameEn: captureContext.colorNameEn },
         sourceUri: photo.uri,
         sourceWidth: photo.width,
         sourceHeight: photo.height,

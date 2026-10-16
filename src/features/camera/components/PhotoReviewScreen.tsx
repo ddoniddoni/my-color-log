@@ -14,15 +14,18 @@ import { cropCapturedPhoto, confirmCapturedPhoto, discardCapturedPhoto, rotateCa
 import { ColorIsolationPreview, isColorIsolationPreviewAvailable } from '@/src/features/camera/components/ColorIsolationPreview';
 import { PhotoCropModal } from '@/src/features/camera/components/PhotoCropModal';
 import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
+import { useDailyEntry } from '@/src/features/entries/hooks/useDailyEntry';
+import { mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
+import { getDayPhotoQueue, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { useQueuedPhoto } from '@/src/features/sync/hooks/useQueuedPhoto';
 import { comparePhotosForSync, type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 export type PhotoReviewContext = {
-  colorHex: string;
+  colorHex?: string;
   photoId: string;
-  colorNameEn: string;
+  colorNameEn?: string;
 };
 
 export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoReviewContext }) {
@@ -33,14 +36,19 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const photoQuery = useQueuedPhoto(reviewContext.photoId);
-  const [caption, setCaption] = useState('');
+  const [editedCaption, setCaption] = useState<string | null>(null);
   const [isCropVisible, setIsCropVisible] = useState(false);
   const [isColorIsolationEnabled, setIsColorIsolationEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const colorTag = `#${reviewContext.colorNameEn.replaceAll(' ', '').toUpperCase()}`;
   const photo = photoQuery.data;
+  const entryQuery = useDailyEntry(photo?.userId ?? null, photo?.dateKey ?? '');
+  const colorHex = reviewContext.colorHex ?? photo?.reviewColor?.hex;
+  const colorNameEn = reviewContext.colorNameEn ?? photo?.reviewColor?.nameEn;
+  const colorTag = colorNameEn ? `#${colorNameEn.replaceAll(' ', '').toUpperCase()}` : '#DAILYLOG';
+  const caption = editedCaption ?? photo?.caption ?? '';
+  const canIsolateColor = Boolean(colorHex) && isColorIsolationPreviewAvailable;
   const isBusy = isSaving || isEditing;
 
   const replaceReviewedPhoto = (updatedPhoto: PendingPhoto): void => {
@@ -75,7 +83,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   };
 
   const retake = async (): Promise<void> => {
-    if (!photo || isBusy) return;
+    if (!photo || isBusy || !colorHex || !colorNameEn) return;
     setIsSaving(true);
     try {
       await discardCapturedPhoto(photo);
@@ -85,8 +93,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           missionId: photo.missionId,
           dateKey: photo.dateKey,
           position: String(photo.position),
-          colorHex: reviewContext.colorHex,
-          colorNameEn: reviewContext.colorNameEn,
+          colorHex,
+          colorNameEn,
         },
       });
     } catch {
@@ -100,11 +108,13 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     setIsSaving(true);
     setErrorMessage(null);
     try {
-      const photoToConfirm = isColorIsolationEnabled
-        ? await applyColorIsolationToPhoto(photo, reviewContext.colorHex)
+      const photoToConfirm = isColorIsolationEnabled && colorHex
+        ? await applyColorIsolationToPhoto(photo, colorHex)
         : photo;
       replaceReviewedPhoto(photoToConfirm);
-      const confirmedPhoto = await confirmCapturedPhoto(photoToConfirm, caption);
+      const dayQueue = await getDayPhotoQueue(photo.userId, photo.dateKey);
+      const occupiedPositions = mergeTodayPhotos(entryQuery.data, dayQueue).map((item) => item.position);
+      const confirmedPhoto = await confirmCapturedPhoto(photoToConfirm, caption, occupiedPositions);
       queryClient.setQueryData<PendingPhoto[]>(queryKeys.pendingPhotos(photo.userId, photo.dateKey), (currentQueue) => [
         ...(currentQueue ?? []).filter((queuedPhoto) => queuedPhoto.id !== confirmedPhoto.id),
         confirmedPhoto,
@@ -116,8 +126,10 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
       ));
       await queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(photo.userId) });
       router.replace('/(tabs)');
-    } catch {
-      setErrorMessage(t('사진을 기록 목록에 추가하지 못했어요. 다시 시도해 주세요.'));
+    } catch (error) {
+      setErrorMessage(t(error instanceof Error && error.message === 'entry_photo_limit_reached'
+        ? '이 날짜의 사진 9장이 모두 찼어요. 사진은 이 기기에 보관했어요. 기록에서 한 장을 정리한 뒤 다시 확인해 주세요.'
+        : '사진을 기록 목록에 추가하지 못했어요. 다시 시도해 주세요.'));
       setIsSaving(false);
     }
   };
@@ -142,7 +154,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     return <View style={styles.loadingPage}><AppText style={styles.loadingText}>사진을 안전하게 준비하고 있어요.</AppText></View>;
   }
 
-  if (photoQuery.isError || !photo) {
+  if (photoQuery.isError || !photo || photo.status !== 'local_saved') {
     return <View style={styles.loadingPage}><AppText style={styles.loadingText}>사진을 불러오지 못했어요.</AppText><Pressable accessibilityLabel={t('오늘 화면으로 돌아가기')} accessibilityRole="button" onPress={() => router.replace('/(tabs)')} style={styles.backButton}><AppText style={styles.backButtonText}>오늘로 돌아가기</AppText></Pressable></View>;
   }
 
@@ -166,7 +178,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
             {isColorIsolationEnabled ? <View pointerEvents="none" style={styles.photoFilterBackdrop} /> : <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} /><View pointerEvents="none" style={styles.photoDimmer} /></>}
             <View pointerEvents="none" style={styles.photoPreviewPaper}>
               <View accessibilityLabel={t(isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진')} accessible style={styles.photoPreview}>
-                {isColorIsolationEnabled ? <ColorIsolationPreview colorHex={reviewContext.colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
+                {isColorIsolationEnabled && colorHex ? <ColorIsolationPreview colorHex={colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
               </View>
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
             </View>
@@ -185,14 +197,14 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         <Pressable
           accessibilityLabel={t('오늘의 색만 보기')}
           accessibilityRole="switch"
-          accessibilityState={{ checked: isColorIsolationEnabled, disabled: !isColorIsolationPreviewAvailable }}
-          disabled={!isColorIsolationPreviewAvailable}
+          accessibilityState={{ checked: isColorIsolationEnabled, disabled: !canIsolateColor }}
+          disabled={!canIsolateColor}
           onPress={() => setIsColorIsolationEnabled((currentValue) => !currentValue)}
-          style={({ pressed }) => [styles.colorIsolationToggle, pressed && isColorIsolationPreviewAvailable && styles.pressed, !isColorIsolationPreviewAvailable && styles.disabled]}>
-          <View style={[styles.colorIsolationDot, { backgroundColor: reviewContext.colorHex }]} />
+          style={({ pressed }) => [styles.colorIsolationToggle, pressed && canIsolateColor && styles.pressed, !canIsolateColor && styles.disabled]}>
+          <View style={[styles.colorIsolationDot, { backgroundColor: colorHex ?? theme.colors.surfaceMuted }]} />
           <View style={styles.colorIsolationCopy}>
             <AppText style={styles.colorIsolationTitle}>오늘의 색만 보기</AppText>
-            <AppText style={styles.colorIsolationDescription}>{isColorIsolationPreviewAvailable ? '오늘의 색은 남기고 나머지는 흑백으로 저장해요.' : '최신 development build에서 사용할 수 있어요.'}</AppText>
+            <AppText style={styles.colorIsolationDescription}>{!colorHex ? '색 정보가 없는 이전 사진은 원본으로 저장해요.' : isColorIsolationPreviewAvailable ? '오늘의 색은 남기고 나머지는 흑백으로 저장해요.' : '최신 development build에서 사용할 수 있어요.'}</AppText>
           </View>
           <View style={[styles.colorIsolationTrack, isColorIsolationEnabled && styles.colorIsolationTrackEnabled]}>
             <View style={[styles.colorIsolationKnob, isColorIsolationEnabled && styles.colorIsolationKnobEnabled]} />
@@ -204,7 +216,10 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           <TextInput
             accessibilityLabel={t('사진 메모')}
             maxLength={80}
-            onChangeText={setCaption}
+            onChangeText={(value) => {
+              setCaption(value);
+              void updatePendingPhoto(photo.id, { caption: value.trim() || null }).catch(() => setErrorMessage(t('메모를 보관하지 못했어요. 다시 시도해 주세요.')));
+            }}
             placeholder={t('뒷마당에서 발견했어요...')}
             placeholderTextColor={theme.colors.textTertiary}
             style={styles.memoInput}
@@ -216,8 +231,9 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
 
         {errorMessage ? <AppText accessibilityLiveRegion="polite" style={styles.errorText}>{errorMessage}</AppText> : null}
 
+        <Pressable accessibilityRole="button" accessibilityLabel={t('나중에 확인')} disabled={isBusy} onPress={() => router.replace('/(tabs)')} style={styles.backButton}><AppText>나중에 확인</AppText></Pressable>
         <View style={styles.actions}>
-          <Pressable accessibilityLabel={t('사진 다시 촬영')} accessibilityRole="button" accessibilityState={{ disabled: isBusy }} disabled={isBusy} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>다시</AppText></View></Pressable>
+          <Pressable accessibilityLabel={t('사진 다시 촬영')} accessibilityRole="button" accessibilityState={{ disabled: isBusy || !colorHex }} disabled={isBusy || !colorHex} onPress={() => void retake()} style={({ pressed }) => [styles.actionButton, styles.againButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><AgainIcon /><AppText style={styles.againText}>다시</AppText></View></Pressable>
           <Pressable accessibilityLabel={t('이 사진 사용')} accessibilityRole="button" accessibilityState={{ busy: isSaving, disabled: isBusy }} disabled={isBusy} onPress={() => void savePhoto()} style={({ pressed }) => [styles.actionButton, styles.useButton, pressed && styles.pressed, isBusy && styles.disabled]}><View style={styles.actionContent}><CheckIcon /><AppText style={styles.useText}>{isSaving ? '저장 중…' : '사용'}</AppText></View></Pressable>
         </View>
       </ScrollView>

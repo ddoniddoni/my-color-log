@@ -5,8 +5,9 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export function useMissionReveal(dateKey: string) {
   const queryClient = useQueryClient();
-  const revealQuery = useQuery({ queryKey: queryKeys.missionReveal(dateKey), queryFn: () => hasRevealedMission(dateKey) });
+  const revealQuery = useQuery({ networkMode: 'always', queryKey: queryKeys.missionReveal(dateKey), queryFn: () => hasRevealedMission(dateKey) });
   const revealMutation = useMutation({
+    networkMode: 'always',
     mutationFn: () => markMissionRevealed(dateKey),
     onSuccess: () => queryClient.setQueryData(queryKeys.missionReveal(dateKey), true),
   });

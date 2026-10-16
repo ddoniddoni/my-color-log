@@ -126,6 +126,10 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         </View> : null}
 
         <View style={[styles.actionArea, isCompact && styles.actionAreaCompact]}>
+          {photos.some((photo) => photo.position > 9) ? <Pressable accessibilityRole="button" onPress={() => {
+            const overflow = photos.find((photo) => photo.position > 9);
+            if (overflow) onPhotoPress(overflow);
+          }} style={styles.retryButton}><AppText color="secondary">9장을 넘어 이 기기에 보관 중인 사진 확인</AppText></Pressable> : null}
           <Button disabled={photos.length >= 9} label={photos.length === 0 ? '첫 번째 색 발견하기' : photos.length >= 9 ? '오늘의 9장을 모두 채웠어요' : '한 장 더 발견하기'} onPress={onAddPhotoPress} style={isCompact ? styles.actionButtonCompact : undefined} />
           {hasSyncFailure
             ? <Pressable accessibilityLabel="실패한 사진 업로드 다시 시도" accessibilityRole="button" onPress={onRetrySync} style={styles.retryButton}><AppText style={[styles.retryText, { color: theme.colors.danger }]}>업로드 다시 시도</AppText></Pressable>

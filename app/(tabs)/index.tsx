@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { Screen } from '@/src/components/layout/Screen';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
+import { PhotoDraftRecovery } from '@/src/features/camera/components/PhotoDraftRecovery';
 import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
 import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
 import { MissionReveal } from '@/src/features/missions/components/MissionReveal';
@@ -26,8 +27,16 @@ import { usePhotoSync } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { radius, spacing } from '@/src/design/tokens';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { useOfflineCacheReady } from '@/src/lib/query/OfflineQueryProvider';
 
 export default function TodayScreen() {
+  const sessionState = useSessionBootstrap();
+  const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  return <><TodayContent /><PhotoDraftRecovery userId={userId} /></>;
+}
+
+function TodayContent() {
+  const cacheReady = useOfflineCacheReady();
   const timeZone = useDeviceTimeZone();
   const dateKey = useTimeZoneDateKey(timeZone);
   const sessionState = useSessionBootstrap();
@@ -45,11 +54,16 @@ export default function TodayScreen() {
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();
 
+  const hasLocalPhotos = queueQuery.data?.some((photo) => photo.status !== 'cancelled') ?? false;
+  if (!cacheReady) return <TodayLoadingScreen />;
+  if (networkStatus === 'offline' && (missionQuery.data === undefined || (entryQuery.data === undefined && !hasLocalPhotos) || (!reveal.isRevealed && !reveal.isLoading && revealPaletteQuery.data === undefined))) {
+    return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void entryQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+  }
   if (sessionState.status === 'loading' || missionQuery.isPending || reveal.isLoading || (!reveal.isRevealed && revealPaletteQuery.isPending)) return <TodayLoadingScreen />;
   if (sessionState.status === 'error' || !userId) return <TodayMissionError onRetry={sessionState.retry} />;
-  if (entryQuery.isPending || queueQuery.isPending) return <TodayLoadingScreen />;
-  if (entryQuery.isError || queueQuery.isError) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
-  if (missionQuery.isError || (!reveal.isRevealed && revealPaletteQuery.isError) || !missionQuery.data) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+  if ((entryQuery.isPending && !hasLocalPhotos) || queueQuery.isPending) return <TodayLoadingScreen />;
+  if ((entryQuery.isError && entryQuery.data === undefined && !hasLocalPhotos) || (queueQuery.isError && queueQuery.data === undefined)) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
+  if (!missionQuery.data || (!reveal.isRevealed && revealPaletteQuery.isError && !revealPaletteQuery.data)) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
 
   const mission = missionQuery.data;
   if (!reveal.isRevealed) {

@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { getProfile } from '@/src/features/profile/api/profileRepository';
 import { queryKeys } from '@/src/lib/query/queryKeys';
+import { useOfflineCacheReady } from '@/src/lib/query/OfflineQueryProvider';
 
 export function useProfile(userId: string | undefined) {
+  const cacheReady = useOfflineCacheReady();
   const sessionState = useSessionBootstrap();
   const session = sessionState.status === 'ready' ? sessionState.session : null;
   const accessToken = session && session.user.id === userId
@@ -14,6 +16,6 @@ export function useProfile(userId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.profile(userId ?? 'missing'),
     queryFn: () => getProfile(userId ?? '', accessToken),
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && cacheReady,
   });
 }

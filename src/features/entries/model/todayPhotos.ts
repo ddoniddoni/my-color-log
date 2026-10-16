@@ -3,7 +3,7 @@ import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
 export type TodayPhoto = {
   id: string;
-  uri: string;
+  uri: string | null;
   localUri: string | null;
   storagePath: string | null;
   position: number;
@@ -14,17 +14,18 @@ export type TodayPhoto = {
 
 export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPhotos: PendingPhoto[]): TodayPhoto[] {
   const byId = new Map<string, TodayPhoto>();
+  const localById = new Map(queuedPhotos.map((photo) => [photo.id, photo]));
   const cancelledPhotoIds = new Set<string>();
   for (const photo of queuedPhotos) {
     if (photo.status === 'cancelled') cancelledPhotoIds.add(photo.id);
   }
   for (const photo of entry?.photos ?? []) {
     if (cancelledPhotoIds.has(photo.id)) continue;
-    if (!photo.signedUrl) continue;
+    const localUri = localById.get(photo.id)?.localUri ?? null;
     byId.set(photo.id, {
       id: photo.id,
-      uri: photo.signedUrl,
-      localUri: null,
+      uri: localUri ?? photo.signedUrl,
+      localUri,
       storagePath: photo.storagePath,
       position: photo.position,
       capturedAt: photo.capturedAt,
@@ -33,13 +34,22 @@ export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPho
     });
   }
   for (const photo of queuedPhotos) {
-    if (photo.status === 'cancelled') continue;
+    if (photo.status === 'cancelled' || photo.status === 'local_saved' || byId.has(photo.id)) continue;
+    // A confirmed server snapshot owns membership, order and captions. Synced
+    // local files are image caches, never evidence that a deleted row still exists.
+    if (photo.status === 'synced' && entry !== undefined) continue;
+    const occupied = new Set([...byId.values()].map((item) => item.position));
+    let position = photo.position;
+    if (occupied.has(position)) {
+      position = 1;
+      while (occupied.has(position)) position += 1;
+    }
     byId.set(photo.id, {
       id: photo.id,
       uri: photo.localUri,
       localUri: photo.localUri,
       storagePath: photo.storagePath,
-      position: photo.position,
+      position,
       capturedAt: photo.capturedAt,
       caption: photo.caption,
       status: photo.status === 'failed'
@@ -55,6 +65,7 @@ export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPho
 }
 
 export function getNextPhotoPosition(photos: TodayPhoto[]): number | null {
+  if (photos.length >= 9) return null;
   const occupied = new Set(photos.map((photo) => photo.position));
   for (let position = 1; position <= 9; position += 1) {
     if (!occupied.has(position)) return position;

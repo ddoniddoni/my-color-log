@@ -1,7 +1,9 @@
-import { createContext, createElement, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import { createContext, createElement, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { type Session } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from '@/src/lib/supabase/client';
+import { readOfflineSession } from '@/src/lib/supabase/offlineSession';
+import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 
 type SessionState = { status: 'loading' } | { status: 'ready'; session: Session | null } | { status: 'error' };
 type SessionBootstrap = SessionState & { retry: () => void };
@@ -23,13 +25,41 @@ export function useSessionBootstrap(): SessionBootstrap {
 function useSessionBootstrapState(): SessionBootstrap {
   const [state, setState] = useState<SessionState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  const networkStatus = useNetworkStatus();
+  const networkRef = useRef(networkStatus);
+  const signedOutRef = useRef(false);
+
+  useEffect(() => { networkRef.current = networkStatus; }, [networkStatus]);
+
+  useEffect(() => {
+    if (networkStatus !== 'offline' || signedOutRef.current) return;
+    let cancelled = false;
+    void readOfflineSession().then((session) => {
+      if (cancelled || signedOutRef.current || !session) return;
+      setState((current) => current.status === 'ready' && current.session ? current : { status: 'ready', session });
+    }).catch(() => { if (!cancelled) setState({ status: 'error' }); });
+    return () => { cancelled = true; };
+  }, [networkStatus, attempt]);
+
+  useEffect(() => {
+    if (networkStatus !== 'online') return;
+    let cancelled = false;
+    void getSupabaseClient().auth.getSession().then(({ data, error }) => {
+      if (cancelled) return;
+      setState(error ? { status: 'error' } : { status: 'ready', session: data.session });
+    }).catch(() => { if (!cancelled) setState({ status: 'error' }); });
+    return () => { cancelled = true; };
+  }, [networkStatus, attempt]);
 
   useEffect(() => {
     let isCancelled = false;
     const supabase = getSupabaseClient();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isCancelled) {
-        setState({ status: 'ready', session });
+        if (event === 'SIGNED_OUT') signedOutRef.current = true;
+        else if (session) signedOutRef.current = false;
+        setState((current) => event === 'INITIAL_SESSION' && !session && networkRef.current === 'offline'
+          && current.status === 'ready' && current.session ? current : { status: 'ready', session });
       }
     });
 

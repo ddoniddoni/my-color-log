@@ -5,7 +5,9 @@ import { updateDiaryEntryNote, updateDiaryPhotoCaption } from '@/src/features/di
 import { removeDiaryPhoto, type DiaryEntry, type DiaryPhoto } from '@/src/features/diary/model/diaryMonth';
 import { normalizeDiaryNote, normalizeDiaryPhotoCaption } from '@/src/features/diary/model/diaryEdits';
 import { deleteMyEntryPhotoRecord, removeEntryPhotoObject } from '@/src/features/entries/api/entryRepository';
-import { getQueuedPhoto, removePendingPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
+import { type DailyEntry } from '@/src/features/entries/model/dailyEntry';
+import { removeEntryPhoto } from '@/src/features/entries/model/removeEntryPhoto';
+import { cancelPendingPhoto, getQueuedPhoto, removePendingPhoto, restorePendingPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
 type UseDiaryEditsInput = {
@@ -44,6 +46,8 @@ export function useDiaryEdits({ monthKey, userId }: UseDiaryEditsInput) {
     if (!userId) return;
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.pendingPhotos(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
@@ -86,11 +90,20 @@ export function useDiaryEdits({ monthKey, userId }: UseDiaryEditsInput) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ photo }: DeletePhotoInput): Promise<DeletePhotoResult> => {
-      const [queuedPhoto, deletedStoragePath] = await Promise.all([
-        getQueuedPhoto(photo.id).catch(() => null),
-        deleteMyEntryPhotoRecord(photo.id),
-      ]);
+    mutationFn: async ({ photo, dateKey }: DeletePhotoInput): Promise<DeletePhotoResult> => {
+      const queuedPhoto = await getQueuedPhoto(photo.id);
+      if (queuedPhoto) await cancelPendingPhoto(photo.id);
+      let deletedStoragePath: string | null;
+      try {
+        deletedStoragePath = await deleteMyEntryPhotoRecord(photo.id);
+      } catch (error) {
+        if (queuedPhoto) await restorePendingPhoto(queuedPhoto);
+        throw error;
+      }
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) });
+        queryClient.setQueryData<DailyEntry | null>(queryKeys.dailyEntry(userId, dateKey), (current) => removeEntryPhoto(current, photo.id));
+      }
       let storageCleanupPending = false;
       try {
         await removeEntryPhotoObject(deletedStoragePath ?? photo.storagePath);

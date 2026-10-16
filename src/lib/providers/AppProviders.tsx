@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type PropsWithChildren } from 'react';
-import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { onlineManager } from '@tanstack/react-query';
 
 import { OfflineBanner } from '@/src/components/feedback/OfflineBanner';
 import { useAuthAutoRefresh } from '@/src/features/auth/hooks/useAuthAutoRefresh';
@@ -12,7 +12,8 @@ import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { ThemeProvider } from '@/src/design/ThemeProvider';
 import { LanguageProvider } from '@/src/lib/localization/LanguageProvider';
 
-const STALE_TIME_MS = 60_000;
+import { OfflineQueryProvider, useOfflineCacheReady } from '@/src/lib/query/OfflineQueryProvider';
+import { clearOfflineCache } from '@/src/lib/query/offlineCache';
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
@@ -30,7 +31,6 @@ function AppProviderContent({ children }: PropsWithChildren) {
   useAuthAutoRefresh();
   const sessionState = useSessionBootstrap();
   const networkStatus = useNetworkStatus();
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: STALE_TIME_MS, retry: 1 } } }));
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const previousUserIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
@@ -44,26 +44,27 @@ function AppProviderContent({ children }: PropsWithChildren) {
   useEffect(() => {
     if (sessionState.status !== 'ready') return;
     if (previousUserIdRef.current !== undefined && previousUserIdRef.current !== userId) {
-      queryClient.clear();
+      if (previousUserIdRef.current) void clearOfflineCache(previousUserIdRef.current).catch(() => undefined);
     }
     previousUserIdRef.current = userId;
-  }, [queryClient, sessionState.status, userId]);
+  }, [sessionState.status, userId]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <OfflineQueryProvider userId={userId}>
       <AppRuntime networkStatus={networkStatus} userId={userId}>
         {children}
       </AppRuntime>
-    </QueryClientProvider>
+    </OfflineQueryProvider>
   );
 }
 
 function AppRuntime({ children, networkStatus, userId }: PropsWithChildren<{ networkStatus: 'offline' | 'online' | 'unknown'; userId: string | null }>) {
+  const cacheReady = useOfflineCacheReady();
   useRoomPhotoPushRegistration(userId);
   useProfileTimeZoneSync(userId);
 
   return (
-    <PhotoSyncProvider userId={userId}>
+    <PhotoSyncProvider userId={cacheReady ? userId : null}>
       {children}
       <OfflineBanner visible={networkStatus === 'offline'} />
     </PhotoSyncProvider>

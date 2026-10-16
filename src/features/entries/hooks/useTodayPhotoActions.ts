@@ -4,6 +4,7 @@ import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoReposi
 import { deleteMyEntryPhotoRecord, removeEntryPhotoObject, reorderMyEntryPhotos } from '@/src/features/entries/api/entryRepository';
 import { getPhotoMoveUpdates, type PhotoMoveDirection, type PhotoPositionUpdate } from '@/src/features/entries/model/photoManagement';
 import { type DailyEntry } from '@/src/features/entries/model/dailyEntry';
+import { removeEntryPhoto } from '@/src/features/entries/model/removeEntryPhoto';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { cancelPendingPhoto, removePendingPhoto, restorePendingPhoto, updatePendingPhoto, updatePendingPhotoPositions } from '@/src/features/sync/queue/photoQueue';
@@ -29,6 +30,7 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingPhotos(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.diaryMonth(userId, dateKey.slice(0, 7)) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
@@ -65,6 +67,10 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
       }
 
       const storagePath = deletedStoragePath ?? photo.storagePath ?? queuedPhoto?.storagePath ?? null;
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) });
+        queryClient.setQueryData<DailyEntry | null>(queryKeys.dailyEntry(userId, dateKey), (current) => removeEntryPhoto(current, photo.id));
+      }
       let storageCleanupPending = false;
       if (storagePath) {
         try {

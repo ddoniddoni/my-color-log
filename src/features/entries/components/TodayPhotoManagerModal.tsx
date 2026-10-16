@@ -76,7 +76,7 @@ export function TodayPhotoManagerModal({
             </View>
 
             <View style={styles.photoFrame}>
-              <Image accessibilityLabel={`${selectedPhoto.position}번째 오늘의 사진`} cachePolicy="memory-disk" contentFit="cover" source={{ uri: selectedPhoto.uri }} style={styles.photo} />
+              <Image accessibilityLabel={`${selectedPhoto.position}번째 오늘의 사진`} cachePolicy="memory-disk" contentFit="cover" source={selectedPhoto.uri ? { uri: selectedPhoto.uri } : undefined} style={styles.photo} />
               <View style={styles.positionBadge}><AppText style={styles.positionText}>{selectedPhoto.position} / 9</AppText></View>
             </View>
 
