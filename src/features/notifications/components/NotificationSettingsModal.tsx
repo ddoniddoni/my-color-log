@@ -72,7 +72,7 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
         />
         {pickerKind === 'morning' ? <InlineTimePicker kind="morning" onChange={(date) => setDraft((current) => updateReminderTime(current, 'morning', date))} reminder={draft.morning} /> : null}
         <ReminderRow
-          description="오늘의 한 장을 떠올리는 알림"
+          description="오늘 기록이 없을 때만 알려드려요."
           disabled={isBusy}
           kind="evening"
           label="저녁의 기록"
@@ -98,7 +98,7 @@ function NotificationSettingsForm({ isLoading, isSaving, onClose, onSave, settin
           </Pressable>
         </View>
 
-        <AppText style={styles.note}>알림을 켤 때만 기기 권한을 요청해요. 친구방 알림은 development build 또는 출시 앱에서 사용할 수 있어요.</AppText>
+        <AppText style={styles.note}>알림을 켤 때만 기기 권한을 요청해요. 기록 알림은 앱을 열 때마다 앞으로 30일간 갱신돼요.</AppText>
       </ScrollView>
 
       <View style={styles.actions}>

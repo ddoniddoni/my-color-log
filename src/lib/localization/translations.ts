@@ -4,6 +4,8 @@ type Translation = Readonly<Record<AppLanguage, string>>;
 export type TranslationValues = Readonly<Record<string, number | string>>;
 
 const translationEntries: readonly Translation[] = [
+  entry('오늘 기록이 없을 때만 알려드려요.', 'Only when you have not recorded today.'),
+  entry('알림을 켤 때만 기기 권한을 요청해요. 기록 알림은 앱을 열 때마다 앞으로 30일간 갱신돼요.', 'We ask for permission only when you enable notifications. Opening the app renews reminders for the next 30 days.'),
   entry('새로운 캔버스', 'New Canvas'),
   entry('모든 픽셀은 한 줄에서 시작돼요...', 'Every pixel begins with a single line...'),
   entry('이메일 주소', 'Email address'),

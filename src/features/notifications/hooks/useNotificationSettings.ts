@@ -1,42 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import {
-  getNotificationSettings,
-  saveNotificationSettings,
-  type SaveNotificationSettingsResult,
-} from '@/src/features/notifications/api/localNotificationRepository';
-import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettings } from '@/src/features/notifications/model/notificationSettings';
+import { getNotificationSettings, saveNotificationSettings } from '@/src/features/notifications/api/localNotificationRepository';
+import { DEFAULT_NOTIFICATION_SETTINGS } from '@/src/features/notifications/model/notificationSettings';
+import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export function useNotificationSettings() {
-  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    let isActive = true;
-    void getNotificationSettings()
-      .then((nextSettings) => {
-        if (isActive) setSettings(nextSettings);
-      })
-      .finally(() => {
-        if (isActive) setIsLoading(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const save = useCallback(async (nextSettings: NotificationSettings): Promise<SaveNotificationSettingsResult> => {
-    setIsSaving(true);
-    try {
-      const result = await saveNotificationSettings(nextSettings);
-      if (result === 'saved') setSettings(nextSettings);
-      return result;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
-
-  return { isLoading, isSaving, save, settings };
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: queryKeys.notificationSettings, queryFn: getNotificationSettings, networkMode: 'always' });
+  const mutation = useMutation({
+    mutationFn: saveNotificationSettings,
+    networkMode: 'always',
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.notificationSettings }),
+  });
+  return { isLoading: query.isPending, isSaving: mutation.isPending, save: mutation.mutateAsync, settings: query.data ?? DEFAULT_NOTIFICATION_SETTINGS };
 }
