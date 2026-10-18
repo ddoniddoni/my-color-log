@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useRootNavigationState, useRouter } from 'expo-router';
+import { usePathname, useRootNavigationState, useRouter } from 'expo-router';
 
 import { recoverPendingGalleryImport } from '@/src/features/camera/api/galleryPhotoRepository';
 
@@ -7,9 +7,10 @@ export function GalleryImportRecovery() {
   const router = useRouter();
   const rootNavigationState = useRootNavigationState();
   const rootNavigationKey = rootNavigationState?.key;
+  const isRecoveringPassword = usePathname().startsWith('/auth/');
 
   useEffect(() => {
-    if (!rootNavigationKey) return;
+    if (!rootNavigationKey || isRecoveringPassword) return;
 
     let isMounted = true;
 
@@ -34,7 +35,7 @@ export function GalleryImportRecovery() {
     return () => {
       isMounted = false;
     };
-  }, [rootNavigationKey, router]);
+  }, [rootNavigationKey, router, isRecoveringPassword]);
 
   return null;
 }

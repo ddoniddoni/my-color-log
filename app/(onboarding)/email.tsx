@@ -159,6 +159,7 @@ export default function EmailOnboardingScreen() {
             />
           ) : (
             <LoginForm
+              onForgotPassword={() => router.push(inviteCode ? { pathname: '/auth/forgot-password', params: { inviteCode } } : '/auth/forgot-password')}
               boldFontFamily={boldFontFamily}
               email={email}
               emailValidation={emailValidation}
@@ -414,13 +415,14 @@ function LoginForm({
   mutationError,
   onChangeEmail,
   onChangePassword,
+  onForgotPassword,
   onSubmit,
   onSwitchMode,
   password,
   passwordValidation,
   pending,
   t,
-}: FormSharedProps) {
+}: FormSharedProps & { onForgotPassword: () => void }) {
   return (
     <View style={styles.loginCard}>
       <View style={styles.loginBrandGroup}>
@@ -460,6 +462,9 @@ function LoginForm({
 
       <FormErrors formError={formError} mutationError={mutationError} />
       <SketchActionButton label={pending ? t('로그인 중…') : t('로그인')} onPress={onSubmit} pending={pending} />
+      <Pressable accessibilityRole="button" disabled={pending} accessibilityState={{ disabled: pending }} onPress={onForgotPassword} style={[styles.loginUtilityLinkButton, styles.forgotPasswordLink]}>
+        <AppText style={[styles.loginUtility, styles.loginUtilityLink]}>비밀번호를 잊으셨나요?</AppText>
+      </Pressable>
       <View style={styles.loginUtilityRow}>
         <AppText style={styles.loginUtility}>처음이신가요? </AppText>
         <Pressable accessibilityLabel={t('회원가입 화면으로 전환')} accessibilityRole="button" onPress={onSwitchMode} style={({ pressed }) => [styles.loginUtilityLinkButton, pressed && styles.loginUtilityLinkButtonPressed]}>
@@ -725,6 +730,7 @@ const styles = StyleSheet.create({
   loginUtility: { color: '#444444', fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 12, fontStyle: 'italic', lineHeight: 17 },
   loginUtilityLink: { color: '#000000', flexShrink: 0, textDecorationLine: 'underline' },
   loginUtilityLinkButton: { alignItems: 'center', flexShrink: 0, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8, width: 88 },
+  forgotPasswordLink: { width: '100%' },
   loginUtilityLinkButtonPressed: { opacity: 0.56 },
   loginDoodleRow: { marginTop: 52 },
 });

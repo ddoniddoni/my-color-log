@@ -31,6 +31,7 @@ export function useRoomPhotoNotificationNavigation(userId: string | null): void 
       if (!isActive) return;
 
       const room = await getRoom(route.roomId).catch(() => null);
+      if (!isActive) return;
       if (room && route.dateKey === getDateKeyInTimeZone(new Date(), room.timeZone)) {
         router.push({ pathname: '/room/[roomId]', params: { photoId: route.photoId, roomId: route.roomId } });
         return;
