@@ -6,11 +6,13 @@ import { useAuthAutoRefresh } from '@/src/features/auth/hooks/useAuthAutoRefresh
 import { SessionBootstrapProvider, useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { configureLocalNotificationPresentation } from '@/src/features/notifications/api/localNotificationRepository';
 import { useRoomPhotoPushRegistration } from '@/src/features/notifications/hooks/useRoomPhotoPushRegistration';
+import { useDailyReminders } from '@/src/features/notifications/hooks/useDailyReminders';
 import { useProfileTimeZoneSync } from '@/src/features/profile/hooks/useProfileTimeZoneSync';
 import { PhotoSyncProvider } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { ThemeProvider } from '@/src/design/ThemeProvider';
 import { LanguageProvider } from '@/src/lib/localization/LanguageProvider';
+import { logError } from '@/src/lib/logging/logger';
 
 const STALE_TIME_MS = 60_000;
 
@@ -34,7 +36,7 @@ function AppProviderContent({ children }: PropsWithChildren) {
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const previousUserIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    void configureLocalNotificationPresentation();
+    void configureLocalNotificationPresentation().catch(() => logError('notification_presentation_failed', { operation: 'configure' }));
   }, []);
 
   useEffect(() => {
@@ -51,14 +53,15 @@ function AppProviderContent({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppRuntime networkStatus={networkStatus} userId={userId}>
+      <AppRuntime networkStatus={networkStatus} userId={userId} sessionReady={sessionState.status === 'ready'}>
         {children}
       </AppRuntime>
     </QueryClientProvider>
   );
 }
 
-function AppRuntime({ children, networkStatus, userId }: PropsWithChildren<{ networkStatus: 'offline' | 'online' | 'unknown'; userId: string | null }>) {
+function AppRuntime({ children, networkStatus, userId, sessionReady }: PropsWithChildren<{ networkStatus: 'offline' | 'online' | 'unknown'; userId: string | null; sessionReady: boolean }>) {
+  useDailyReminders(userId, sessionReady);
   useRoomPhotoPushRegistration(userId);
   useProfileTimeZoneSync(userId);
 
