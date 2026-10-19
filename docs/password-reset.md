@@ -6,7 +6,7 @@
 
 ## Supabase 운영 설정
 
-1. 운영 프로젝트의 Authentication → URL Configuration → Redirect URLs에 `mycolorlog://auth/reset-password`를 추가한다. 앱의 `app.json` scheme 및 `EXPO_PUBLIC_APP_SCHEME`과 일치해야 한다. 커스텀 scheme을 바꾸면 네이티브 앱도 다시 빌드한다.
+1. 운영 프로젝트의 Authentication → URL Configuration → Redirect URLs에 `mycolorlog://auth/reset-password`를 추가한다. 개발·베타 앱은 각각 `mycolorlog-dev://auth/reset-password`, `mycolorlog-preview://auth/reset-password`를 사용하며 해당 서버에 별도로 허용한다. 앱은 `app.config.ts`로 결정된 네이티브 scheme을 우선하고, Expo 설정이 없는 도구에서만 `EXPO_PUBLIC_APP_SCHEME`을 fallback으로 사용한다. 커스텀 scheme을 바꾸면 네이티브 앱도 다시 빌드한다. [베타 빌드 안내](beta-builds.md)를 참고한다.
 2. Authentication의 이메일 전송에 실제 사용 가능한 SMTP를 설정하고 발신 도메인을 확인한다. Supabase 기본 발송 서비스의 수신자 제한·전송 제한 때문에 일반 사용자에게 메일이 전달되지 않을 수 있다.
 3. Reset Password 이메일 템플릿은 기본 `{{ .ConfirmationURL }}` 링크를 유지한다. 이 링크를 Supabase가 검증한 후 허용된 앱 주소로 돌려보낸다. 발송 업체의 링크 추적 기능은 인증 링크를 변형하지 않도록 끈다.
 4. 테스트 계정으로 메일 수신, 링크 열기, 비밀번호 변경, 새 비밀번호 로그인을 확인한다. 이메일 확인(Confirm email)을 끄더라도 비밀번호 복구에는 이메일 발송이 필요하다.
