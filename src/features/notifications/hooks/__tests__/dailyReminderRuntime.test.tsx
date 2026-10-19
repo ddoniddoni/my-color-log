@@ -9,6 +9,9 @@ import { getDailyEntry } from '@/src/features/entries/api/entryRepository';
 
 let mockLanguage = 'ko';
 const day = '2026-10-19';
+jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: {
+  getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn().mockResolvedValue(undefined), removeItem: jest.fn().mockResolvedValue(undefined),
+} }));
 jest.mock('@/src/lib/localization/LanguageProvider', () => ({ useAppLanguage: () => ({ language: mockLanguage, isLoading: false }) }));
 jest.mock('@/src/lib/localization/deviceTimeZone', () => ({ useDeviceTimeZone: () => 'Asia/Seoul' }));
 jest.mock('@/src/features/missions/hooks/useTimeZoneDateKey', () => ({ useTimeZoneDateKey: () => '2026-10-19' }));

@@ -9,7 +9,7 @@ export type NinePhotoMosaicPhoto = {
   accessibilityLabel?: string;
   id: string;
   position: number;
-  uri: string;
+  uri: string | null;
   capturedAt: string;
   status?: 'pending' | 'synced' | 'syncing' | 'failed';
 };
@@ -49,7 +49,9 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
 
             const content = (
               <>
-                <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.uri }} style={styles.photoImage} />
+                {photo.uri
+                  ? <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.uri }} style={styles.photoImage} />
+                  : <View style={styles.unavailablePhoto}><AppText variant="caption" color="secondary">연결 후 사진을 볼 수 있어요</AppText></View>}
                 {photo.status && photo.status !== 'synced' ? <View style={[
                   styles.photoStatus,
                   { borderColor: theme.colors.surface },
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   photoCardEmpty: { alignItems: 'center', borderStyle: 'dashed', justifyContent: 'center' },
   emptyAddMark: { fontSize: 28, fontWeight: '300', lineHeight: 32 },
   photoImage: { height: '100%', width: '100%' },
+  unavailablePhoto: { flex: 1, justifyContent: 'center', padding: spacing[2] },
   photoStatus: { alignItems: 'center', borderRadius: 9, borderWidth: 1, height: 18, justifyContent: 'center', left: 5, position: 'absolute', top: 5, width: 18 },
   photoStatusSyncing: {},
   photoStatusPending: {},

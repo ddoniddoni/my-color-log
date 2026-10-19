@@ -5,6 +5,7 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export function useUserPhotoQueue(userId: string | null) {
   return useQuery({
+    networkMode: 'always',
     enabled: userId !== null,
     queryKey: queryKeys.photoQueue(userId ?? 'signed-out'),
     queryFn: () => {

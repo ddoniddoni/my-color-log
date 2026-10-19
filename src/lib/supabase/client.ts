@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { getPublicEnv } from '@/src/lib/env/publicEnv';
 import { secureStorage } from '@/src/lib/supabase/storage';
+import { getAuthStorageKey } from '@/src/lib/supabase/offlineSession';
 
 const env = getPublicEnv();
 
@@ -15,7 +16,7 @@ const supabaseGlobal = globalThis as SupabaseGlobal;
 
 function createSupabaseClient(): SupabaseClient {
   return createClient(env.supabaseUrl, env.supabasePublishableKey, {
-    auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+    auth: { storage: secureStorage, storageKey: getAuthStorageKey(), autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
   });
 }
 

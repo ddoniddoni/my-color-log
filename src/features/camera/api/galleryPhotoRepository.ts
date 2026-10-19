@@ -83,6 +83,7 @@ async function savePickedAsset(asset: ImagePicker.ImagePickerAsset | undefined, 
     sourceUri: asset.uri,
     sourceWidth: asset.width,
     userId: context.userId,
+    reviewColor: { hex: context.colorHex, nameEn: context.colorNameEn },
   });
 }
 

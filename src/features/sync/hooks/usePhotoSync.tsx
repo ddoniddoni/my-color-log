@@ -12,7 +12,8 @@ import {
 } from 'react';
 
 import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoRepository';
-import { removeEntryPhotoObject, syncPendingPhoto } from '@/src/features/entries/api/entryRepository';
+import { deleteMyEntryPhotoRecord, removeEntryPhotoObject, syncPendingPhoto } from '@/src/features/entries/api/entryRepository';
+import { type DailyEntry } from '@/src/features/entries/model/dailyEntry';
 import {
   getNextCancelledPhoto,
   getNextPendingUpload,
@@ -26,6 +27,7 @@ import {
   markPendingPhotoSynced,
   removePendingPhoto,
   updatePendingPhoto,
+  PHOTO_SYNC_MUTATION_SCOPE,
 } from '@/src/features/sync/queue/photoQueue';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
@@ -68,12 +70,14 @@ export function PhotoSyncProvider({ children, userId }: PropsWithChildren<{ user
   }, [queryClient]);
 
   const operationMutation = useMutation({
+    scope: PHOTO_SYNC_MUTATION_SCOPE,
     mutationFn: async (operation: PhotoSyncOperation): Promise<void> => {
       const { photo } = operation;
       if (operation.kind === 'cleanup') {
-        if (photo.lastErrorCode === 'entry_photo_storage_delete_failed') {
-          await removeEntryPhotoObject(photo.storagePath);
-        }
+        // The queued operation may have waited behind a rejected deletion.
+        if ((await getQueuedPhoto(photo.id))?.status !== 'cancelled') return;
+        const storagePath = await deleteMyEntryPhotoRecord(photo.id);
+        await removeEntryPhotoObject(storagePath ?? photo.storagePath);
         await removePendingPhoto(photo.id);
         await removeLocalPhotoFile(photo.localUri);
         return;
@@ -87,7 +91,18 @@ export function PhotoSyncProvider({ children, userId }: PropsWithChildren<{ user
       await updatePendingPhoto(photo.id, { status: 'uploading', lastErrorCode: null });
       try {
         const result = await syncPendingPhoto(latestPhoto);
-        if (!result.wasCancelled) await markPendingPhotoSynced(photo.id, result.entryId);
+        if (!result.wasCancelled) {
+          const serverPhotos = result.photos;
+          await queryClient.cancelQueries({ queryKey: queryKeys.dailyEntry(photo.userId, photo.dateKey) });
+          queryClient.setQueryData<DailyEntry | null>(queryKeys.dailyEntry(photo.userId, photo.dateKey), (current) => ({
+            id: result.entryId, userId: photo.userId, missionId: photo.missionId, dateKey: photo.dateKey,
+            note: current?.note ?? null,
+            photos: serverPhotos.map((item) => ({ ...item,
+              signedUrl: current?.photos.find((cached) => cached.id === item.id)?.signedUrl ?? null,
+            })),
+          }));
+          await markPendingPhotoSynced(photo.id, result.entryId);
+        }
       } catch (error) {
         const failedPhoto = await getQueuedPhoto(photo.id);
         if (!failedPhoto || failedPhoto.status === 'cancelled') return;

@@ -7,6 +7,7 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 
 export function useDayPhotoQueue(userId: string | null, dateKey: string) {
   const query = useQuery({
+    networkMode: 'always',
     enabled: userId !== null,
     queryKey: queryKeys.pendingPhotos(userId ?? 'signed-out', dateKey),
     queryFn: () => {

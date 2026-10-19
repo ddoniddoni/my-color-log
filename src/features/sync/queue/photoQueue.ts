@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { comparePhotosForSync, type PendingPhoto, parsePendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
 const PHOTO_QUEUE_STORAGE_KEY = '@mycolorlog/photo-upload-queue/v1';
+// Upload, cleanup and user deletion share one lane within an account's client.
+export const PHOTO_SYNC_MUTATION_SCOPE = { id: 'photo-sync' } as const;
 
 let writeChain: Promise<void> = Promise.resolve();
 
@@ -29,7 +31,7 @@ export async function getDayPhotoQueue(userId: string, dateKey: string): Promise
 export async function getUserPhotoQueue(userId: string): Promise<PendingPhoto[]> {
   const queue = await getPhotoQueue();
   return queue
-    .filter((photo) => photo.userId === userId && photo.status !== 'local_saved' && photo.status !== 'synced')
+    .filter((photo) => photo.userId === userId && photo.status !== 'synced')
     .sort(comparePhotosForSync);
 }
 
@@ -76,6 +78,26 @@ export function updatePendingPhotoPositions(updates: readonly { photoId: string;
     const position = positionByPhotoId.get(photo.id);
     return position ? { ...photo, position } : photo;
   }));
+}
+
+export async function confirmReviewPhoto(photoId: string, caption: string | null, occupiedPositions: readonly number[]): Promise<PendingPhoto> {
+  let confirmed: PendingPhoto | undefined;
+  await mutateQueue((queue) => {
+    const photo = queue.find((item) => item.id === photoId);
+    if (!photo || photo.status !== 'local_saved') throw new Error('photo_review_not_available');
+    const occupied = new Set(occupiedPositions);
+    for (const item of queue) {
+      if (item.userId === photo.userId && item.dateKey === photo.dateKey
+        && item.status !== 'local_saved' && item.status !== 'cancelled' && item.status !== 'synced') occupied.add(item.position);
+    }
+    const position = Array.from({ length: 9 }, (_, index) => index + 1).find((slot) => !occupied.has(slot));
+    if (!position) throw new Error('entry_photo_limit_reached');
+    const nextPhoto: PendingPhoto = { ...photo, caption, position, status: 'pending' };
+    confirmed = nextPhoto;
+    return queue.map((item) => item.id === photoId ? nextPhoto : item);
+  });
+  if (!confirmed) throw new Error('photo_review_not_available');
+  return confirmed;
 }
 
 function mutateQueue(update: (queue: PendingPhoto[]) => PendingPhoto[]): Promise<void> {

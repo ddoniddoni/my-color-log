@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoRepository';
 import { deleteMyEntryPhotoRecord, removeEntryPhotoObject, reorderMyEntryPhotos } from '@/src/features/entries/api/entryRepository';
 import { getPhotoMoveUpdates, type PhotoMoveDirection, type PhotoPositionUpdate } from '@/src/features/entries/model/photoManagement';
 import { type DailyEntry } from '@/src/features/entries/model/dailyEntry';
+import { removeEntryPhoto } from '@/src/features/entries/model/removeEntryPhoto';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
-import { cancelPendingPhoto, removePendingPhoto, restorePendingPhoto, updatePendingPhoto, updatePendingPhotoPositions } from '@/src/features/sync/queue/photoQueue';
+import { cancelPendingPhoto, restorePendingPhoto, updatePendingPhoto, updatePendingPhotoPositions, PHOTO_SYNC_MUTATION_SCOPE } from '@/src/features/sync/queue/photoQueue';
 import { queryKeys } from '@/src/lib/query/queryKeys';
 
 type UseTodayPhotoActionsInput = {
@@ -29,6 +29,7 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoQueue(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingPhotos(userId, dateKey) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.diaryMonth(userId, dateKey.slice(0, 7)) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoards(userId, dateKey) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistories(userId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.roomHistoryBoards(userId) }),
@@ -36,6 +37,7 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
   };
 
   const deleteMutation = useMutation({
+    scope: PHOTO_SYNC_MUTATION_SCOPE,
     mutationFn: async (photo: TodayPhoto): Promise<DeletePhotoResult> => {
       const queuedPhoto = queuedPhotos.find((item) => item.id === photo.id) ?? null;
       if (queuedPhoto && userId) {
@@ -65,6 +67,10 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
       }
 
       const storagePath = deletedStoragePath ?? photo.storagePath ?? queuedPhoto?.storagePath ?? null;
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: queryKeys.dailyEntry(userId, dateKey) });
+        queryClient.setQueryData<DailyEntry | null>(queryKeys.dailyEntry(userId, dateKey), (current) => removeEntryPhoto(current, photo.id));
+      }
       let storageCleanupPending = false;
       if (storagePath) {
         try {
@@ -75,12 +81,9 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
       }
 
       if (queuedPhoto) {
-        if (storageCleanupPending) {
-          await updatePendingPhoto(photo.id, { lastErrorCode: 'entry_photo_storage_delete_failed', status: 'cancelled' });
-        } else {
-          await removePendingPhoto(photo.id);
-        }
-        await removeLocalPhotoFile(queuedPhoto.localUri);
+        // Keep the tombstone until the serialized sync worker has completed
+        // final cleanup; a late upload must still see the cancellation.
+        await updatePendingPhoto(photo.id, { lastErrorCode: storageCleanupPending ? 'entry_photo_storage_delete_failed' : null, status: 'cancelled' });
       }
 
       await invalidatePhotoViews();
@@ -89,6 +92,7 @@ export function useTodayPhotoActions({ dateKey, entry, queuedPhotos, userId }: U
   });
 
   const moveMutation = useMutation({
+    scope: PHOTO_SYNC_MUTATION_SCOPE,
     mutationFn: async ({ direction, photoId, photos }: { direction: PhotoMoveDirection; photoId: string; photos: TodayPhoto[] }): Promise<void> => {
       const updates = getPhotoMoveUpdates(photos, photoId, direction);
       if (!updates) return;

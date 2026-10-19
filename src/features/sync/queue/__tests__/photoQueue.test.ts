@@ -1,6 +1,8 @@
 import {
   addPendingPhoto,
   cancelPendingPhoto,
+  confirmReviewPhoto,
+  getQueuedPhoto,
   getUserPhotoQueue,
   removeUserPhotoQueue,
 } from '@/src/features/sync/queue/photoQueue';
@@ -38,6 +40,35 @@ const pendingPhoto: PendingPhoto = {
 };
 
 describe('persisted photo upload queue', () => {
+  it('restores unconfirmed drafts with their color and caption without auto-uploading', async () => {
+    const draft = { ...pendingPhoto, status: 'local_saved' as const, caption: 'unfinished caption', reviewColor: { hex: '#123456', nameEn: 'Blue' } };
+    await addPendingPhoto(draft);
+    expect(await getUserPhotoQueue(draft.userId)).toEqual([draft]);
+  });
+
+  it('atomically reserves separate free slots when two recovered drafts are confirmed', async () => {
+    await addPendingPhoto({ ...pendingPhoto, id: 'draft-a', status: 'local_saved' });
+    await addPendingPhoto({ ...pendingPhoto, id: 'draft-b', status: 'local_saved' });
+    const confirmed = await Promise.all([
+      confirmReviewPhoto('draft-a', null, [1]),
+      confirmReviewPhoto('draft-b', null, [1]),
+    ]);
+    expect(confirmed.map((photo) => photo.position)).toEqual([2, 3]);
+    expect((await getQueuedPhoto('draft-b'))?.status).toBe('pending');
+  });
+
+  it('keeps a full-day draft and its local file URI for later recovery', async () => {
+    const draft = { ...pendingPhoto, status: 'local_saved' as const };
+    await addPendingPhoto(draft);
+    await expect(confirmReviewPhoto(draft.id, null, [1, 2, 3, 4, 5, 6, 7, 8, 9])).rejects.toThrow('entry_photo_limit_reached');
+    expect(await getQueuedPhoto(draft.id)).toEqual(draft);
+  });
+
+  it('rejects confirmation after a draft has been cancelled', async () => {
+    await addPendingPhoto({ ...pendingPhoto, status: 'local_saved' });
+    await cancelPendingPhoto(pendingPhoto.id);
+    await expect(confirmReviewPhoto(pendingPhoto.id, null, [])).rejects.toThrow('photo_review_not_available');
+  });
   afterEach(async () => {
     await removeUserPhotoQueue(pendingPhoto.userId);
   });
