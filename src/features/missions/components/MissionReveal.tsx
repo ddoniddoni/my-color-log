@@ -1,211 +1,197 @@
-import {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque';
 import { useFonts } from 'expo-font';
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useRef } from 'react';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, interpolate, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
-import Svg, { Circle, Defs, Path, Pattern, Rect, Text as SvgText } from 'react-native-svg';
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 
 import { AppText } from '@/src/components/ui/AppText';
+import { Button } from '@/src/components/ui/Button';
 import { useAppTheme } from '@/src/design/ThemeProvider';
-import { type ThemeColors } from '@/src/design/tokens';
-import { type DailyMission, type MissionRevealColor } from '@/src/features/missions/model/dailyMission';
-import { getRevealTargetRotation, MISSION_REVEAL_SLOT_COUNT } from '@/src/features/missions/model/missionRevealWheel';
+import { radius, spacing, type ThemeColors } from '@/src/design/tokens';
+import { useColorRevealAnimation } from '@/src/features/missions/hooks/useColorRevealAnimation';
+import type { DailyMission, MissionRevealColor } from '@/src/features/missions/model/dailyMission';
+import { MISSION_REVEAL_SLOT_COUNT } from '@/src/features/missions/model/missionRevealWheel';
+import { formatDateKey } from '@/src/lib/localization/dateFormat';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
 type MissionRevealProps = {
   mission: DailyMission;
   palette: readonly MissionRevealColor[];
   reduceMotion: boolean;
+  isNewDay: boolean;
+  onStart: () => void;
   onRevealed: () => Promise<void>;
+  onContinue: () => void;
 };
 
-const INITIAL_WHEEL_ROTATION = 165;
-
-export function MissionReveal({ mission, palette, reduceMotion, onRevealed }: MissionRevealProps) {
-  const theme = useAppTheme();
-  const styles = useMissionRevealStyles();
-  const { language, t } = useAppLanguage();
-  const [fontsLoaded] = useFonts({
-    BricolageGrotesque_400Regular,
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-  });
-  const [isRevealing, setIsRevealing] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+export function MissionReveal({ mission, palette, reduceMotion, isNewDay, onStart, onRevealed, onContinue }: MissionRevealProps) {
+  const { colors } = useAppTheme();
+  const { language, t, format } = useAppLanguage();
+  const [fontsLoaded] = useFonts({ BricolageGrotesque_700Bold });
+  const { width, height, fontScale } = useWindowDimensions();
+  const contentRef = useRef<ScrollView>(null);
+  const compact = height < 700;
   const insets = useSafeAreaInsets();
-  const rotation = useSharedValue(INITIAL_WHEEL_ROTATION);
-  const resultProgress = useSharedValue(0);
-  const wheelStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotation.value}deg` }] }));
-  const resultStyle = useAnimatedStyle(() => ({ opacity: interpolate(resultProgress.value, [0, 1], [0, 1]), transform: [{ translateY: reduceMotion ? 0 : interpolate(resultProgress.value, [0, 1], [8, 0]) }] }));
-  const displayFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
-  const titleFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const targetIndex = palette.findIndex((color) => color.id === mission.color.id);
+  const reveal = useColorRevealAnimation({ targetIndex, reduceMotion, onStart, onRevealed });
+  const size = Math.max(160, Math.min(width - spacing[6] * 2, compact ? 184 : fontScale > 1.3 ? 232 : 272));
   const colorName = language === 'ko' ? mission.color.nameKo : mission.color.nameEn;
-
-  const finishReveal = useCallback(() => {
-    void onRevealed().catch(() => {
-      resultProgress.set(0);
-      setShowResult(false);
-      setIsRevealing(false);
-    });
-  }, [onRevealed, resultProgress]);
-
-  const showRevealResult = useCallback(() => {
-    setShowResult(true);
-    resultProgress.set(withSequence(
-      withTiming(1, { duration: reduceMotion ? 120 : 220 }),
-      withDelay(reduceMotion ? 240 : 620, withTiming(0, { duration: 1 }, (finished) => {
-        if (finished) runOnJS(finishReveal)();
-      })),
-    ));
-  }, [finishReveal, reduceMotion, resultProgress]);
-
-  const handleReveal = (): void => {
-    if (isRevealing || targetIndex < 0 || palette.length !== MISSION_REVEAL_SLOT_COUNT) return;
-    setIsRevealing(true);
-    setShowResult(false);
-    resultProgress.set(0);
-    if (reduceMotion) {
-      showRevealResult();
-      return;
-    }
-    rotation.value = withTiming(
-      getRevealTargetRotation(targetIndex),
-      { duration: 2_200, easing: Easing.out(Easing.cubic) },
-      (finished) => {
-        if (finished) runOnJS(showRevealResult)();
-        else runOnJS(setIsRevealing)(false);
-      },
-    );
-  };
+  const validPalette = targetIndex >= 0 && palette.length === MISSION_REVEAL_SLOT_COUNT;
 
   return (
-    <View style={styles.page}>
-      <WavyPaper color={theme.colors.border} />
-      <View style={[styles.navBar, { paddingTop: Math.max(insets.top, 16) }]}>
-        <View style={styles.navBrand}><MenuIcon color={theme.colors.ink} /><AppText style={[styles.wordmark, { fontFamily: titleFont }]}>Color Log</AppText></View>
-        <BellIcon color={theme.colors.ink} />
+    <View style={[styles.page, { backgroundColor: colors.canvas }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing[4]) }]}>
+        <AppText localize={false} style={[styles.wordmark, { fontFamily: fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined }]}>Color Log</AppText>
+        <AppText localize={false} color="secondary" variant="caption" style={styles.date}>{formatDateKey(mission.challengeDate, language, 'shortWithWeekday')}</AppText>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.copy}>
-          <AppText style={[styles.title, { fontFamily: displayFont }]}>오늘의 컬러 룰렛</AppText>
-          <View style={styles.markerLine} />
-          <AppText style={[styles.subtitle, { fontFamily: fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined }]}>색을 돌려 오늘의 장면을 만나보세요.</AppText>
+      <ScrollView ref={contentRef} contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => { if (reveal.hasResult) contentRef.current?.scrollToEnd({ animated: !reduceMotion }); }}>
+        <View style={[styles.heading, compact && styles.headingCompact]}>
+          <AppText color="secondary" variant="caption" style={styles.eyebrow}>{isNewDay ? '새로운 하루가 시작됐어요' : '하루에 하나, 나만의 발견'}</AppText>
+          <AppText accessibilityRole="header" variant="display" style={[styles.title, compact && styles.titleCompact]}>{'하루의 시작,\n하나의 색.'}</AppText>
         </View>
 
-        <View accessibilityLabel={language === 'ko' ? `${MISSION_REVEAL_SLOT_COUNT}가지 실제 색상으로 구성된 오늘의 ${colorName} 룰렛` : `Today’s ${colorName} wheel with ${MISSION_REVEAL_SLOT_COUNT} real colors`} accessible={!showResult} style={styles.wheelFrame}>
-          <Animated.View style={[styles.wheel, wheelStyle]}>
-            <WheelArtwork colors={theme.colors} palette={palette} />
-          </Animated.View>
-          <View pointerEvents="none" style={styles.pointer}>
-            <WheelPointer fill={theme.colors.ink} stroke={theme.colors.surface} />
-          </View>
-          {showResult ? <Animated.View accessibilityLabel={language === 'ko' ? `오늘의 색은 ${colorName}` : `Today’s color is ${colorName}`} accessibilityLiveRegion="assertive" accessibilityRole="alert" accessible pointerEvents="none" style={[styles.resultCard, { backgroundColor: mission.color.accentTint }, resultStyle]}>
-            <AppText style={styles.resultEyebrow}>오늘의 색</AppText>
-            <AppText style={styles.resultName}>{colorName}</AppText>
-          </Animated.View> : null}
+        <View
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={reveal.hasResult ? format('오늘의 색은 {colorName}', { colorName }) : t('오늘의 색을 여는 컬러 디스크')}
+          style={[styles.discStage, { height: size, width: size }]}>
+          <ColorDisc colors={colors} mission={mission} palette={palette} progress={reveal.progress} rotation={reveal.rotation} reduceMotion={reduceMotion} />
+          <DiscClock progress={reveal.progress} fontFamily={fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined} />
         </View>
 
-        <Pressable
-          accessibilityLabel={t('오늘의 색 룰렛 돌리기')}
-          accessibilityRole="button"
-          accessibilityState={{ busy: isRevealing, disabled: isRevealing }}
-          disabled={isRevealing}
-          onPress={handleReveal}
-          style={({ pressed }) => [styles.spinButton, isRevealing && styles.spinButtonDisabled, pressed && !isRevealing && styles.spinButtonPressed]}
-        >
-          <AppText style={[styles.spinButtonText, { fontFamily: titleFont }]}>{isRevealing ? '색을 고르는 중…' : '오늘의 색 돌리기'}</AppText>
-        </Pressable>
-      </View>
+        <RevealDescription mission={mission} reveal={reveal} reduceMotion={reduceMotion} />
+      </ScrollView>
+
+      <RevealFooter reveal={reveal} validPalette={validPalette} onContinue={onContinue} />
     </View>
   );
 }
 
-function WavyPaper({ color }: { color: string }) {
+function RevealDescription({ mission, reveal, reduceMotion }: {
+  mission: DailyMission;
+  reveal: Pick<ReturnType<typeof useColorRevealAnimation>, 'phase' | 'hasResult' | 'progress'>;
+  reduceMotion: boolean;
+}) {
+  const { language } = useAppLanguage();
+  const { progress } = reveal;
+  const style = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: reduceMotion ? 0 : 10 * (1 - progress.value) }] }));
   return (
-    <Svg pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Defs>
-        <Pattern height={40} id="roulette-waves" patternUnits="userSpaceOnUse" width={40}>
-          <Path d="M0 20c5 0 5-5 10-5s5 5 10 5 5-5 10-5 5 5 10 5" fill="none" stroke={color} strokeWidth={1} />
-        </Pattern>
-      </Defs>
-      <Rect fill="url(#roulette-waves)" height="100%" width="100%" />
-    </Svg>
+    <View style={styles.description}>
+      {reveal.hasResult ? (
+        <Animated.View accessibilityLiveRegion="polite" style={[styles.result, style]}>
+          <AppText localize={false} variant="title1" style={styles.colorName}>{language === 'ko' ? mission.color.nameKo : mission.color.nameEn}</AppText>
+          {language === 'ko' ? <AppText localize={false} color="secondary" variant="caption" style={styles.englishName}>{mission.color.nameEn}</AppText> : null}
+          <AppText localize={false} color="secondary" style={styles.prompt}>{language === 'ko' ? mission.promptKo : `Find a scene touched by ${mission.color.nameEn}.`}</AppText>
+        </Animated.View>
+      ) : (
+        <View style={styles.result}>
+          <AppText style={styles.prompt}>{reveal.phase === 'turning' ? '오늘의 장면을 물들일 색이 열려요.' : '오늘은 어떤 색을 만나게 될까요?'}</AppText>
+          <AppText color="secondary" variant="caption" style={styles.prompt}>매일 자정, 새로운 색이 열려요.</AppText>
+        </View>
+      )}
+    </View>
   );
 }
 
-function WheelArtwork({ colors, palette }: { colors: ThemeColors; palette: readonly MissionRevealColor[] }) {
-  return (
-    <Svg height="100%" viewBox="0 0 100 100" width="100%">
-      <Circle cx={50} cy={50} fill={colors.surface} r={49.5} />
-      {palette.map((color, index) => <Path d={createWheelSectorPath(index, palette.length)} fill={color.accent} key={color.id} stroke={colors.ink} strokeWidth={0.48} />)}
-      <Circle cx={50} cy={50} fill={colors.surface} r={13} stroke={colors.ink} strokeWidth={0.8} />
-      <SvgText fill={colors.ink} fontFamily="Bricolage Grotesque" fontSize={5} fontWeight="700" letterSpacing={0.35} textAnchor="middle" x={50} y={49}>COLOR</SvgText>
-      <SvgText fill={colors.ink} fontFamily="monospace" fontSize={4.3} letterSpacing={0.8} textAnchor="middle" x={50} y={54}>LOG</SvgText>
-    </Svg>
-  );
-}
-
-function WheelPointer({ fill, stroke }: { fill: string; stroke: string }) {
-  return (
-    <Svg height={36} viewBox="0 0 36 36" width={36}>
-      <Path d="M18 31 4.5 5h27L18 31Z" fill={fill} stroke={stroke} strokeLinejoin="round" strokeWidth={1.5} />
-    </Svg>
-  );
-}
-
-function createWheelSectorPath(index: number, total: number): string {
-  const startAngle = -90 + ((360 / total) * index);
-  const endAngle = -90 + ((360 / total) * (index + 1));
-  const start = getWheelPoint(startAngle);
-  const end = getWheelPoint(endAngle);
-  return `M 50 50 L ${start.x} ${start.y} A 50 50 0 0 1 ${end.x} ${end.y} Z`;
-}
-
-function getWheelPoint(angle: number): { x: number; y: number } {
-  const radians = (angle * Math.PI) / 180;
-  return { x: Number((50 + (50 * Math.cos(radians))).toFixed(3)), y: Number((50 + (50 * Math.sin(radians))).toFixed(3)) };
-}
-
-function MenuIcon({ color }: { color: string }) {
-  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="M4 8h16M4 12h11M4 16h16" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.8} /></Svg>;
-}
-
-function BellIcon({ color }: { color: string }) {
-  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="M18 10a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 11h4" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} /></Svg>;
-}
-
-function useMissionRevealStyles() {
+function RevealFooter({ reveal, validPalette, onContinue }: {
+  reveal: Pick<ReturnType<typeof useColorRevealAnimation>, 'phase' | 'hasResult' | 'begin' | 'retry'>;
+  validPalette: boolean;
+  onContinue: () => void;
+}) {
   const { colors } = useAppTheme();
-  return useMemo(() => createStyles(colors), [colors]);
+  const busy = reveal.phase === 'turning' || reveal.phase === 'saving';
+  const label = reveal.phase === 'error' ? '다시 저장하기'
+    : reveal.hasResult ? '이 색으로 기록하기'
+      : reveal.phase === 'turning' ? '오늘의 색이 열리고 있어요' : '오늘의 색 열기';
+  return (
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      {reveal.phase === 'error' ? <AppText accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>공개 상태를 저장하지 못했어요. 같은 색으로 다시 저장해 주세요.</AppText> : null}
+      {!validPalette ? <AppText accessibilityRole="alert" color="secondary" style={styles.error}>색 정보를 다시 불러와 주세요.</AppText> : null}
+      <Button accessibilityState={{ busy }} disabled={busy || !validPalette} label={label}
+        onPress={reveal.phase === 'ready' ? onContinue : reveal.phase === 'error' ? () => void reveal.retry() : reveal.begin}
+        style={styles.action} />
+    </View>
+  );
 }
 
-function createStyles(colors: ThemeColors) {
-  return StyleSheet.create({
-  page: { backgroundColor: colors.canvas, flex: 1 },
-  navBar: { alignItems: 'center', backgroundColor: colors.canvas, borderBottomColor: colors.ink, borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 56, paddingBottom: 13, paddingHorizontal: 16 },
-  navBrand: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  wordmark: { color: colors.ink, fontSize: 17, fontWeight: '700', letterSpacing: -0.5, lineHeight: 21 },
-  content: { alignItems: 'center', flex: 1, justifyContent: 'flex-start', paddingBottom: 26, paddingHorizontal: 24, paddingTop: 84 },
-  copy: { alignItems: 'center', marginBottom: 28, width: '100%' },
-  title: { color: colors.ink, fontSize: 40, fontWeight: '800', letterSpacing: -1.45, lineHeight: 41, maxWidth: 320, textAlign: 'center' },
-  markerLine: { backgroundColor: colors.ink, borderRadius: 4, height: 2, marginBottom: 5, marginTop: 7, transform: [{ rotate: '-1deg' }], width: 160 },
-  subtitle: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, textAlign: 'center' },
-  wheelFrame: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 4, borderWidth: 2, height: 288, justifyContent: 'center', overflow: 'hidden', position: 'relative', width: 288 },
-  wheel: { borderColor: colors.ink, borderRadius: 136, borderWidth: 1.5, height: 272, overflow: 'hidden', width: 272 },
-  pointer: { alignItems: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
-  resultCard: { alignItems: 'center', borderColor: colors.black, borderWidth: 1.5, bottom: 24, gap: 2, left: 24, paddingHorizontal: 14, paddingVertical: 9, position: 'absolute', right: 24 },
-  resultEyebrow: { color: colors.black, fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.8, lineHeight: 11 },
-  resultName: { color: colors.black, fontSize: 20, fontWeight: '800', letterSpacing: -0.5, lineHeight: 25 },
-  spinButton: { alignItems: 'center', backgroundColor: colors.ink, boxShadow: `6px 6px 0px ${colors.black}`, justifyContent: 'center', marginTop: 34, minHeight: 72, paddingHorizontal: 32, width: '100%' },
-  spinButtonPressed: { boxShadow: `0px 0px 0px ${colors.black}`, transform: [{ translateX: 6 }, { translateY: 6 }] },
-  spinButtonDisabled: { opacity: 0.55 },
-  spinButtonText: { color: colors.surface, fontSize: 17, fontWeight: '700', lineHeight: 22, textAlign: 'center' },
-  });
+function ColorDisc({ colors, mission, palette, progress, rotation, reduceMotion }: {
+  colors: ThemeColors; mission: DailyMission; palette: readonly MissionRevealColor[];
+  progress: SharedValue<number>; rotation: SharedValue<number>; reduceMotion: boolean;
+}) {
+  const ringStyle = useAnimatedStyle(() => ({ opacity: 0.8 - progress.value * 0.65, transform: [{ rotate: `${rotation.value}deg` }] }));
+  const fillStyle = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ scale: reduceMotion ? 1 : 0.9 + progress.value * 0.1 }] }));
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden>
+      <Svg height="100%" width="100%" viewBox="0 0 300 300">
+        <Circle cx={150} cy={150} r={148} stroke={colors.border} strokeWidth={0.8} fill="none" />
+        <Circle cx={150} cy={150} r={112} fill={colors.surface} stroke={colors.border} strokeWidth={0.8} />
+      </Svg>
+      <Animated.View style={[StyleSheet.absoluteFill, ringStyle]}>
+        <Svg height="100%" width="100%" viewBox="0 0 300 300">
+          {palette.map((color, index) => <Path key={color.id} d={ringArc(index, palette.length)} fill="none" stroke={color.accent} strokeLinecap="round" strokeWidth={7} />)}
+        </Svg>
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, fillStyle]}>
+        <Svg height="100%" width="100%" viewBox="0 0 300 300">
+          <Defs>
+            <RadialGradient id="color-light" cx="30%" cy="22%" rx="85%" ry="85%">
+              <Stop offset="0" stopColor={colors.white} stopOpacity={0.24} />
+              <Stop offset="1" stopColor={colors.white} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={150} cy={150} r={112} fill={mission.color.accent} />
+          <Circle cx={150} cy={150} r={112} fill="url(#color-light)" />
+          <Circle cx={150} cy={150} r={104} fill="none" stroke={mission.color.onAccent} strokeWidth={0.6} strokeOpacity={0.25} />
+        </Svg>
+      </Animated.View>
+      <View style={[styles.indexMark, { backgroundColor: colors.ink }]} />
+    </View>
+  );
 }
+
+function DiscClock({ progress, fontFamily }: { progress: SharedValue<number>; fontFamily: string | undefined }) {
+  const style = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
+  return (
+    <Animated.View pointerEvents="none" style={[styles.discClock, style]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden>
+      <AppText localize={false} maxFontSizeMultiplier={1.3} style={[styles.midnight, { fontFamily }]}>00:00</AppText>
+      <AppText color="secondary" variant="caption">새로운 색의 시작</AppText>
+    </Animated.View>
+  );
+}
+
+function ringArc(index: number, count: number): string {
+  const point = (degrees: number) => `${150 + 130 * Math.cos(degrees * Math.PI / 180)} ${150 + 130 * Math.sin(degrees * Math.PI / 180)}`;
+  const start = -90 + index * 360 / count + 3;
+  const end = -90 + (index + 1) * 360 / count - 3;
+  return `M ${point(start)} A 130 130 0 0 1 ${point(end)}`;
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4], paddingHorizontal: spacing[6], paddingBottom: spacing[4], flexWrap: 'wrap' },
+  wordmark: { fontSize: 20, lineHeight: 26, fontWeight: '700', letterSpacing: -0.7 },
+  date: { fontVariant: ['tabular-nums'] },
+  content: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[6], paddingTop: spacing[5], paddingBottom: spacing[6] },
+  contentCompact: { paddingTop: spacing[3], paddingBottom: spacing[4] },
+  heading: { alignItems: 'center', gap: spacing[3], marginBottom: spacing[8] },
+  headingCompact: { gap: spacing[2], marginBottom: spacing[5] },
+  eyebrow: { textAlign: 'center', letterSpacing: 0.3 },
+  title: { textAlign: 'center', letterSpacing: -1.2 },
+  titleCompact: { fontSize: 28, lineHeight: 36 },
+  discStage: { alignItems: 'center', justifyContent: 'center' },
+  discClock: { alignItems: 'center', gap: spacing[1], maxWidth: '70%' },
+  midnight: { fontSize: 46, lineHeight: 56, fontWeight: '700', letterSpacing: -2, fontVariant: ['tabular-nums'] },
+  indexMark: { position: 'absolute', top: 2, left: '50%', width: 2, height: 10, borderRadius: radius.pill, marginLeft: -1 },
+  description: { width: '100%', maxWidth: 360, paddingTop: spacing[6] },
+  result: { alignItems: 'center', gap: spacing[2] },
+  colorName: { textAlign: 'center', letterSpacing: -0.8 },
+  englishName: { letterSpacing: 1 },
+  prompt: { textAlign: 'center' },
+  footer: { paddingHorizontal: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[5], borderTopWidth: StyleSheet.hairlineWidth },
+  action: { minHeight: 58, borderRadius: radius.pill, paddingVertical: spacing[3] },
+  error: { textAlign: 'center', marginBottom: spacing[3] },
+});

@@ -19,7 +19,8 @@ describe('daily mission mapping', () => {
 
 describe('mission reveal state', () => {
   it('uses a versioned, date-scoped local storage key', () => {
-    expect(getMissionRevealStorageKey('2026-07-16')).toBe('@mycolorlog/mission-reveal/v1/2026-07-16');
+    expect(getMissionRevealStorageKey('owner', '2026-07-16')).toBe('@mycolorlog/mission-reveal/v2/owner/2026-07-16');
+    expect(getMissionRevealStorageKey('friend', '2026-07-16')).not.toBe(getMissionRevealStorageKey('owner', '2026-07-16'));
   });
 
   it('formats the KST countdown readably', () => {
@@ -41,8 +42,8 @@ describe('mission reveal state', () => {
   });
 
   it('lands a selected wheel segment under the pointer after full turns', () => {
-    expect(getRevealTargetRotation(0)).toBe(1_782);
-    expect(getRevealTargetRotation(9)).toBe(1_458);
+    expect(getRevealTargetRotation(0)).toBe(702);
+    expect(getRevealTargetRotation(9)).toBe(378);
     expect(() => getRevealTargetRotation(10)).toThrow('invalid_reveal_wheel_slot');
   });
 });
