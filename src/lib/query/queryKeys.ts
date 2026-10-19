@@ -16,6 +16,6 @@ export const queryKeys = {
   photoQueue: (userId: string) => ['photoQueue', userId] as const,
   pendingPhotos: (userId: string, dateKey: string) => ['pendingPhotos', userId, dateKey] as const,
   queuedPhoto: (photoId: string) => ['queuedPhoto', photoId] as const,
-  missionReveal: (dateKey: string) => ['missionReveal', dateKey] as const,
+  missionReveal: (userId: string, dateKey: string) => ['missionReveal', userId, dateKey] as const,
   missionRevealPalette: (dateKey: string) => ['missionRevealPalette', dateKey] as const,
 };

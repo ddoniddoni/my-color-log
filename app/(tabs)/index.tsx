@@ -16,8 +16,7 @@ import { TodayPhotoManagerModal } from '@/src/features/entries/components/TodayP
 import { canMovePhoto } from '@/src/features/entries/model/photoManagement';
 import { getNextPhotoPosition, mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
 import { useDailyMission } from '@/src/features/missions/hooks/useDailyMission';
-import { useTimeZoneCountdown } from '@/src/features/missions/hooks/useTimeZoneCountdown';
-import { useTimeZoneDateKey } from '@/src/features/missions/hooks/useTimeZoneDateKey';
+import { useDailyColorClock } from '@/src/features/missions/hooks/useDailyColorClock';
 import { useMissionReveal } from '@/src/features/missions/hooks/useMissionReveal';
 import { useMissionRevealPalette } from '@/src/features/missions/hooks/useMissionRevealPalette';
 import { useReducedMotion } from '@/src/features/missions/hooks/useReducedMotion';
@@ -29,33 +28,35 @@ import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
 
 export default function TodayScreen() {
   const timeZone = useDeviceTimeZone();
-  const dateKey = useTimeZoneDateKey(timeZone);
+  const { dateKey, isNewDay, millisecondsUntilMidnight } = useDailyColorClock(timeZone);
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
   const missionQuery = useDailyMission(dateKey);
   const entryQuery = useDailyEntry(userId, dateKey);
   const queueQuery = useDayPhotoQueue(userId, dateKey);
-  const reveal = useMissionReveal(dateKey);
-  const revealPaletteQuery = useMissionRevealPalette(dateKey, !reveal.isRevealed);
+  const reveal = useMissionReveal(userId, dateKey);
+  const revealPaletteQuery = useMissionRevealPalette(dateKey, userId !== null && reveal.isPresenting);
   const reduceMotion = useReducedMotion();
-  const millisecondsUntilMidnight = useTimeZoneCountdown(timeZone);
   const photoSync = usePhotoSync(dateKey);
   const networkStatus = useNetworkStatus();
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();
 
-  if (sessionState.status === 'loading' || missionQuery.isPending || reveal.isLoading || (!reveal.isRevealed && revealPaletteQuery.isPending)) return <TodayLoadingScreen />;
+  if (sessionState.status === 'loading') return <TodayLoadingScreen isNewDay={isNewDay} />;
   if (sessionState.status === 'error' || !userId) return <TodayMissionError onRetry={sessionState.retry} />;
-  if (entryQuery.isPending || queueQuery.isPending) return <TodayLoadingScreen />;
-  if (entryQuery.isError || queueQuery.isError) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
-  if (missionQuery.isError || (!reveal.isRevealed && revealPaletteQuery.isError) || !missionQuery.data) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+  if (missionQuery.isPending || reveal.isLoading || (reveal.isPresenting && revealPaletteQuery.isPending)) return <TodayLoadingScreen isNewDay={isNewDay} />;
+  if (reveal.isError) return <TodayMissionError onRetry={() => void reveal.retry()} />;
+  if (missionQuery.isError || (reveal.isPresenting && revealPaletteQuery.isError) || !missionQuery.data) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
 
   const mission = missionQuery.data;
-  if (!reveal.isRevealed) {
-    if (!revealPaletteQuery.data) return <TodayMissionError onRetry={() => void revealPaletteQuery.refetch()} />;
-    return <MissionReveal mission={mission} palette={revealPaletteQuery.data} reduceMotion={reduceMotion} onRevealed={reveal.reveal} />;
+  if (reveal.isPresenting) {
+    if (!revealPaletteQuery.data?.some((color) => color.id === mission.color.id)) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+    return <MissionReveal key={`${userId}:${dateKey}:${mission.id}`} mission={mission} palette={revealPaletteQuery.data} reduceMotion={reduceMotion} isNewDay={isNewDay} onStart={reveal.begin} onRevealed={reveal.reveal} onContinue={reveal.dismiss} />;
   }
+
+  if (entryQuery.isPending || queueQuery.isPending) return <TodayLoadingScreen />;
+  if (entryQuery.isError || queueQuery.isError) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
 
   const photos = mergeTodayPhotos(entryQuery.data, queueQuery.data ?? []);
   const nextPosition = getNextPhotoPosition(photos);
@@ -112,8 +113,8 @@ export default function TodayScreen() {
   );
 }
 
-function TodayLoadingScreen() {
-  return <Screen><LoadingSkeleton style={styles.headerSkeleton} /><LoadingSkeleton style={styles.heroSkeleton} /><LoadingSkeleton style={styles.bodySkeleton} /></Screen>;
+function TodayLoadingScreen({ isNewDay = false }: { isNewDay?: boolean }) {
+  return <Screen>{isNewDay ? <AppText accessibilityLiveRegion="polite" variant="title2">새로운 하루의 색을 준비하고 있어요</AppText> : null}<LoadingSkeleton style={styles.headerSkeleton} /><LoadingSkeleton style={styles.heroSkeleton} /><LoadingSkeleton style={styles.bodySkeleton} /></Screen>;
 }
 
 function TodayMissionError({ onRetry }: { onRetry: () => void }) {

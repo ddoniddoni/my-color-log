@@ -15,7 +15,7 @@ import { NinePhotoMosaic } from '@/src/components/ui/NinePhotoMosaic';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { type DailyMission } from '@/src/features/missions/model/dailyMission';
-import { formatCountdown } from '@/src/features/missions/model/countdown';
+import { NextColorCountdown } from '@/src/features/missions/components/NextColorCountdown';
 import { getTodayJournalLayout } from '@/src/features/missions/model/todayJournalLayout';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
 import { getPhotoSyncFeedback } from '@/src/features/sync/model/photoSyncFeedback';
@@ -117,7 +117,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
         <View style={[styles.noteSection, { borderBottomColor: theme.colors.ink }, isCompact && styles.noteSectionCompact]}>
           <AppText numberOfLines={isCompact ? 1 : 2} style={[styles.note, { color: theme.colors.ink, fontFamily: bodyFont }, isCompact && styles.noteCompact]}>{missionPrompt}</AppText>
-          <AppText localize={false} style={[styles.countdown, { color: theme.colors.textSecondary, fontFamily: bodyFont }]}>{format('자정까지 {countdown}', { countdown: formatCountdown(millisecondsUntilMidnight) })}</AppText>
+          <NextColorCountdown milliseconds={millisecondsUntilMidnight} />
         </View>
 
         {!isCompact ? <View style={styles.tags}>
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
   noteSectionCompact: { gap: 2, paddingBottom: spacing[2] },
   note: { fontSize: 17, fontStyle: 'italic', lineHeight: 26 },
   noteCompact: { fontSize: 14, lineHeight: 19 },
-  countdown: { fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.4, lineHeight: 14 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5 },
   tagText: { fontFamily: 'monospace', fontSize: 10, lineHeight: 12 },
