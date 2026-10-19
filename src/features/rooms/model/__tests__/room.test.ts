@@ -1,4 +1,4 @@
-import { getInviteExpiryLabel, parseActiveRoomRows, parseRoomInvitePreview, parseRoomListRows, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
+import { getInviteExpiryLabel, parseRoomInvitePreview, parseRoomListRows, validateInviteCode, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomErrorMessage } from '@/src/features/rooms/model/roomErrors';
 import { toRoomError } from '@/src/features/rooms/model/roomRpcError';
 
@@ -31,7 +31,7 @@ describe('room input validation', () => {
 
 describe('room RPC parsers', () => {
   it('groups active room member rows into one room', () => {
-    const room = parseActiveRoomRows([
+    const [room] = parseRoomListRows([
       { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-1', member_nickname: '도니', member_role: 'owner', member_joined_at: '2026-07-17T00:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
       { room_id: 'room-1', room_name: '색수집단', room_emoji: '🎨', room_status: 'active', room_timezone: 'Asia/Seoul', max_members: 6, member_user_id: 'user-2', member_nickname: '친구', member_role: 'member', member_joined_at: '2026-07-17T01:00:00.000Z', invite_code: '012345', invite_expires_at: '2026-07-18T00:00:00.000Z' },
     ]);

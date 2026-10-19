@@ -77,13 +77,6 @@ export function getInviteExpiryLabel(expiresAt: string | null, now: Date = new D
   return `초대 코드가 약 ${remainingHours}시간 뒤 만료돼요.`;
 }
 
-export function parseActiveRoomRows(value: unknown): ActiveRoom | null {
-  const rooms = parseRoomListRows(value);
-  if (rooms.length === 0) return null;
-  if (rooms.length > 1) throw new Error('invalid_active_room_response');
-  return rooms[0] ?? null;
-}
-
 export function parseRoomListRows(value: unknown): ActiveRoom[] {
   if (!Array.isArray(value)) throw new Error('invalid_room_list_response');
 

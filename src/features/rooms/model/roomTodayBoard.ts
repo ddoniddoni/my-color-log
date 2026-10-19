@@ -37,35 +37,11 @@ export type RoomTodayBoard = {
   members: RoomBoardMember[];
 };
 
-export type RoomMemberProgress = {
-  countLabel: string;
-  description: string;
-};
-
 export type RoomPhotoMosaicSlot = {
   id: string;
   position: number;
   photo: RoomBoardPhoto | null;
 };
-
-export function getRoomMemberProgress(photoCount: number, language: 'en' | 'ko' = 'ko'): RoomMemberProgress {
-  if (!Number.isInteger(photoCount) || photoCount < 0 || photoCount > 9) throw new Error('invalid_room_photo_count');
-  if (language === 'en') {
-    if (photoCount === 0) return { countLabel: '0 / 6', description: 'Looking for today’s color' };
-    if (photoCount < 6) return { countLabel: `${photoCount} / 6`, description: 'Collecting one photo at a time' };
-    if (photoCount < 9) return { countLabel: `${photoCount} / 9`, description: 'Six photos complete' };
-    return { countLabel: '9 / 9', description: 'Today’s canvas is full' };
-  }
-  if (photoCount === 0) return { countLabel: '0 / 6', description: '오늘의 색을 찾는 중' };
-  if (photoCount < 6) return { countLabel: `${photoCount} / 6`, description: '오늘을 한 장씩 모으는 중' };
-  if (photoCount < 9) return { countLabel: `${photoCount} / 9`, description: '여섯 장을 완성했어요' };
-  return { countLabel: '9 / 9', description: '오늘의 캔버스가 가득 찼어요' };
-}
-
-export function getLatestRoomBoardPhotos(member: RoomBoardMember, limit: number = 3): RoomBoardPhoto[] {
-  if (!Number.isInteger(limit) || limit < 1) throw new Error('invalid_room_photo_limit');
-  return [...member.photos].sort((left, right) => right.position - left.position).slice(0, limit);
-}
 
 export function getRoomPhotoMosaicSlots(member: RoomBoardMember): RoomPhotoMosaicSlot[] {
   return Array.from({ length: 9 }, (_, index) => {

@@ -1,8 +1,6 @@
-import {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
+import { BricolageGrotesque_400Regular } from '@expo-google-fonts/bricolage-grotesque/400Regular';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
+import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque/800ExtraBold';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { useLocalSearchParams, useRouter } from 'expo-router';

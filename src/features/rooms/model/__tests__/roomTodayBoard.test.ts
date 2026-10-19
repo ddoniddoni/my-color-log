@@ -1,7 +1,5 @@
 import {
-  getLatestRoomBoardPhotos,
   getRoomPhotoMosaicSlots,
-  getRoomMemberProgress,
   parseRoomTodayBoardRows,
 } from '@/src/features/rooms/model/roomTodayBoard';
 
@@ -81,14 +79,7 @@ describe('room today board parser', () => {
     }));
   });
 
-  it('uses member photo counts for the neutral progress language', () => {
-    expect(getRoomMemberProgress(0)).toEqual({ countLabel: '0 / 6', description: '오늘의 색을 찾는 중' });
-    expect(getRoomMemberProgress(6)).toEqual({ countLabel: '6 / 9', description: '여섯 장을 완성했어요' });
-    expect(getRoomMemberProgress(9)).toEqual({ countLabel: '9 / 9', description: '오늘의 캔버스가 가득 찼어요' });
-    expect(getRoomMemberProgress(6, 'en')).toEqual({ countLabel: '6 / 9', description: 'Six photos complete' });
-  });
-
-  it('limits the visible recent photos to the latest positions', () => {
+  it('places member photos in their positions on the nine-cell board', () => {
     const board = parseRoomTodayBoardRows([
       ...[1, 2, 3, 4].map((position) => ({
         ...commonRow,
@@ -109,7 +100,6 @@ describe('room today board parser', () => {
     ], new Map());
 
     expect(board).not.toBeNull();
-    expect(getLatestRoomBoardPhotos(board!.members[0]).map((photo) => photo.position)).toEqual([4, 3, 2]);
     expect(getRoomPhotoMosaicSlots(board!.members[0]).map((slot) => slot.photo?.position ?? null)).toEqual([1, 2, 3, 4, null, null, null, null, null]);
   });
 });

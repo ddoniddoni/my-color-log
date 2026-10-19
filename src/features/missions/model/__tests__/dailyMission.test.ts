@@ -1,5 +1,5 @@
 import { parseDailyMission, parseMissionRevealPalette } from '@/src/features/missions/model/dailyMission';
-import { formatKstCountdown } from '@/src/features/missions/model/countdown';
+import { formatCountdown } from '@/src/features/missions/model/countdown';
 import { getMissionRevealStorageKey } from '@/src/features/missions/model/revealState';
 import { getRevealTargetRotation, MISSION_REVEAL_SLOT_COUNT } from '@/src/features/missions/model/missionRevealWheel';
 
@@ -23,8 +23,8 @@ describe('mission reveal state', () => {
     expect(getMissionRevealStorageKey('friend', '2026-07-16')).not.toBe(getMissionRevealStorageKey('owner', '2026-07-16'));
   });
 
-  it('formats the KST countdown readably', () => {
-    expect(formatKstCountdown(3_661_000)).toBe('01:01:01');
+  it('formats the countdown readably', () => {
+    expect(formatCountdown(3_661_000)).toBe('01:01:01');
   });
 
   it('accepts ten distinct server-provided wheel colors', () => {
