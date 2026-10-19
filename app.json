@@ -74,6 +74,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "762d1794-df62-44df-9f3e-049aa90bb665"
+      }
+    },
+    "owner": "ddoni"
   }
 }

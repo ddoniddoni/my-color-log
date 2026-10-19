@@ -1,0 +1,40 @@
+# .easignore replaces .gitignore for EAS archives.
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.tsbuildinfo
+/ios
+/android
+
+# Load the two public backend variables from the selected EAS environment.
+# Local .env also contains server credentials and must never be uploaded.
+.env*
+!.env.example
+credentials.json
+google-services.json
+GoogleService-Info.plist
+.git/
+.agents/
+.codex/
+.aws/
+coverage/
+/supabase/
+/docs/
+PRD.md
+DESIGN.md
+AGENTS.md
