@@ -11,7 +11,7 @@ const mockRead = jest.fn<Promise<{ data: (typeof row)[]; error: null }>, []>();
 const mockInsert = jest.fn<Promise<{ error: { code: string } | null }>, [Record<string, unknown>]>();
 const mockUpload = jest.fn(async () => ({ error: null }));
 const mockRemove = jest.fn(async () => ({ error: null }));
-const mockRpc = jest.fn(async (name: string) => ({ data: name === 'get_or_create_daily_entry' ? [{ id: 'entry' }] : [], error: null }));
+const mockRpc = jest.fn(async (name: string) => ({ data: name === 'cl_get_or_create_daily_entry' ? [{ id: 'entry' }] : [], error: null }));
 jest.mock('@/src/lib/supabase/client', () => ({ getSupabaseClient: () => ({
   rpc: mockRpc,
   from: () => ({ select: () => ({ eq: () => ({ order: mockRead }) }), insert: mockInsert }),
@@ -75,7 +75,7 @@ describe('photo upload reconciliation', () => {
     mockQueued = { ...photo, status: 'cancelled' };
     mockRead.mockResolvedValue({ data: [{ ...row, id: photo.id }], error: null });
     expect((await syncPendingPhoto(photo)).wasCancelled).toBe(true);
-    expect(mockRpc).toHaveBeenCalledWith('delete_my_entry_photo', { p_photo_id: photo.id });
+    expect(mockRpc).toHaveBeenCalledWith('cl_delete_my_entry_photo', { p_photo_id: photo.id });
     expect(mockInsert).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import { getSupabaseClient } from '@/src/lib/supabase/client';
 const profileColumns = 'id, nickname, timezone, is_onboarded';
 
 export async function getProfile(userId: string, accessToken?: string): Promise<Profile | null> {
-  const query = getSupabaseClient().from('profiles').select(profileColumns).eq('id', userId).maybeSingle();
+  const query = getSupabaseClient().from('cl_profiles').select(profileColumns).eq('id', userId).maybeSingle();
   const { data, error } = accessToken
     ? await query.setHeader('Authorization', `Bearer ${accessToken}`)
     : await query;
@@ -20,7 +20,7 @@ export async function getProfile(userId: string, accessToken?: string): Promise<
 
 export async function completeProfile(userId: string, nickname: string, timeZone: string, accessToken: string): Promise<Profile> {
   const query = getSupabaseClient()
-    .from('profiles')
+    .from('cl_profiles')
     .upsert({ id: userId, nickname, timezone: timeZone, is_onboarded: true }, { onConflict: 'id' })
     .select(profileColumns)
     .single();
@@ -35,7 +35,7 @@ export async function completeProfile(userId: string, nickname: string, timeZone
 
 export async function updateProfileTimeZone(userId: string, timeZone: string): Promise<Profile> {
   const { data, error } = await getSupabaseClient()
-    .from('profiles')
+    .from('cl_profiles')
     .update({ timezone: timeZone })
     .eq('id', userId)
     .select(profileColumns)
@@ -50,7 +50,7 @@ export async function updateProfileNickname(userId: string, nickname: string): P
   if (!validation.isValid) throw new Error('nickname_invalid');
 
   const { data, error } = await getSupabaseClient()
-    .from('profiles')
+    .from('cl_profiles')
     .update({ nickname: validation.value })
     .eq('id', userId)
     .select(profileColumns)

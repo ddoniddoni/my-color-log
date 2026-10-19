@@ -1,5 +1,14 @@
 begin;
 
+-- Disposable local database only. These users and all changes roll back.
+create temporary table contract_users (
+  ordinal integer primary key,
+  id uuid not null default gen_random_uuid()
+) on commit drop;
+insert into contract_users(ordinal) values (1), (2);
+insert into auth.users(id) select id from contract_users;
+insert into public.cl_profiles(id,nickname) select id,'계약검증' from contract_users;
+
 do $global_timezones_catalog$
 declare
   room_timezone_default text;
@@ -8,7 +17,7 @@ begin
     select 1
     from information_schema.columns
     where table_schema = 'public'
-      and table_name = 'rooms'
+      and table_name = 'cl_rooms'
       and column_name = 'timezone'
       and is_nullable = 'NO'
   ) then
@@ -18,22 +27,22 @@ begin
   select column_default into room_timezone_default
   from information_schema.columns
   where table_schema = 'public'
-    and table_name = 'rooms'
+    and table_name = 'cl_rooms'
     and column_name = 'timezone';
 
   if room_timezone_default is null or room_timezone_default not like '%Asia/Seoul%' then
     raise exception 'global_timezones_contract_room_timezone_default';
   end if;
 
-  if not has_function_privilege('authenticated', 'public.get_my_rooms_v2()', 'EXECUTE')
-    or not has_function_privilege('authenticated', 'public.get_room_v2(uuid)', 'EXECUTE')
-    or not has_function_privilege('authenticated', 'public.create_room_with_invite_v2(text,text,text)', 'EXECUTE') then
+  if not has_function_privilege('authenticated', 'public.cl_get_my_rooms_v2()', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.cl_get_room_v2(uuid)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.cl_create_room_with_invite_v2(text,text,text)', 'EXECUTE') then
     raise exception 'global_timezones_contract_v2_rpc_grants';
   end if;
 
-  if has_function_privilege('anon', 'public.get_my_rooms_v2()', 'EXECUTE')
-    or has_function_privilege('anon', 'public.get_room_v2(uuid)', 'EXECUTE')
-    or has_function_privilege('anon', 'public.create_room_with_invite_v2(text,text,text)', 'EXECUTE') then
+  if has_function_privilege('anon', 'public.cl_get_my_rooms_v2()', 'EXECUTE')
+    or has_function_privilege('anon', 'public.cl_get_room_v2(uuid)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.cl_create_room_with_invite_v2(text,text,text)', 'EXECUTE') then
     raise exception 'global_timezones_contract_v2_rpc_anon_grant';
   end if;
 end;
@@ -41,21 +50,21 @@ $global_timezones_catalog$;
 
 do $global_timezones_behavior$
 begin
-  if private.current_date_in_time_zone('Asia/Seoul', timestamptz '2026-07-22 02:30:00+00') <> date '2026-07-22' then
+  if cl_private.current_date_in_time_zone('Asia/Seoul', timestamptz '2026-07-22 02:30:00+00') <> date '2026-07-22' then
     raise exception 'global_timezones_contract_seoul_date';
   end if;
 
-  if private.current_date_in_time_zone('America/Los_Angeles', timestamptz '2026-07-22 02:30:00+00') <> date '2026-07-21' then
+  if cl_private.current_date_in_time_zone('America/Los_Angeles', timestamptz '2026-07-22 02:30:00+00') <> date '2026-07-21' then
     raise exception 'global_timezones_contract_los_angeles_date';
   end if;
 
-  if private.current_date_in_time_zone('America/New_York', timestamptz '2026-03-08 06:59:59+00') <> date '2026-03-08'
-    or private.current_date_in_time_zone('America/New_York', timestamptz '2026-11-01 05:30:00+00') <> date '2026-11-01' then
+  if cl_private.current_date_in_time_zone('America/New_York', timestamptz '2026-03-08 06:59:59+00') <> date '2026-03-08'
+    or cl_private.current_date_in_time_zone('America/New_York', timestamptz '2026-11-01 05:30:00+00') <> date '2026-11-01' then
     raise exception 'global_timezones_contract_dst_date';
   end if;
 
   begin
-    perform private.current_date_in_time_zone('Not/A_Zone', now());
+    perform cl_private.current_date_in_time_zone('Not/A_Zone', now());
     raise exception 'global_timezones_contract_invalid_zone_accepted';
   exception
     when sqlstate '22023' then null;
@@ -65,10 +74,7 @@ $global_timezones_behavior$;
 
 create temporary table global_timezones_context (actor_id uuid not null) on commit drop;
 insert into global_timezones_context
-select profile.id
-from public.profiles as profile
-order by profile.created_at, profile.id
-limit 1;
+select id from contract_users where ordinal = 1;
 
 do $global_timezones_fixture$
 begin
@@ -97,8 +103,8 @@ set local role authenticated;
 
 do $global_timezones_authenticated_rpc$
 begin
-  perform public.get_daily_mission(null);
-  perform public.get_my_rooms_v2();
+  perform public.cl_get_daily_mission(null);
+  perform public.cl_get_my_rooms_v2();
 end;
 $global_timezones_authenticated_rpc$;
 

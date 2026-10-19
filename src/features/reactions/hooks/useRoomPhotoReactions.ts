@@ -34,7 +34,7 @@ export function useRoomPhotoReactions({ photoId, roomId, userId }: { photoId: st
         event: '*',
         filter: `photo_id=eq.${photoId}`,
         schema: 'public',
-        table: 'room_photo_reactions',
+        table: 'cl_room_photo_reactions',
       }, () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.roomPhotoReactions(userId, roomId, photoId) });
       })

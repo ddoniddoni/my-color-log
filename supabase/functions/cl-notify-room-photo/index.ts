@@ -67,8 +67,8 @@ Deno.serve(async (request) => {
 
 async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord, photoId: string, sourceUserId: string): Promise<void> {
   const [{ data: sourceProfile }, { data: shares, error: shareError }] = await Promise.all([
-    adminClient.from('profiles').select('nickname').eq('id', sourceUserId).maybeSingle(),
-    adminClient.from('entry_room_shares').select('room_id').eq('entry_id', photo.entry_id).is('revoked_at', null),
+    adminClient.from('cl_profiles').select('nickname').eq('id', sourceUserId).maybeSingle(),
+    adminClient.from('cl_entry_room_shares').select('room_id').eq('entry_id', photo.entry_id).is('revoked_at', null),
   ]);
   if (shareError) throw new Error('room_share_lookup_failed');
 
@@ -76,11 +76,11 @@ async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord
   for (const share of shares ?? []) {
     if (!isRoomShare(share)) continue;
 
-    const { data: room } = await adminClient.from('rooms').select('name, status, timezone').eq('id', share.room_id).maybeSingle<RoomRecord>();
+    const { data: room } = await adminClient.from('cl_rooms').select('name, status, timezone').eq('id', share.room_id).maybeSingle<RoomRecord>();
     if (!room || (room.status !== 'draft' && room.status !== 'active')) continue;
 
     const { data: sourceMembership } = await adminClient
-      .from('room_members')
+      .from('cl_room_members')
       .select('joined_at, user_id')
       .eq('room_id', share.room_id)
       .eq('user_id', sourceUserId)
@@ -89,7 +89,7 @@ async function notifyRoomMembers(adminClient: SupabaseClient, photo: PhotoRecord
     if (!sourceMembership || getDateKey(sourceMembership.joined_at, room.timezone) > photo.date_key) continue;
 
     const { data: memberships, error: membershipError } = await adminClient
-      .from('room_members')
+      .from('cl_room_members')
       .select('joined_at, user_id')
       .eq('room_id', share.room_id)
       .eq('status', 'active');
@@ -124,7 +124,7 @@ async function notifyRecipient(input: {
   sourceUserId: string;
 }): Promise<void> {
   const { data: devices, error: deviceError } = await input.adminClient
-    .from('push_devices')
+    .from('cl_push_devices')
     .select('expo_push_token')
     .eq('user_id', input.recipientUserId)
     .eq('is_enabled', true);
@@ -133,7 +133,7 @@ async function notifyRecipient(input: {
   const deviceRecords = (devices ?? []).filter(isPushDevice);
   if (deviceRecords.length === 0) return;
 
-  const { data: claimed, error: claimError } = await input.adminClient.rpc('claim_room_photo_push_delivery', {
+  const { data: claimed, error: claimError } = await input.adminClient.rpc('cl_claim_room_photo_push_delivery', {
     p_date_key: input.dateKey,
     p_recipient_user_id: input.recipientUserId,
     p_room_id: input.roomId,
@@ -174,12 +174,12 @@ async function sendExpoPushes(devices: readonly PushDeviceRecord[], content: { b
 }
 
 async function disableInvalidDevice(adminClient: SupabaseClient, expoPushToken: string): Promise<void> {
-  await adminClient.from('push_devices').update({ is_enabled: false, updated_at: new Date().toISOString() }).eq('expo_push_token', expoPushToken);
+  await adminClient.from('cl_push_devices').update({ is_enabled: false, updated_at: new Date().toISOString() }).eq('expo_push_token', expoPushToken);
 }
 
 async function getOwnedPhoto(adminClient: SupabaseClient, photoId: string, userId: string): Promise<PhotoRecord | null> {
   const { data, error } = await adminClient
-    .from('entry_photos')
+    .from('cl_entry_photos')
     .select('entry_id, owner_id, date_key')
     .eq('id', photoId)
     .eq('owner_id', userId)

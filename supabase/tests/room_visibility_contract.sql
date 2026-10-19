@@ -45,13 +45,13 @@ union all select outsider_id from visibility_cases;
 
 -- Deliberately different from the room zone: access must not depend on the
 -- viewer's current profile zone, nor on the SQL session's zone.
-insert into public.profiles (id, nickname, timezone)
+insert into public.cl_profiles (id, nickname, timezone)
 select owner_id, '사진주인', 'Pacific/Honolulu' from visibility_cases
 union all select viewer_id, '방멤버', 'Pacific/Honolulu' from visibility_cases
 union all select outsider_id, '외부유저', 'Pacific/Honolulu' from visibility_cases;
 
-insert into public.daily_missions (challenge_date, mission_type, color_id, title_ko, prompt_ko, source)
-select distinct date_key, 'color', (select id from public.color_palette order by slug limit 1),
+insert into public.cl_daily_missions (challenge_date, mission_type, color_id, title_ko, prompt_ko, source)
+select distinct date_key, 'color', (select id from public.cl_color_palette order by slug limit 1),
   '가시성 테스트', '트랜잭션 종료 시 제거', 'manual'
 from visibility_cases
 on conflict (challenge_date) do nothing;
@@ -59,24 +59,24 @@ on conflict (challenge_date) do nothing;
 update visibility_cases as fixture
 set mission_id = mission.id,
   storage_path = fixture.owner_id::text || '/' || fixture.date_key::text || '/' || fixture.photo_id::text || '.jpg'
-from public.daily_missions as mission
+from public.cl_daily_missions as mission
 where mission.challenge_date = fixture.date_key;
 
-insert into public.rooms (id, name, created_by, status, timezone)
+insert into public.cl_rooms (id, name, created_by, status, timezone)
 select room_id, '가시성 테스트방', owner_id, 'active', timezone from visibility_cases;
-insert into public.room_members (room_id, user_id, role, joined_at)
+insert into public.cl_room_members (room_id, user_id, role, joined_at)
 select room_id, owner_id, 'owner', timestamptz '2020-01-01 00:00:00+00' from visibility_cases
 union all select room_id, viewer_id, 'member', joined_at from visibility_cases;
-insert into public.room_daily_missions (room_id, challenge_date, mission_id)
+insert into public.cl_room_daily_missions (room_id, challenge_date, mission_id)
 select room_id, date_key, mission_id from visibility_cases;
-insert into public.daily_entries (id, user_id, mission_id, date_key)
+insert into public.cl_daily_entries (id, user_id, mission_id, date_key)
 select entry_id, owner_id, mission_id, date_key from visibility_cases;
-insert into public.entry_photos (id, entry_id, owner_id, date_key, storage_path, position, captured_at, width, height, byte_size)
+insert into public.cl_entry_photos (id, entry_id, owner_id, date_key, storage_path, position, captured_at, width, height, byte_size)
 select photo_id, entry_id, owner_id, date_key, storage_path, 1, joined_at, 100, 100, 1 from visibility_cases;
-insert into public.entry_room_shares (entry_id, room_id, shared_by)
+insert into public.cl_entry_room_shares (entry_id, room_id, shared_by)
 select entry_id, room_id, owner_id from visibility_cases;
 insert into storage.objects (bucket_id, name)
-select 'entry-photos', storage_path from visibility_cases;
+select 'cl-entry-photos', storage_path from visibility_cases;
 
 create temporary table visibility_results (
   label text not null, surface text not null, expected boolean not null, actual boolean not null
@@ -105,19 +105,19 @@ begin
     allow_room := fixture.expected and p_room;
     insert into pg_temp.visibility_results values
       (p_phase || ':' || fixture.label, 'entry', allow_shared,
-        exists (select 1 from public.daily_entries where id = fixture.entry_id)),
+        exists (select 1 from public.cl_daily_entries where id = fixture.entry_id)),
       (p_phase || ':' || fixture.label, 'photo', allow_shared,
-        exists (select 1 from public.entry_photos where id = fixture.photo_id)),
+        exists (select 1 from public.cl_entry_photos where id = fixture.photo_id)),
       (p_phase || ':' || fixture.label, 'share', allow_shared,
-        exists (select 1 from public.entry_room_shares where entry_id = fixture.entry_id and room_id = fixture.room_id)),
+        exists (select 1 from public.cl_entry_room_shares where entry_id = fixture.entry_id and room_id = fixture.room_id)),
       (p_phase || ':' || fixture.label, 'storage', allow_shared,
-        exists (select 1 from storage.objects where bucket_id = 'entry-photos' and name = fixture.storage_path));
+        exists (select 1 from storage.objects where bucket_id = 'cl-entry-photos' and name = fixture.storage_path));
     if p_actor <> 'owner' then
       insert into pg_temp.visibility_results values
         (p_phase || ':' || fixture.label, 'room_mission', allow_room,
-          exists (select 1 from public.room_daily_missions where room_id = fixture.room_id and challenge_date = fixture.date_key)),
+          exists (select 1 from public.cl_room_daily_missions where room_id = fixture.room_id and challenge_date = fixture.date_key)),
         (p_phase || ':' || fixture.label, 'board_photo', allow_shared,
-          exists (select 1 from public.get_room_day_board(fixture.room_id, fixture.date_key) where photo_id = fixture.photo_id));
+          exists (select 1 from public.cl_get_room_day_board(fixture.room_id, fixture.date_key) where photo_id = fixture.photo_id));
     end if;
   end loop;
 end;
@@ -132,9 +132,9 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
   perform set_config('request.jwt.claims', '{"role":"authenticated"}', true);
   for fixture in select * from visibility_cases loop
-    if private.can_view_room_day(fixture.room_id, fixture.date_key)
-      or private.can_view_shared_entry(fixture.entry_id)
-      or private.can_view_shared_storage_path(fixture.storage_path) then
+    if cl_private.can_view_room_day(fixture.room_id, fixture.date_key)
+      or cl_private.can_view_shared_entry(fixture.entry_id)
+      or cl_private.can_view_shared_storage_path(fixture.storage_path) then
       raise exception 'visibility_helper_without_identity';
     end if;
   end loop;
@@ -150,45 +150,45 @@ select pg_temp.check_visibility('active_east_session', 'viewer', true, true);
 select pg_temp.check_visibility('outsider', 'outsider', false, false);
 reset role;
 
-update public.entry_room_shares set revoked_at = now()
+update public.cl_entry_room_shares set revoked_at = now()
 where entry_id in (select entry_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('revoked', 'viewer', false, true);
 select pg_temp.check_visibility('owner_after_revoke', 'owner', false, false);
 reset role;
 
-update public.entry_room_shares set revoked_at = null
+update public.cl_entry_room_shares set revoked_at = null
 where entry_id in (select entry_id from visibility_cases);
-update public.room_members set status = 'left', left_at = now()
+update public.cl_room_members set status = 'left', left_at = now()
 where user_id in (select viewer_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('left', 'viewer', false, false);
 reset role;
 
-update public.room_members set status = 'removed'
+update public.cl_room_members set status = 'removed'
 where user_id in (select viewer_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('removed', 'viewer', false, false);
 reset role;
 
 -- A returning viewer cannot regain access to days before the new join date.
-update public.room_members set status = 'active', left_at = null,
+update public.cl_room_members set status = 'active', left_at = null,
   joined_at = timestamptz '2026-08-01 12:00:00+00'
 where user_id in (select viewer_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('rejoined', 'viewer', false, false);
 reset role;
 
-update public.room_members as member set joined_at = fixture.joined_at
+update public.cl_room_members as member set joined_at = fixture.joined_at
 from visibility_cases as fixture where member.user_id = fixture.viewer_id;
-delete from public.entry_room_shares where entry_id in (select entry_id from visibility_cases);
+delete from public.cl_entry_room_shares where entry_id in (select entry_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('unshared', 'viewer', false, true);
 reset role;
-insert into public.entry_room_shares (entry_id, room_id, shared_by)
+insert into public.cl_entry_room_shares (entry_id, room_id, shared_by)
 select entry_id, room_id, owner_id from visibility_cases;
 
-update public.rooms set status = 'ended', ended_at = now()
+update public.cl_rooms set status = 'ended', ended_at = now()
 where id in (select room_id from visibility_cases);
 set local role authenticated;
 select pg_temp.check_visibility('ended', 'viewer', false, false);
@@ -219,8 +219,8 @@ begin
     if to_regprocedure('public.' || signature) is not null then
       raise exception 'visibility_helper_exposed_in_public:%', signature;
     end if;
-    if not has_function_privilege('authenticated', 'private.' || signature, 'EXECUTE')
-      or has_function_privilege('anon', 'private.' || signature, 'EXECUTE') then
+    if not has_function_privilege('authenticated', 'cl_private.' || signature, 'EXECUTE')
+      or has_function_privilege('anon', 'cl_private.' || signature, 'EXECUTE') then
       raise exception 'visibility_helper_incorrect_grants:%', signature;
     end if;
   end loop;

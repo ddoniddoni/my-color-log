@@ -2,6 +2,8 @@
 
 > 오늘의 색으로, 오늘을 남겨요.
 
+개발·운영: [공유 Supabase 설치 및 `cl_` 데이터베이스 안내](docs/shared-supabase.md)
+
 <p align="center">
   <img src="./assets/images/onboarding-color-discovery.png" width="560" alt="오늘의 색을 발견하는 Color Log" />
 </p>

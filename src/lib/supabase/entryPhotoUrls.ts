@@ -1,6 +1,6 @@
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
-const ENTRY_PHOTO_BUCKET = 'entry-photos';
+const ENTRY_PHOTO_BUCKET = 'cl-entry-photos';
 const ENTRY_PHOTO_URL_TTL_SECONDS = 60 * 60;
 
 export async function getEntryPhotoSignedUrls(paths: string[]): Promise<Map<string, string>> {
