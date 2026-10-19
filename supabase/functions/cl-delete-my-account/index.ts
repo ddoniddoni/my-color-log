@@ -1,8 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
-import { deleteAuthIdentity } from './accountDeletionWorkflow.ts';
+import { deleteColorLogAccount } from './accountDeletionWorkflow.ts';
 
-const ENTRY_PHOTO_BUCKET = 'entry-photos';
+const ENTRY_PHOTO_BUCKET = 'cl-entry-photos';
 const STORAGE_LIST_LIMIT = 1_000;
 const STORAGE_REMOVE_CHUNK_SIZE = 100;
 const MAX_DIRECTORY_DEPTH = 12;
@@ -42,13 +42,9 @@ Deno.serve(async (request) => {
     const storagePaths = await getUserStoragePaths(adminClient, user.id);
     await removeStoragePaths(adminClient, storagePaths);
 
-    const { error: roomPreparationError } = await adminClient.rpc('prepare_account_deletion', { p_user_id: user.id });
-    if (roomPreparationError) throw new Error('room_preparation_failed');
-
-    await deleteAuthIdentity({
-      accessToken,
-      adminAuth: adminClient.auth.admin,
-      userId: user.id,
+    await deleteColorLogAccount({
+      deleteAppData: () => adminClient.rpc('cl_delete_account_data', { p_user_id: user.id }),
+      signOutCurrentSession: () => adminClient.auth.admin.signOut(accessToken, 'local'),
     });
 
     return jsonResponse({ deleted: true }, 200);

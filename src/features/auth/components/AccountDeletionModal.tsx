@@ -47,10 +47,11 @@ function AccountDeletionForm({ isDeleting, onClose, onConfirm }: Omit<AccountDel
 
       <View style={styles.warningBox}>
         <AppText style={styles.warningTitle}>되돌릴 수 없어요</AppText>
-        <AppText style={styles.warningText}>내 프로필, 다이어리, 사진이 영구적으로 삭제돼요.</AppText>
+        <AppText style={styles.warningText}>Color Log의 프로필, 다이어리, 사진이 영구적으로 삭제돼요.</AppText>
       </View>
 
       <AppText style={styles.description}>방장이라면 가장 먼저 참여한 멤버에게 방장 권한이 넘어가요. 혼자였던 방은 종료되고, 다른 멤버의 개인 기록은 그대로 유지돼요.</AppText>
+      <AppText style={styles.description}>다른 서비스에서도 사용하는 로그인 계정은 유지돼요.</AppText>
       <AppText localize={false} style={styles.inputLabel}>{format('계속하려면 ‘{confirmation}’를 입력해 주세요.', { confirmation: confirmationWord })}</AppText>
       <TextInput
         accessibilityLabel={t('계정 삭제 확인 문구')}

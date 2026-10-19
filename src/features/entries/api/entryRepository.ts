@@ -11,7 +11,7 @@ import { ENTRY_PHOTO_BUCKET, getEntryPhotoSignedUrls } from '@/src/lib/supabase/
 export async function getDailyEntry(userId: string, dateKey: string): Promise<DailyEntry | null> {
   const supabase = getSupabaseClient();
   const { data: entry, error: entryError } = await supabase
-    .from('daily_entries')
+    .from('cl_daily_entries')
     .select('id, user_id, mission_id, date_key, note')
     .eq('user_id', userId)
     .eq('date_key', dateKey)
@@ -21,7 +21,7 @@ export async function getDailyEntry(userId: string, dateKey: string): Promise<Da
   if (!entry) return null;
 
   const { data: photoRows, error: photoError } = await supabase
-    .from('entry_photos')
+    .from('cl_entry_photos')
     .select('id, entry_id, storage_path, position, caption, captured_at, width, height, byte_size')
     .eq('entry_id', entry.id)
     .order('position');
@@ -41,7 +41,7 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
   const supabase = getSupabaseClient();
   const localFile = new File(photo.localUri);
 
-  const { data: entryRows, error: entryError } = await supabase.rpc('get_or_create_daily_entry', {
+  const { data: entryRows, error: entryError } = await supabase.rpc('cl_get_or_create_daily_entry', {
     p_entry_id: photo.entryId,
     p_mission_id: photo.missionId,
     p_date_key: photo.dateKey,
@@ -100,7 +100,7 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
 }
 
 async function getRemotePhotoMetadata(entryId: string): Promise<EntryPhoto[]> {
-  const { data, error } = await getSupabaseClient().from('entry_photos')
+  const { data, error } = await getSupabaseClient().from('cl_entry_photos')
     .select('id, entry_id, storage_path, position, caption, captured_at, width, height, byte_size')
     .eq('entry_id', entryId).order('position');
   if (error) throw new Error('entry_photos_fetch_failed');
@@ -121,7 +121,7 @@ async function insertPendingPhoto(entryId: string, photo: PendingPhoto): Promise
     if (!position) throw new Error('entry_photo_limit_reached');
     const latest = await getQueuedPhoto(photo.id);
     if (!latest || latest.status === 'cancelled') return;
-    const { error } = await getSupabaseClient().from('entry_photos').insert({
+    const { error } = await getSupabaseClient().from('cl_entry_photos').insert({
       id: latest.id, entry_id: entryId, owner_id: latest.userId,
       date_key: latest.dateKey, storage_path: latest.storagePath, position,
       caption: latest.caption, captured_at: latest.capturedAt,
@@ -141,7 +141,7 @@ async function insertPendingPhoto(entryId: string, photo: PendingPhoto): Promise
 }
 
 export async function deleteMyEntryPhotoRecord(photoId: string): Promise<string | null> {
-  const { data, error } = await getSupabaseClient().rpc('delete_my_entry_photo', { p_photo_id: photoId });
+  const { data, error } = await getSupabaseClient().rpc('cl_delete_my_entry_photo', { p_photo_id: photoId });
   if (error) throw new Error('entry_photo_delete_failed');
   return readDeletedStoragePath(data);
 }
@@ -153,7 +153,7 @@ export async function removeEntryPhotoObject(storagePath: string): Promise<void>
 
 export async function reorderMyEntryPhotos(updates: readonly { photoId: string; position: number }[]): Promise<void> {
   if (updates.length === 0) return;
-  const { error } = await getSupabaseClient().rpc('reorder_my_entry_photos', {
+  const { error } = await getSupabaseClient().rpc('cl_reorder_my_entry_photos', {
     p_photo_ids: updates.map((update) => update.photoId),
     p_positions: updates.map((update) => update.position),
   });

@@ -474,6 +474,7 @@
 - 명확한 영향 범위를 안내한다.
 - 관련 사진 파일과 개인 레코드를 제거한다.
 - 다른 방 멤버의 개인 기록은 삭제하지 않는다.
+- 공유 Supabase 프로젝트에서는 Color Log 데이터와 현재 로그인 세션만 정리하고, 다른 서비스에서 사용하는 Auth 계정·데이터·세션은 유지한다. 삭제 화면에 이 범위를 안내한다.
 
 #### FR-AUTH-005 — 비밀번호 재설정
 
@@ -998,6 +999,8 @@ invite: active → expired/revoked/exhausted
 ## 15. 데이터 모델
 
 아래는 논리 모델이다. 실제 SQL은 별도 migration으로 관리한다.
+
+공유 Supabase 프로젝트의 실제 테이블과 RPC에는 `cl_` 접두사를 붙인다. 예를 들어 아래 `profiles`의 실제 이름은 `cl_profiles`다. 내부 함수는 `cl_private`, 사진 버킷은 `cl-entry-photos`를 사용한다.
 
 ### 15.1 `profiles`
 

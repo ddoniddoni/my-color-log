@@ -28,7 +28,7 @@ export function useRoomTodayBoard(userId: string | null, dateKey: string, roomId
         event: '*',
         filter: `room_id=eq.${roomId}`,
         schema: 'public',
-        table: 'entry_room_shares',
+        table: 'cl_entry_room_shares',
       }, () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.roomTodayBoard(userId, roomId, dateKey) });
       })

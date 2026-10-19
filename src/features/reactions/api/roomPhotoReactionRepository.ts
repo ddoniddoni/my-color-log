@@ -6,7 +6,7 @@ import {
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
 export async function getRoomPhotoReactions(roomId: string, photoId: string): Promise<RoomPhotoReactionSummary[]> {
-  const { data, error } = await getSupabaseClient().rpc('get_room_photo_reactions', {
+  const { data, error } = await getSupabaseClient().rpc('cl_get_room_photo_reactions', {
     p_photo_id: photoId,
     p_room_id: roomId,
   });
@@ -15,7 +15,7 @@ export async function getRoomPhotoReactions(roomId: string, photoId: string): Pr
 }
 
 export async function toggleRoomPhotoReaction(roomId: string, photoId: string, emoji: RoomPhotoReactionEmoji): Promise<boolean> {
-  const { data, error } = await getSupabaseClient().rpc('toggle_room_photo_reaction', {
+  const { data, error } = await getSupabaseClient().rpc('cl_toggle_room_photo_reaction', {
     p_emoji: emoji,
     p_photo_id: photoId,
     p_room_id: roomId,

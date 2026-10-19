@@ -1,5 +1,14 @@
 begin;
 
+-- Disposable local database only. These users and all changes roll back.
+create temporary table contract_users (
+  ordinal integer primary key,
+  id uuid not null default gen_random_uuid()
+) on commit drop;
+insert into contract_users(ordinal) values (1), (2);
+insert into auth.users(id) select id from contract_users;
+insert into public.cl_profiles(id,nickname) select id,'계약검증' from contract_users;
+
 create temporary table account_deletion_audit_context (
   deleting_user_id uuid not null,
   successor_user_id uuid not null,
@@ -14,19 +23,19 @@ insert into account_deletion_audit_context (
   solo_room_id
 )
 select
-  (select profile.id from public.profiles as profile order by profile.created_at, profile.id limit 1),
-  (select profile.id from public.profiles as profile order by profile.created_at, profile.id offset 1 limit 1),
+  (select id from contract_users where ordinal = 1),
+  (select id from contract_users where ordinal = 2),
   gen_random_uuid(),
   gen_random_uuid();
 
-insert into public.rooms (id, name, status, created_by)
+insert into public.cl_rooms (id, name, status, created_by)
 select shared_room_id, '삭제 공유방', 'active', deleting_user_id
 from account_deletion_audit_context
 union all
 select solo_room_id, '삭제 혼자방', 'draft', deleting_user_id
 from account_deletion_audit_context;
 
-insert into public.room_members (room_id, user_id, role, status, joined_at)
+insert into public.cl_room_members (room_id, user_id, role, status, joined_at)
 select shared_room_id, deleting_user_id, 'owner', 'active', timestamptz '1900-01-01 00:00:00+00'
 from account_deletion_audit_context
 union all
@@ -44,7 +53,7 @@ begin
   perform set_config('request.jwt.claims', '{"role":"authenticated"}', true);
 
   begin
-    perform public.prepare_account_deletion(target_user_id);
+    perform public.cl_prepare_account_deletion(target_user_id);
     raise exception 'account_deletion_contract_authenticated_call_succeeded';
   exception
     when sqlstate '42501' then null;
@@ -58,7 +67,7 @@ declare
 begin
   perform set_config('request.jwt.claim.role', 'service_role', true);
   perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
-  perform public.prepare_account_deletion(target_user_id);
+  perform public.cl_prepare_account_deletion(target_user_id);
 end;
 $service_role_preparation$;
 
@@ -68,7 +77,7 @@ declare
 begin
   if not exists (
     select 1
-    from public.room_members as membership
+    from public.cl_room_members as membership
     where membership.room_id = context.shared_room_id
       and membership.user_id = context.successor_user_id
       and membership.role = 'owner'
@@ -79,7 +88,7 @@ begin
 
   if not exists (
     select 1
-    from public.room_members as membership
+    from public.cl_room_members as membership
     where membership.room_id = context.shared_room_id
       and membership.user_id = context.deleting_user_id
       and membership.role = 'member'
@@ -90,7 +99,7 @@ begin
 
   if not exists (
     select 1
-    from public.rooms as room
+    from public.cl_rooms as room
     where room.id = context.solo_room_id
       and room.status = 'ended'
       and room.ended_at is not null
@@ -100,7 +109,7 @@ begin
 
   if not exists (
     select 1
-    from public.room_members as membership
+    from public.cl_room_members as membership
     where membership.room_id = context.solo_room_id
       and membership.user_id = context.deleting_user_id
       and membership.status = 'left'

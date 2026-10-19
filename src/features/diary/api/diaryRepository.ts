@@ -5,7 +5,7 @@ import { getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
 export async function getDiaryMonth(monthKey: string): Promise<DiaryEntry[]> {
   if (!/^\d{4}-\d{2}$/.test(monthKey)) throw new Error('invalid_diary_month');
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase.rpc('get_diary_month_v2', { p_month_start: `${monthKey}-01` });
+  const { data, error } = await supabase.rpc('cl_get_diary_month_v2', { p_month_start: `${monthKey}-01` });
   if (error || !Array.isArray(data)) throw new Error('diary_month_fetch_failed');
 
   const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));
@@ -15,7 +15,7 @@ export async function getDiaryMonth(monthKey: string): Promise<DiaryEntry[]> {
 export async function updateDiaryEntryNote(entryId: string, note: string | null): Promise<void> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
-    .from('daily_entries')
+    .from('cl_daily_entries')
     .update({ note })
     .eq('id', entryId)
     .select('id')
@@ -27,7 +27,7 @@ export async function updateDiaryEntryNote(entryId: string, note: string | null)
 export async function updateDiaryPhotoCaption(photoId: string, caption: string | null): Promise<void> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
-    .from('entry_photos')
+    .from('cl_entry_photos')
     .update({ caption })
     .eq('id', photoId)
     .select('id')

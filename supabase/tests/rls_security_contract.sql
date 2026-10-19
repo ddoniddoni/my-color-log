@@ -1,5 +1,14 @@
 begin;
 
+-- Disposable local database only. These users and all changes roll back.
+create temporary table contract_users (
+  ordinal integer primary key,
+  id uuid not null default gen_random_uuid()
+) on commit drop;
+insert into contract_users(ordinal) values (1), (2);
+insert into auth.users(id) select id from contract_users;
+insert into public.cl_profiles(id,nickname) select id,'계약검증' from contract_users;
+
 do $security_catalog$
 declare
   public_table record;
@@ -8,7 +17,7 @@ begin
     select 1
     from pg_class as relation
     join pg_namespace as namespace on namespace.oid = relation.relnamespace
-    where namespace.nspname = 'public'
+    where namespace.nspname = 'public' and starts_with(relation.relname, 'cl_')
       and relation.relkind in ('r', 'p')
       and not relation.relrowsecurity
   ) then
@@ -19,7 +28,7 @@ begin
     select relation.oid, relation.relname
     from pg_class as relation
     join pg_namespace as namespace on namespace.oid = relation.relnamespace
-    where namespace.nspname = 'public'
+    where namespace.nspname = 'public' and starts_with(relation.relname, 'cl_')
       and relation.relkind in ('r', 'p')
   loop
     if has_table_privilege('anon', public_table.oid, 'SELECT')
@@ -34,31 +43,31 @@ begin
 
     if has_table_privilege('authenticated', public_table.oid, 'SELECT')
       <> (public_table.relname = any (array[
-        'daily_entries',
-        'entry_photos',
-        'entry_room_shares',
-        'profiles',
-        'push_devices',
-        'room_daily_missions',
-        'room_members',
-        'room_photo_reactions',
-        'rooms'
+        'cl_daily_entries',
+        'cl_entry_photos',
+        'cl_entry_room_shares',
+        'cl_profiles',
+        'cl_push_devices',
+        'cl_room_daily_missions',
+        'cl_room_members',
+        'cl_room_photo_reactions',
+        'cl_rooms'
       ])) then
       raise exception 'security_contract_authenticated_select:%', public_table.relname;
     end if;
 
     if has_table_privilege('authenticated', public_table.oid, 'INSERT')
-      <> (public_table.relname = any (array['daily_entries', 'entry_photos', 'profiles'])) then
+      <> (public_table.relname = any (array['cl_daily_entries', 'cl_entry_photos', 'cl_profiles'])) then
       raise exception 'security_contract_authenticated_insert:%', public_table.relname;
     end if;
 
     if has_table_privilege('authenticated', public_table.oid, 'UPDATE')
-      <> (public_table.relname = any (array['daily_entries', 'entry_photos', 'profiles'])) then
+      <> (public_table.relname = any (array['cl_daily_entries', 'cl_entry_photos', 'cl_profiles'])) then
       raise exception 'security_contract_authenticated_update:%', public_table.relname;
     end if;
 
     if has_table_privilege('authenticated', public_table.oid, 'DELETE')
-      <> (public_table.relname = any (array['daily_entries', 'entry_photos'])) then
+      <> (public_table.relname = any (array['cl_daily_entries', 'cl_entry_photos'])) then
       raise exception 'security_contract_authenticated_delete:%', public_table.relname;
     end if;
 
@@ -73,7 +82,7 @@ begin
     select 1
     from pg_proc as procedure
     join pg_namespace as namespace on namespace.oid = procedure.pronamespace
-    where namespace.nspname = 'public'
+    where namespace.nspname = 'public' and starts_with(procedure.proname, 'cl_')
       and has_function_privilege('anon', procedure.oid, 'EXECUTE')
   ) then
     raise exception 'security_contract_anon_function_execute';
@@ -83,17 +92,18 @@ begin
     select 1
     from pg_proc as procedure
     join pg_namespace as namespace on namespace.oid = procedure.pronamespace
-    where namespace.nspname = 'public'
+    where namespace.nspname = 'public' and starts_with(procedure.proname, 'cl_')
       and procedure.proname = any (array[
-        'assert_active_room_capacity',
-        'claim_room_photo_push_delivery',
-        'ensure_room_daily_mission',
-        'prepare_account_deletion',
-        'set_daily_entries_updated_at',
-        'set_profiles_updated_at',
-        'touch_room_entry_shares_for_photo_change',
-        'validate_entry_room_share',
-        'validate_room_daily_mission'
+        'cl_assert_active_room_capacity',
+        'cl_claim_room_photo_push_delivery',
+        'cl_ensure_room_daily_mission',
+        'cl_prepare_account_deletion',
+        'cl_delete_account_data',
+        'cl_set_daily_entries_updated_at',
+        'cl_set_profiles_updated_at',
+        'cl_touch_room_entry_shares_for_photo_change',
+        'cl_validate_entry_room_share',
+        'cl_validate_room_daily_mission'
       ])
       and has_function_privilege('authenticated', procedure.oid, 'EXECUTE')
   ) then
@@ -104,13 +114,13 @@ begin
     select 1
     from pg_proc as procedure
     join pg_namespace as namespace on namespace.oid = procedure.pronamespace
-    where namespace.nspname = 'public'
+    where namespace.nspname = 'public' and starts_with(procedure.proname, 'cl_')
       and procedure.prosecdef
       and has_function_privilege('authenticated', procedure.oid, 'EXECUTE')
       and position('auth.uid' in lower(procedure.prosrc)) = 0
       and not (
-        procedure.proname = 'get_room_today_board'
-        and position('public.get_room_day_board' in lower(procedure.prosrc)) > 0
+        procedure.proname = 'cl_get_room_today_board'
+        and position('public.cl_get_room_day_board' in lower(procedure.prosrc)) > 0
       )
   ) then
     raise exception 'security_contract_exposed_definer_without_auth_boundary';
@@ -120,7 +130,7 @@ begin
     select 1
     from pg_proc as procedure
     join pg_namespace as namespace on namespace.oid = procedure.pronamespace
-    where namespace.nspname in ('public', 'private')
+    where (namespace.nspname = 'cl_private' or (namespace.nspname = 'public' and starts_with(procedure.proname, 'cl_')))
       and procedure.prosecdef
       and position('search_path=""' in array_to_string(procedure.proconfig, ',')) = 0
   ) then
@@ -131,7 +141,7 @@ begin
     select 1
     from pg_proc as procedure
     join pg_namespace as namespace on namespace.oid = procedure.pronamespace
-    where namespace.nspname = 'private'
+    where namespace.nspname = 'cl_private'
       and procedure.proname = 'validate_iana_timezone_column'
       and procedure.prosecdef
       and not has_function_privilege('anon', procedure.oid, 'EXECUTE')
@@ -143,7 +153,7 @@ begin
   if not exists (
     select 1
     from storage.buckets
-    where id = 'entry-photos'
+    where id = 'cl-entry-photos'
       and not public
       and file_size_limit = 8388608
       and allowed_mime_types = array['image/jpeg']::text[]
@@ -164,8 +174,8 @@ create temporary table security_audit_context (
 
 insert into security_audit_context (actor_id, other_id, mission_id, entry_id, photo_id, date_key)
 select
-  (select profile.id from public.profiles as profile order by profile.created_at, profile.id limit 1),
-  (select profile.id from public.profiles as profile order by profile.created_at, profile.id offset 1 limit 1),
+  (select id from contract_users where ordinal = 1),
+  (select id from contract_users where ordinal = 2),
   gen_random_uuid(),
   gen_random_uuid(),
   gen_random_uuid(),
@@ -183,7 +193,7 @@ begin
 end;
 $security_fixtures$;
 
-insert into public.daily_missions (
+insert into public.cl_daily_missions (
   id,
   challenge_date,
   mission_type,
@@ -203,16 +213,16 @@ select
 from security_audit_context as context
 cross join lateral (
   select color.id
-  from public.color_palette as color
+  from public.cl_color_palette as color
   order by color.slug
   limit 1
 ) as palette;
 
-insert into public.daily_entries (id, user_id, mission_id, date_key)
+insert into public.cl_daily_entries (id, user_id, mission_id, date_key)
 select entry_id, actor_id, mission_id, date_key
 from security_audit_context;
 
-insert into public.entry_photos (
+insert into public.cl_entry_photos (
   id,
   entry_id,
   owner_id,
@@ -270,13 +280,13 @@ begin
     raise exception 'security_contract_jwt_context';
   end if;
 
-  update public.profiles
+  update public.cl_profiles
   set timezone = 'Asia/Seoul'
   where id = actor_user_id;
 
   if not exists (
     select 1
-    from public.profiles as profile
+    from public.cl_profiles as profile
     where profile.id = actor_user_id
       and profile.timezone = 'Asia/Seoul'
   ) then
@@ -284,7 +294,7 @@ begin
   end if;
 
   select count(*) into violation_count
-  from public.profiles as profile
+  from public.cl_profiles as profile
   where profile.id <> actor_user_id;
   if violation_count <> 0 then
     raise exception 'security_contract_profile_cross_read';
@@ -292,7 +302,7 @@ begin
 
   if not exists (
     select 1
-    from public.daily_entries as entry
+    from public.cl_daily_entries as entry
     where entry.id = fixture_entry_id
       and entry.user_id = actor_user_id
   ) then
@@ -300,45 +310,45 @@ begin
   end if;
 
   select count(*) into violation_count
-  from public.daily_entries as entry
+  from public.cl_daily_entries as entry
   where entry.user_id <> actor_user_id
-    and not private.can_view_shared_entry(entry.id);
+    and not cl_private.can_view_shared_entry(entry.id);
   if violation_count <> 0 then
     raise exception 'security_contract_entry_cross_read';
   end if;
 
   select count(*) into violation_count
-  from public.entry_photos as photo
+  from public.cl_entry_photos as photo
   where photo.owner_id <> actor_user_id
-    and not private.can_view_shared_entry(photo.entry_id);
+    and not cl_private.can_view_shared_entry(photo.entry_id);
   if violation_count <> 0 then
     raise exception 'security_contract_photo_cross_read';
   end if;
 
   select count(*) into violation_count
-  from public.room_members as membership
+  from public.cl_room_members as membership
   where membership.user_id <> actor_user_id;
   if violation_count <> 0 then
     raise exception 'security_contract_membership_cross_read';
   end if;
 
   select count(*) into violation_count
-  from public.rooms as room
-  where not private.has_active_room_membership(room.id);
+  from public.cl_rooms as room
+  where not cl_private.has_active_room_membership(room.id);
   if violation_count <> 0 then
     raise exception 'security_contract_room_cross_read';
   end if;
 
   select count(*) into violation_count
-  from public.entry_room_shares as share
+  from public.cl_entry_room_shares as share
   where share.shared_by <> actor_user_id
-    and not private.can_view_shared_entry(share.entry_id);
+    and not cl_private.can_view_shared_entry(share.entry_id);
   if violation_count <> 0 then
     raise exception 'security_contract_share_cross_read';
   end if;
 
   select count(*) into violation_count
-  from public.push_devices as device
+  from public.cl_push_devices as device
   where device.user_id <> actor_user_id;
   if violation_count <> 0 then
     raise exception 'security_contract_push_device_cross_read';
@@ -346,15 +356,15 @@ begin
 
   select count(*) into violation_count
   from storage.objects as object
-  where object.bucket_id = 'entry-photos'
+  where object.bucket_id = 'cl-entry-photos'
     and (storage.foldername(object.name))[1] <> actor_user_id::text
-    and not private.can_view_shared_storage_path(object.name);
+    and not cl_private.can_view_shared_storage_path(object.name);
   if violation_count <> 0 then
     raise exception 'security_contract_storage_cross_read';
   end if;
 
   begin
-    insert into public.daily_entries (id, user_id, mission_id, date_key)
+    insert into public.cl_daily_entries (id, user_id, mission_id, date_key)
     values (fixture_photo_id, other_user_id, fixture_mission_id, fixture_date_key);
     raise exception 'security_contract_entry_cross_insert';
   exception
@@ -362,7 +372,7 @@ begin
   end;
 
   begin
-    update public.daily_entries
+    update public.cl_daily_entries
     set user_id = other_user_id
     where id = fixture_entry_id;
     raise exception 'security_contract_entry_owner_reassignment';
@@ -371,7 +381,7 @@ begin
   end;
 
   begin
-    update public.entry_photos
+    update public.cl_entry_photos
     set owner_id = other_user_id
     where id = fixture_photo_id;
     raise exception 'security_contract_photo_owner_reassignment';

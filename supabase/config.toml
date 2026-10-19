@@ -415,19 +415,19 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.delete-my-account]
+[functions.cl-delete-my-account]
 enabled = true
 # The handler validates the bearer token with Auth before using the admin client.
 verify_jwt = false
-entrypoint = "./functions/delete-my-account/index.ts"
+entrypoint = "./functions/cl-delete-my-account/index.ts"
 
-[functions.notify-room-photo]
+[functions.cl-notify-room-photo]
 enabled = true
 verify_jwt = true
-import_map = "./functions/notify-room-photo/deno.json"
+import_map = "./functions/cl-notify-room-photo/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/notify-room-photo/index.ts"
+entrypoint = "./functions/cl-notify-room-photo/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/notify-room-photo/*.html" ]
+# static_files = [ "./functions/cl-notify-room-photo/*.html" ]

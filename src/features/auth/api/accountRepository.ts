@@ -16,7 +16,7 @@ export async function deleteCurrentAccount(userId: string): Promise<void> {
   if (!userId) throw new Error('account_delete_failed');
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase.functions.invoke('delete-my-account', { method: 'POST' });
+  const { data, error } = await supabase.functions.invoke('cl-delete-my-account', { method: 'POST' });
   if (error || !isDeletedAccountResponse(data)) throw new Error('account_delete_failed');
 
   await clearLocalAccountData(userId);

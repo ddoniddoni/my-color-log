@@ -2,7 +2,7 @@
 
 관련 요구사항: PRD §19 오프라인 및 동기화, §21 접근성, §26 품질 수용 기준과 FR-AUTH-005, FR-NOTIFY-001.
 
-EAS 프로젝트는 [@ddoni/mycolorlog](https://expo.dev/accounts/ddoni/projects/mycolorlog)다. `app.json`에 공개 프로젝트 ID와 소유자를 연결하고, `app.config.ts`가 빌드별 네이티브 이름·식별자·딥링크를 결정한다. DB migration과 RLS는 변경하지 않는다.
+EAS 프로젝트는 [@ddoni/mycolorlog](https://expo.dev/accounts/ddoni/projects/mycolorlog)다. `app.json`에 공개 프로젝트 ID와 소유자를 연결하고, `app.config.ts`가 빌드별 네이티브 이름·식별자·딥링크를 결정한다. 새 공유 서버의 DB·RLS와 `cl_` 이름 변경은 [공유 Supabase 설치 기록](shared-supabase.md)을 따른다.
 
 네이티브 빌드 준비 중 Expo Doctor가 기존 Hermes 메모리 회귀를 검출해 같은 SDK 57 안에서 Expo `57.0.6 → 57.0.30`, React Native `0.86.0 → 0.86.3`, Hermes `250829098.0.14 → 250829098.0.17`과 Expo 호환 패키지를 정렬했다. Jest 프리셋도 RN 버전에 맞추고 Jest 타입은 실제 Jest 29에 맞췄다. `package-lock.json` 변경은 이 호환성 정렬과 전이 의존성 교체에 따른 것이며 Supabase·TanStack Query·Skia 버전은 유지한다. [Expo SDK 57 수정 내역](https://expo.dev/changelog/sdk-57#known-regressions)을 근거로 했다.
 
@@ -63,7 +63,20 @@ npm run build:production
 
 ## 생성한 Android 베타와 설치 확인
 
-2026-10-19에 `preview` 프로필의 네이티브 빌드가 완료됐다. Android 기기에서 [빌드 상세·설치 페이지](https://expo.dev/accounts/ddoni/projects/mycolorlog/builds/19911ad1-ccc2-4b31-8adf-89d783577465)를 열어 APK를 설치한다.
+### 공유 서버용 새 빌드
+
+2026-10-19에 `.env`의 새 서버 공개 URL·키를 EAS `preview`에도 반영하고 `cl_` 앱 코드로 **1.0.0 (versionCode 4)** 빌드를 완료했다. [새 빌드 상세·설치 페이지](https://expo.dev/accounts/ddoni/projects/mycolorlog/builds/8f3ab824-3cb2-4e7d-abb9-ef179df3af0a)에서 APK를 설치한다. Pixel 9 에뮬레이터(Android 17 / API 37)에 기존 앱 위로 업데이트하여 versionCode 4를 확인했고, Metro 없이 로그인 → 닉네임 저장 → 오늘의 색 공개(클리어 블루) 흐름을 검증했다. 공유 로그인 계정을 보존하는 삭제 안내도 화면에서 확인했다. 실제 기기의 촬영·알림·오프라인 QA는 별도다.
+
+- APK 크기: 188,776,921 bytes
+- SHA-256: `1adfb6e03e51dcf8613b50e19c5583bc730db40f18546f23b66e5cd2baad1ae1`
+
+검증 후 앱에서 로그아웃하고 임시 QA 계정·프로필을 삭제했다. 에뮬레이터는 새 APK의 로그인 화면에 둔다. 테스트 자격 증명은 문서나 저장소에 저장하지 않았다.
+
+업로드 직전 앱 파일 259개와 lockfile의 포함, `.env`·서버 파일 제외를 확인했다. 기존 APK에는 이전 서버와 테이블명이 들어 있으므로 `.env` 변경만으로 수정되지 않는다.
+
+### 이전 서버용 빌드 기록
+
+2026-10-19에 최초 `preview` 프로필의 네이티브 빌드가 완료됐다. [이전 빌드 상세 페이지](https://expo.dev/accounts/ddoni/projects/mycolorlog/builds/19911ad1-ccc2-4b31-8adf-89d783577465)는 이력 확인용이다. 새 공유 서버 검증에는 이 APK를 사용하지 않는다.
 
 - 앱: **Color Log Beta 1.0.0 (versionCode 3)**
 - 패키지: `com.ddoni.mycolorlog.preview`

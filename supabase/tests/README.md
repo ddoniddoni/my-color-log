@@ -6,6 +6,10 @@
 
 전체 migration이 적용된 **로컬 또는 폐기 가능한 Supabase DB**에서 실행한다.
 
+현재 테스트는 `cl_` 테이블과 `cl_private` 함수를 대상으로 한다. 공유 운영 프로젝트에는 실행하지 않는다. 최초 설치와 운영 검증은 [공유 Supabase 안내](../../docs/shared-supabase.md)를 따른다.
+
+각 계약은 필요한 테스트 사용자를 트랜잭션 안에서 직접 만들고 롤백한다. 기존 계정·프로필을 준비할 필요가 없으며 다른 사용자의 행을 fixture로 재사용하지 않는다. npm DB 명령은 고정한 CLI 버전과 `--local --yes`를 사용한다.
+
 ```sh
 npm run test:db:room-visibility
 ```
@@ -28,3 +32,9 @@ npm run test:db:room-visibility
 - 인증 ID가 없는 호출 차단, private helper 권한, 공개 중복 helper 제거
 
 12개 날짜 사례와 상태 변경을 조합해 744개 조회 결과를 비교한다. helper 권한과 인증 ID 검증도 별도로 실행한다. 이 테스트는 DB 권한을 검증하며 Auth의 JWT 발급·검증, Storage HTTP API의 signed URL 발급 및 실제 기기 사진 열기는 별도 통합 QA 대상이다.
+
+`cl_namespace_contract.sql`은 다른 앱의 `profiles` 테이블과 광범위한 Storage 정책을 로컬 트랜잭션에서 흉내 낸다. Color Log 사진 접근 차단, 다른 버킷 접근 보존, 서비스 전용 삭제 RPC, 공유 Auth·다른 앱 프로필 보존과 방장 위임을 확인하고 롤백한다. `profiles(id, nickname)`을 사용하는 폐기 가능한 fixture이므로 실제 공유 서버에 실행하면 안 된다.
+
+```sh
+npm run test:db:namespace
+```
