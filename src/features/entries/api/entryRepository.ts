@@ -1,9 +1,9 @@
 import { File } from 'expo-file-system';
 
-import { type DailyEntry, parseDailyEntry, parseEntryPhoto } from '@/src/features/entries/model/dailyEntry';
+import { type DailyEntry, type EntryPhoto, parseDailyEntry, parseEntryPhoto } from '@/src/features/entries/model/dailyEntry';
 import { notifyRoomPhotoUploaded } from '@/src/features/notifications/api/roomPushNotificationRepository';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
-import { getQueuedPhoto } from '@/src/features/sync/queue/photoQueue';
+import { getQueuedPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { shareEntryToActiveRoom } from '@/src/features/rooms/api/roomRepository';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 import { ENTRY_PHOTO_BUCKET, getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
@@ -33,15 +33,13 @@ export async function getDailyEntry(userId: string, dateKey: string): Promise<Da
   return parseDailyEntry(entry, photos);
 }
 
-type SyncPendingPhotoResult = {
-  entryId: string;
-  wasCancelled: boolean;
-};
+type SyncPendingPhotoResult =
+  | { entryId: string; wasCancelled: true }
+  | { entryId: string; wasCancelled: false; photo: EntryPhoto; photos: EntryPhoto[] };
 
 export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPendingPhotoResult> {
   const supabase = getSupabaseClient();
   const localFile = new File(photo.localUri);
-  if (!localFile.exists) throw new Error('local_photo_missing');
 
   const { data: entryRows, error: entryError } = await supabase.rpc('get_or_create_daily_entry', {
     p_entry_id: photo.entryId,
@@ -51,6 +49,22 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
   if (entryError) throw new Error('daily_entry_create_failed');
   const entryId = readEntryId(entryRows);
 
+  const remotePhotos = await getRemotePhotoMetadata(entryId);
+  const existingPhoto = remotePhotos.find((item) => item.id === photo.id);
+  if (existingPhoto) {
+    const queued = await getQueuedPhoto(photo.id);
+    if (!queued || queued.status === 'cancelled') {
+      await cleanCancelledRemotePhoto(photo.id, photo.storagePath);
+      return { entryId, wasCancelled: true };
+    }
+    // A prior upload may have committed before the app was terminated. Never
+    // upsert stale captions/positions over edits made since that commit.
+    await updatePendingPhoto(photo.id, { position: existingPhoto.position, caption: existingPhoto.caption, entryId });
+    await shareEntryToActiveRoom(entryId);
+    return { entryId, wasCancelled: false, photo: existingPhoto, photos: remotePhotos };
+  }
+
+  if (!localFile.exists) throw new Error('local_photo_missing');
   const bytes = await localFile.arrayBuffer();
   const { error: uploadError } = await supabase.storage.from(ENTRY_PHOTO_BUCKET).upload(photo.storagePath, bytes, {
     cacheControl: '31536000',
@@ -65,22 +79,12 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
     return { entryId, wasCancelled: true };
   }
 
-  const { error: photoError } = await supabase.from('entry_photos').upsert({
-    id: latestPhoto.id,
-    entry_id: entryId,
-    owner_id: latestPhoto.userId,
-    date_key: latestPhoto.dateKey,
-    storage_path: latestPhoto.storagePath,
-    position: latestPhoto.position,
-    caption: latestPhoto.caption,
-    captured_at: latestPhoto.capturedAt,
-    width: latestPhoto.width,
-    height: latestPhoto.height,
-    byte_size: latestPhoto.byteSize,
-  }, { onConflict: 'id' });
-  if (photoError) throw new Error('entry_photo_save_failed');
-
-  const afterSavePhoto = await getQueuedPhoto(photo.id);
+  const saved = await insertPendingPhoto(entryId, latestPhoto);
+  if (!saved) {
+    await cleanCancelledRemotePhoto(photo.id, latestPhoto.storagePath);
+    return { entryId, wasCancelled: true };
+  }
+  const afterSavePhoto = await getQueuedPhoto(saved.photo.id);
   if (!afterSavePhoto || afterSavePhoto.status === 'cancelled') {
     await cleanCancelledRemotePhoto(photo.id, latestPhoto.storagePath);
     return { entryId, wasCancelled: true };
@@ -92,7 +96,48 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
       // A push failure must never turn a safely synced photo back into a failed upload.
     });
   }
-  return { entryId, wasCancelled: false };
+  return { entryId, wasCancelled: false, photo: saved.photo, photos: saved.photos };
+}
+
+async function getRemotePhotoMetadata(entryId: string): Promise<EntryPhoto[]> {
+  const { data, error } = await getSupabaseClient().from('entry_photos')
+    .select('id, entry_id, storage_path, position, caption, captured_at, width, height, byte_size')
+    .eq('entry_id', entryId).order('position');
+  if (error) throw new Error('entry_photos_fetch_failed');
+  return (data ?? []).map((row) => parseEntryPhoto(row, null));
+}
+
+async function insertPendingPhoto(entryId: string, photo: PendingPhoto): Promise<{ photo: EntryPhoto; photos: EntryPhoto[] } | undefined> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const remote = await getRemotePhotoMetadata(entryId);
+    const existing = remote.find((item) => item.id === photo.id);
+    if (existing) {
+      await updatePendingPhoto(photo.id, { position: existing.position, caption: existing.caption, entryId });
+      return { photo: existing, photos: remote };
+    }
+    const occupied = new Set(remote.map((item) => item.position));
+    const position = !occupied.has(photo.position) ? photo.position
+      : Array.from({ length: 9 }, (_, index) => index + 1).find((slot) => !occupied.has(slot));
+    if (!position) throw new Error('entry_photo_limit_reached');
+    const latest = await getQueuedPhoto(photo.id);
+    if (!latest || latest.status === 'cancelled') return;
+    const { error } = await getSupabaseClient().from('entry_photos').insert({
+      id: latest.id, entry_id: entryId, owner_id: latest.userId,
+      date_key: latest.dateKey, storage_path: latest.storagePath, position,
+      caption: latest.caption, captured_at: latest.capturedAt,
+      width: latest.width, height: latest.height, byte_size: latest.byteSize,
+    });
+    if (!error) {
+      await updatePendingPhoto(photo.id, { position, entryId });
+      const savedPhoto: EntryPhoto = { id: latest.id, entryId, storagePath: latest.storagePath, position, caption: latest.caption,
+        capturedAt: latest.capturedAt, width: latest.width, height: latest.height, byteSize: latest.byteSize, signedUrl: null };
+      return { photo: savedPhoto, photos: [...remote, savedPhoto].sort((a, b) => a.position - b.position) };
+    }
+    // A second device can claim the slot between SELECT and INSERT. The unique
+    // constraint remains authoritative; reload and converge without overwriting.
+    if (error.code !== '23505') throw new Error('entry_photo_save_failed');
+  }
+  throw new Error('entry_photo_position_conflict');
 }
 
 export async function deleteMyEntryPhotoRecord(photoId: string): Promise<string | null> {

@@ -4,6 +4,17 @@ type Translation = Readonly<Record<AppLanguage, string>>;
 export type TranslationValues = Readonly<Record<string, number | string>>;
 
 const translationEntries: readonly Translation[] = [
+  entry('연결 후 사진을 볼 수 있어요', 'Photo available when connected'),
+  entry('연결 후 처음 시작할 수 있어요', 'Connect to get started'),
+  entry('이 기기에 저장된 프로필이 없어요. 인터넷에 연결하면 기록을 준비할게요.', 'No profile is saved on this device yet. Connect to prepare your journal.'),
+  entry('확인을 마치지 않은 사진이 있어요', 'You have an unfinished photo'),
+  entry('{date} 사진을 이 기기에 안전하게 보관하고 있어요. 확인 후 기록에 추가해 주세요.', 'Your photo from {date} is safely saved on this device. Review it to add it to your journal.'),
+  entry('사진 이어서 확인', 'Continue reviewing'),
+  entry('나중에 확인', 'Review later'),
+  entry('이 날짜의 사진 9장이 모두 찼어요. 사진은 이 기기에 보관했어요. 기록에서 한 장을 정리한 뒤 다시 확인해 주세요.', 'This day already has 9 photos. Your photo is saved on this device. Remove a journal photo, then review this one again.'),
+  entry('색 정보가 없는 이전 사진은 원본으로 저장해요.', 'Older photos without color information are saved without a color filter.'),
+  entry('메모를 보관하지 못했어요. 다시 시도해 주세요.', 'Could not save your caption. Please try again.'),
+  entry('9장을 넘어 이 기기에 보관 중인 사진 확인', 'Review extra photos saved on this device'),
   entry('하루에 하나, 나만의 발견', 'A little discovery, every day'),
   entry('새로운 하루가 시작됐어요', 'A new day has begun'),
   entry('하루의 시작,\n하나의 색.', 'A new day.\nA little color.'),

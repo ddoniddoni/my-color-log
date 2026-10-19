@@ -4,7 +4,7 @@ import { ImageManipulator, type ImageManipulatorContext, SaveFormat } from 'expo
 
 import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
 import { getCenteredSquareCrop, getSquareResize } from '@/src/features/camera/model/squareCrop';
-import { addPendingPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
+import { addPendingPhoto, confirmReviewPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
 const MAX_IMAGE_DIMENSION = 1600;
@@ -18,6 +18,7 @@ export type SavePhotoForReviewInput = {
   missionId: string;
   dateKey: string;
   position: number;
+  reviewColor?: PendingPhoto['reviewColor'];
 };
 
 export async function saveCapturedPhotoForReview(input: SavePhotoForReviewInput): Promise<PendingPhoto> {
@@ -58,20 +59,15 @@ export async function saveCapturedPhotoForReview(input: SavePhotoForReviewInput)
     status: 'local_saved',
     retryCount: 0,
     lastErrorCode: null,
+    ...(input.reviewColor ? { reviewColor: input.reviewColor } : {}),
   };
 
   await addPendingPhoto(pendingPhoto);
   return pendingPhoto;
 }
 
-export async function confirmCapturedPhoto(photo: PendingPhoto, caption: string): Promise<PendingPhoto> {
-  const confirmedPhoto: PendingPhoto = {
-    ...photo,
-    caption: normalizeCaption(caption),
-    status: 'pending',
-  };
-  await updatePendingPhoto(photo.id, { caption: confirmedPhoto.caption, status: confirmedPhoto.status });
-  return confirmedPhoto;
+export async function confirmCapturedPhoto(photo: PendingPhoto, caption: string, occupiedPositions: readonly number[] = []): Promise<PendingPhoto> {
+  return confirmReviewPhoto(photo.id, normalizeCaption(caption), occupiedPositions);
 }
 
 export async function rotateCapturedPhoto(photo: PendingPhoto): Promise<PendingPhoto> {

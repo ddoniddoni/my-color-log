@@ -6,6 +6,8 @@ import { clearStoredRoomPushToken } from '@/src/features/notifications/api/roomP
 import { getPhotoQueue, removeUserPhotoQueue } from '@/src/features/sync/queue/photoQueue';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
+import { clearOfflineCache } from '@/src/lib/query/offlineCache';
+
 type DeletedAccountResponse = {
   deleted: true;
 };
@@ -24,6 +26,7 @@ export async function deleteCurrentAccount(userId: string): Promise<void> {
 async function clearLocalAccountData(userId: string): Promise<void> {
   await Promise.allSettled([
     clearLocalAccountPhotoData(userId),
+    clearOfflineCache(userId),
     clearPendingGalleryImportContext(),
     clearStoredRoomPushToken(),
     clearLocalNotificationData(),

@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { Screen } from '@/src/components/layout/Screen';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
+import { PhotoDraftRecovery } from '@/src/features/camera/components/PhotoDraftRecovery';
 import { PhotoSourceModal } from '@/src/features/camera/components/PhotoSourceModal';
 import { usePhotoSourceSelection } from '@/src/features/camera/hooks/usePhotoSourceSelection';
 import { MissionReveal } from '@/src/features/missions/components/MissionReveal';
@@ -25,8 +26,16 @@ import { usePhotoSync } from '@/src/features/sync/hooks/usePhotoSync';
 import { useNetworkStatus } from '@/src/features/sync/hooks/useNetworkStatus';
 import { radius, spacing } from '@/src/design/tokens';
 import { useDeviceTimeZone } from '@/src/lib/localization/deviceTimeZone';
+import { useOfflineCacheReady } from '@/src/lib/query/OfflineQueryProvider';
 
 export default function TodayScreen() {
+  const sessionState = useSessionBootstrap();
+  const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
+  return <><TodayContent /><PhotoDraftRecovery userId={userId} /></>;
+}
+
+function TodayContent() {
+  const cacheReady = useOfflineCacheReady();
   const timeZone = useDeviceTimeZone();
   const { dateKey, isNewDay, millisecondsUntilMidnight } = useDailyColorClock(timeZone);
   const sessionState = useSessionBootstrap();
@@ -43,11 +52,15 @@ export default function TodayScreen() {
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();
 
-  if (sessionState.status === 'loading') return <TodayLoadingScreen isNewDay={isNewDay} />;
+  const hasLocalPhotos = queueQuery.data?.some((photo) => photo.status !== 'cancelled') ?? false;
+  if (sessionState.status === 'loading' || !cacheReady) return <TodayLoadingScreen isNewDay={isNewDay} />;
   if (sessionState.status === 'error' || !userId) return <TodayMissionError onRetry={sessionState.retry} />;
+  if (networkStatus === 'offline' && (missionQuery.data === undefined || (reveal.isPresenting && !reveal.isLoading && revealPaletteQuery.data === undefined))) {
+    return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+  }
   if (missionQuery.isPending || reveal.isLoading || (reveal.isPresenting && revealPaletteQuery.isPending)) return <TodayLoadingScreen isNewDay={isNewDay} />;
   if (reveal.isError) return <TodayMissionError onRetry={() => void reveal.retry()} />;
-  if (missionQuery.isError || (reveal.isPresenting && revealPaletteQuery.isError) || !missionQuery.data) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
+  if (!missionQuery.data || (reveal.isPresenting && revealPaletteQuery.isError && !revealPaletteQuery.data)) return <TodayMissionError onRetry={() => { void missionQuery.refetch(); void revealPaletteQuery.refetch(); }} />;
 
   const mission = missionQuery.data;
   if (reveal.isPresenting) {
@@ -55,8 +68,9 @@ export default function TodayScreen() {
     return <MissionReveal key={`${userId}:${dateKey}:${mission.id}`} mission={mission} palette={revealPaletteQuery.data} reduceMotion={reduceMotion} isNewDay={isNewDay} onStart={reveal.begin} onRevealed={reveal.reveal} onContinue={reveal.dismiss} />;
   }
 
-  if (entryQuery.isPending || queueQuery.isPending) return <TodayLoadingScreen />;
-  if (entryQuery.isError || queueQuery.isError) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
+  if (networkStatus === 'offline' && entryQuery.data === undefined && !hasLocalPhotos && !queueQuery.isPending) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
+  if ((entryQuery.isPending && !hasLocalPhotos) || queueQuery.isPending) return <TodayLoadingScreen />;
+  if ((entryQuery.isError && entryQuery.data === undefined && !hasLocalPhotos) || (queueQuery.isError && queueQuery.data === undefined)) return <TodayMissionError onRetry={() => { void entryQuery.refetch(); void queueQuery.refetch(); }} />;
 
   const photos = mergeTodayPhotos(entryQuery.data, queueQuery.data ?? []);
   const nextPosition = getNextPhotoPosition(photos);

@@ -107,11 +107,12 @@ npx expo install <expo-compatible-package>
 
 ### 3.6 날짜
 
-- MVP 날짜 경계는 `Asia/Seoul`이다.
-- 날짜 비교를 로컬 기기 자정에만 의존하지 않는다.
-- 도메인에서 사용하는 날짜 키는 `YYYY-MM-DD` 형식의 KST date key다.
+- 개인 기록은 프로필의 유효한 IANA 타임존, 친구방은 생성 시 고정한 방의 IANA 타임존을 기준으로 한다.
+- `Asia/Seoul`은 타임존이 없거나 유효하지 않을 때의 기본값이다.
+- 친구방의 서버 미션, 가입일 가시성, DB 및 Storage 접근 권한은 같은 방 타임존을 사용한다. 기기 자정이나 현재 프로필 타임존으로 방 날짜를 판단하지 않는다.
+- 도메인에서 사용하는 날짜 키는 해당 타임존에서 확정한 `YYYY-MM-DD` 형식이다. 타임존 변경 시 기존 기록의 날짜 키를 이동하지 않는다.
 - timestamp는 UTC `timestamptz`로 저장한다.
-- `new Date().toISOString().slice(0, 10)`를 KST 날짜 계산 용도로 사용하지 않는다.
+- `new Date().toISOString().slice(0, 10)`를 개인/방 날짜 계산 용도로 사용하지 않는다.
 - 날짜 로직은 공통 유틸리티와 테스트에 둔다.
 
 ### 3.7 오늘의 미션
@@ -321,7 +322,7 @@ assets/
 
 - 화면 파일에서 긴 Supabase 쿼리 작성
 - 화면 파일에서 이미지 업로드 파이프라인 구현
-- 화면 파일에서 KST 날짜 계산 복제
+- 화면 파일에서 개인/방 타임존 날짜 계산 복제
 - 화면 파일에 색상/간격 하드코딩 반복
 
 ### 8.2 feature
@@ -510,19 +511,20 @@ supabase/migrations/20260716093000_create_room_daily_missions.sql
 최소 함수:
 
 ```ts
-getKstDateKey(date?: Date): string;
-getKstMonthKey(date?: Date): string;
-getMillisecondsUntilNextKstMidnight(now?: Date): number;
-isFutureKstDate(dateKey: string, now?: Date): boolean;
+getDateKeyInTimeZone(date?: Date, timeZone?: string): string;
+getMonthKeyInTimeZone(date?: Date, timeZone?: string): string;
+getMillisecondsUntilNextMidnight(timeZone: string, now?: Date): number;
+isFutureDateInTimeZone(dateKey: string, timeZone: string, now?: Date): boolean;
 ```
 
 필수 테스트:
 
-- UTC 날짜와 KST 날짜가 다른 시각
-- KST 자정 1초 전/후
+- UTC 날짜와 개인/방 타임존 날짜가 다른 시각
+- 각 타임존의 자정 1초 전/후 및 DST 전환
 - 연말/연초
 - 윤년 2월
-- 앱 기기 타임존이 미국/유럽이어도 같은 결과
+- 기기/프로필 타임존이 달라도 같은 방 타임존을 지정하면 같은 결과
+- 한국보다 날짜가 빠른/느린 방의 가입일 이전 기록 차단 및 가입 당일 기록 허용
 
 ---
 
@@ -586,7 +588,7 @@ isFutureKstDate(dateKey: string, now?: Date): boolean;
 
 ### 18.1 단위 테스트 우선 대상
 
-- KST 날짜 계산
+- 개인/방 타임존 날짜 계산
 - 일일 기록 상태 계산
 - 1/6/9 진행 문구
 - 사진 position 재정렬
@@ -623,7 +625,7 @@ isFutureKstDate(dateKey: string, now?: Date): boolean;
 - 권한 최초 허용/거부/영구 거부
 - 오프라인 촬영 후 재연결
 - 앱 강제 종료 후 큐 복구
-- KST 자정 전후
+- 개인/방 타임존 자정 전후
 - 큰 글자 크기
 
 ---
@@ -742,7 +744,7 @@ isFutureKstDate(dateKey: string, now?: Date): boolean;
 - [ ] 중복 일일 기록이 방지되는가?
 - [ ] 사진 최대 9장이 DB에서도 보장되는가?
 - [ ] 삭제와 늦은 업로드가 충돌하지 않는가?
-- [ ] KST 날짜가 올바른가?
+- [ ] 개인/방 타임존 날짜가 올바르고 방 조회와 RLS의 날짜 경계가 같은가?
 
 ### 보안
 
@@ -778,7 +780,7 @@ isFutureKstDate(dateKey: string, now?: Date): boolean;
 - 1:1 pair 구조를 친구방 MVP로 고정
 - 방 정원과 활성 방 제한을 UI에서만 검사
 - 화면 컴포넌트에서 직접 복잡한 SQL/RPC 호출
-- KST 날짜 로직 복제
+- 개인/방 타임존 날짜 로직 복제
 - 테스트 통과를 위해 타입/린트 규칙 비활성화
 - 요청되지 않은 대규모 리팩터링
 - 관련 없는 패키지 업그레이드
