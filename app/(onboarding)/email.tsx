@@ -461,7 +461,7 @@ function LoginForm({
       <FormErrors formError={formError} mutationError={mutationError} />
       <SketchActionButton label={pending ? t('로그인 중…') : t('로그인')} onPress={onSubmit} pending={pending} />
       <Pressable accessibilityRole="button" disabled={pending} accessibilityState={{ disabled: pending }} onPress={onForgotPassword} style={[styles.loginUtilityLinkButton, styles.forgotPasswordLink]}>
-        <AppText style={[styles.loginUtility, styles.loginUtilityLink]}>비밀번호를 잊으셨나요?</AppText>
+        <AppText style={[styles.loginUtility, styles.loginUtilityLink, styles.forgotPasswordLinkText]}>비밀번호를 잊으셨나요?</AppText>
       </Pressable>
       <View style={styles.loginUtilityRow}>
         <AppText style={styles.loginUtility}>처음이신가요? </AppText>
@@ -729,6 +729,7 @@ const styles = StyleSheet.create({
   loginUtilityLink: { color: '#000000', flexShrink: 0, textDecorationLine: 'underline' },
   loginUtilityLinkButton: { alignItems: 'center', flexShrink: 0, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8, width: 88 },
   forgotPasswordLink: { width: '100%' },
+  forgotPasswordLinkText: { alignSelf: 'stretch', textAlign: 'center' },
   loginUtilityLinkButtonPressed: { opacity: 0.56 },
   loginDoodleRow: { marginTop: 52 },
 });
