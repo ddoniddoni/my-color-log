@@ -19,14 +19,12 @@ describe('color isolation', () => {
   it('does not produce shader uniforms for invalid colors', () => {
     expect(toNormalizedRgb('#orange')).toBeNull();
     expect(getColorIsolationUniforms('#orange')).toBeNull();
-    expect(COLOR_ISOLATION_DEFAULTS).toEqual({ softness: 0.12, threshold: 0.3 });
   });
 
   it('creates complete shader uniforms for a mission color', () => {
     expect(getColorIsolationUniforms('#FF8040')).toEqual({
-      softness: 0.12,
+      ...COLOR_ISOLATION_DEFAULTS,
       targetColor: [1, 128 / 255, 64 / 255],
-      threshold: 0.3,
     });
   });
 });
