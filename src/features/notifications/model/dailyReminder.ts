@@ -6,8 +6,8 @@ import { addDateKeyDays, getZonedDateTime } from '@/src/utils/dates/zonedDateTim
 import type { NotificationSettings, ReminderKind } from './notificationSettings';
 
 export const REMINDER_PREFIX = 'mycolorlog-reminder-v2:';
-export const REMINDER_HORIZON_DAYS = 30;
-export const LEGACY_REMINDER_IDS = ['mycolorlog-morning-reminder', 'mycolorlog-evening-reminder'];
+const REMINDER_HORIZON_DAYS = 30;
+const LEGACY_REMINDER_IDS = ['mycolorlog-morning-reminder', 'mycolorlog-evening-reminder'];
 
 export type DailyReminderContext = {
   userId: string;

@@ -9,8 +9,6 @@
     "@shopify/react-native-skia": "2.6.2",
     "@supabase/supabase-js": "^2.110.6",
     "@tanstack/react-query": "^5.101.2",
-    "eslint": "^9.39.5",
-    "eslint-config-expo": "~57.0.2",
     "expo": "~57.0.30",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.5",
@@ -31,8 +29,6 @@
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
-    "expo-web-browser": "~57.0.3",
-    "jest-expo": "~57.0.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -49,6 +45,9 @@
     "@react-native/jest-preset": "^0.86.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
+    "jest-expo": "~57.0.6",
     "typescript": "~6.0.3"
   },
   "scripts": {

@@ -9,7 +9,7 @@ import {
   type ThemePreference,
 } from '@/src/design/themePreference';
 
-export type ResolvedTheme = 'dark' | 'light';
+type ResolvedTheme = 'dark' | 'light';
 
 type AppTheme = {
   colors: ThemeColors;

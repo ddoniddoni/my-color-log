@@ -1,4 +1,4 @@
-export type UploadStatus = 'local_saved' | 'pending' | 'uploading' | 'synced' | 'failed' | 'cancelled';
+type UploadStatus = 'local_saved' | 'pending' | 'uploading' | 'synced' | 'failed' | 'cancelled';
 
 export type PendingPhoto = {
   id: string;

@@ -13,7 +13,7 @@ export type RoomPhotoReactionSummary = {
   reactedByMe: boolean;
 };
 
-export function isRoomPhotoReactionEmoji(value: unknown): value is RoomPhotoReactionEmoji {
+function isRoomPhotoReactionEmoji(value: unknown): value is RoomPhotoReactionEmoji {
   return typeof value === 'string' && ROOM_PHOTO_REACTION_CHOICES.some((choice) => choice.emoji === value);
 }
 

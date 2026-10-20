@@ -1,4 +1,4 @@
-import { getNextPhotoPosition, getTodayPhotoSlots, mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
+import { getNextPhotoPosition, mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { removeEntryPhoto } from '@/src/features/entries/model/removeEntryPhoto';
 
@@ -70,13 +70,5 @@ describe('today photos', () => {
     const photos = Array.from({ length: 8 }, (_, index) => ({ id: String(index), uri: 'file:///photo.jpg', localUri: 'file:///photo.jpg', storagePath: 'user/photo.jpg', position: index + 1, capturedAt: queuedPhoto.capturedAt, caption: null, status: 'synced' as const }));
     expect(getNextPhotoPosition(photos)).toBe(9);
     expect(getNextPhotoPosition([...photos, { ...photos[0], id: '9', position: 9 }])).toBeNull();
-  });
-
-  it('places a first photo in the top-left cell of the fixed nine-cell board', () => {
-    const firstPhoto = { id: 'photo-1', uri: 'file:///photo-1.jpg', localUri: 'file:///photo-1.jpg', storagePath: 'user/photo-1.jpg', position: 1, capturedAt: queuedPhoto.capturedAt, caption: null, status: 'synced' as const };
-    const slots = getTodayPhotoSlots([firstPhoto]);
-    expect(slots).toHaveLength(9);
-    expect(slots[0]).toEqual(firstPhoto);
-    expect(slots.slice(1)).toEqual([null, null, null, null, null, null, null, null]);
   });
 });

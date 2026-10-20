@@ -1,4 +1,4 @@
-import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
 import { useFonts } from 'expo-font';
 import { useRef } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
