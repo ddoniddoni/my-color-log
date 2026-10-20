@@ -18,6 +18,8 @@ export type PendingPhoto = {
   retryCount: number;
   lastErrorCode: string | null;
   reviewColor?: { hex: string; nameEn: string };
+  // Persist with the rendered file so a failed confirmation cannot intensify it twice.
+  colorIsolationApplied?: true;
 };
 
 export function parsePendingPhoto(value: unknown): PendingPhoto | null {
@@ -50,6 +52,7 @@ export function parsePendingPhoto(value: unknown): PendingPhoto | null {
     lastErrorCode: value.lastErrorCode,
     ...(isRecord(value.reviewColor) && typeof value.reviewColor.hex === 'string' && /^#[0-9a-f]{6}$/i.test(value.reviewColor.hex) && isString(value.reviewColor.nameEn)
       ? { reviewColor: { hex: value.reviewColor.hex, nameEn: value.reviewColor.nameEn } } : {}),
+    ...(value.colorIsolationApplied === true ? { colorIsolationApplied: true } : {}),
   };
 }
 

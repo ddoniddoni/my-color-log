@@ -5,6 +5,7 @@ import {
   getQueuedPhoto,
   getUserPhotoQueue,
   removeUserPhotoQueue,
+  updatePendingPhoto,
 } from '@/src/features/sync/queue/photoQueue';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 
@@ -62,6 +63,24 @@ describe('persisted photo upload queue', () => {
     await addPendingPhoto(draft);
     await expect(confirmReviewPhoto(draft.id, null, [1, 2, 3, 4, 5, 6, 7, 8, 9])).rejects.toThrow('entry_photo_limit_reached');
     expect(await getQueuedPhoto(draft.id)).toEqual(draft);
+  });
+
+  it('retains the applied color treatment when confirmation fails and the draft is recovered', async () => {
+    await addPendingPhoto({ ...pendingPhoto, status: 'local_saved' });
+    const localUri = 'file:///documents/photo-queue/rendered-color.jpg';
+    await updatePendingPhoto(pendingPhoto.id, { localUri, colorIsolationApplied: true });
+
+    await expect(confirmReviewPhoto(pendingPhoto.id, null, [1, 2, 3, 4, 5, 6, 7, 8, 9])).rejects.toThrow('entry_photo_limit_reached');
+    expect(await getQueuedPhoto(pendingPhoto.id)).toMatchObject({
+      colorIsolationApplied: true,
+      localUri,
+      status: 'local_saved',
+    });
+    expect(await confirmReviewPhoto(pendingPhoto.id, null, [])).toMatchObject({
+      colorIsolationApplied: true,
+      localUri,
+      status: 'pending',
+    });
   });
 
   it('rejects confirmation after a draft has been cancelled', async () => {

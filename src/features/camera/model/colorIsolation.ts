@@ -1,34 +1,58 @@
 export type NormalizedRgb = readonly [number, number, number];
 
 export const COLOR_ISOLATION_DEFAULTS = {
-  // Keep nearby shades within the same everyday color family visible too.
-  softness: 0.12,
-  threshold: 0.3,
+  backgroundBrightness: 0.82,
+  saturationBoost: 1.35,
+  // Match hue independently of brightness and saturation, with a soft edge.
+  softness: 0.14,
+  threshold: 0.32,
 } as const;
+
+export type ColorIsolationUniforms = {
+  backgroundBrightness: number;
+  saturationBoost: number;
+  softness: number;
+  targetColor: NormalizedRgb;
+  threshold: number;
+};
 
 export const COLOR_ISOLATION_SHADER = `
   uniform shader image;
-  uniform float3 targetColor;
+  layout(color) uniform float3 targetColor;
   uniform float threshold;
   uniform float softness;
+  uniform float saturationBoost;
+  uniform float backgroundBrightness;
 
   half4 main(float2 xy) {
     half4 pixel = image.eval(xy);
-    float brightest = max(pixel.r, max(pixel.g, pixel.b));
-    float darkest = min(pixel.r, min(pixel.g, pixel.b));
-    float saturation = (brightest - darkest) / max(brightest, 0.001);
+    // Skia shaders use premultiplied alpha. Classify the straight color.
+    float3 rgb = clamp(pixel.rgb / max(pixel.a, 0.001), 0.0, 1.0);
+    float brightest = max(rgb.r, max(rgb.g, rgb.b));
+    float darkest = min(rgb.r, min(rgb.g, rgb.b));
+    float chroma = brightest - darkest;
+    float saturation = chroma / max(brightest, 0.001);
 
-    float3 pixelChroma = pixel.rgb / max(brightest, 0.001);
+    float3 pixelHue = (rgb - darkest) / max(chroma, 0.001);
     float targetBrightest = max(targetColor.r, max(targetColor.g, targetColor.b));
-    float3 targetChroma = targetColor / max(targetBrightest, 0.001);
-    float difference = length(pixelChroma - targetChroma);
+    float targetDarkest = min(targetColor.r, min(targetColor.g, targetColor.b));
+    float targetChroma = targetBrightest - targetDarkest;
+    float3 targetHue = (targetColor - targetDarkest) / max(targetChroma, 0.001);
+    float difference = length(pixelHue - targetHue);
 
     float hueMatch = 1.0 - smoothstep(threshold - softness, threshold + softness, difference);
-    float colorPresence = smoothstep(0.05, 0.15, saturation);
-    float keepOriginalColor = hueMatch * colorPresence;
-    float luminance = dot(pixel.rgb, float3(0.2126, 0.7152, 0.0722));
-    half3 grayscale = half3(luminance, luminance, luminance);
-    return half4(mix(grayscale, pixel.rgb, keepOriginalColor), pixel.a);
+    // Suppress tinted whites and shadow noise instead of amplifying them.
+    float colorPresence = smoothstep(0.05, 0.18, saturation);
+    float shadowPresence = smoothstep(0.04, 0.12, brightest);
+    float targetPresence = smoothstep(0.05, 0.18, targetChroma / max(targetBrightest, 0.001));
+    float colorMask = hueMatch * colorPresence * shadowPresence * targetPresence;
+
+    // Increase saturation while preserving the photographed hue and highlights.
+    float vividSaturation = min(saturation * saturationBoost, 1.0);
+    float3 vividColor = brightest * mix(float3(1.0), pixelHue, vividSaturation);
+    float luminance = dot(rgb, float3(0.2126, 0.7152, 0.0722));
+    float3 grayscale = float3(luminance * backgroundBrightness);
+    return half4(mix(grayscale, vividColor, colorMask) * pixel.a, pixel.a);
   }
 `;
 
@@ -46,11 +70,7 @@ export function toNormalizedRgb(colorHex: string): NormalizedRgb | null {
   ];
 }
 
-export function getColorIsolationUniforms(colorHex: string): {
-  softness: number;
-  targetColor: NormalizedRgb;
-  threshold: number;
-} | null {
+export function getColorIsolationUniforms(colorHex: string): ColorIsolationUniforms | null {
   const targetColor = toNormalizedRgb(colorHex);
   if (!targetColor) return null;
 

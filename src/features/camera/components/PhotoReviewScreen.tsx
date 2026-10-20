@@ -38,7 +38,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   const photoQuery = useQueuedPhoto(reviewContext.photoId);
   const [editedCaption, setCaption] = useState<string | null>(null);
   const [isCropVisible, setIsCropVisible] = useState(false);
-  const [isColorIsolationEnabled, setIsColorIsolationEnabled] = useState(false);
+  const [isColorIsolationRequested, setIsColorIsolationRequested] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -50,6 +50,8 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
   const caption = editedCaption ?? photo?.caption ?? '';
   const canIsolateColor = Boolean(colorHex) && isColorIsolationPreviewAvailable;
   const isBusy = isSaving || isEditing;
+  const isColorIsolationEnabled = Boolean(photo?.colorIsolationApplied) || isColorIsolationRequested;
+  const canToggleColorIsolation = canIsolateColor && !isBusy && !photo?.colorIsolationApplied;
 
   const replaceReviewedPhoto = (updatedPhoto: PendingPhoto): void => {
     queryClient.setQueryData(queryKeys.queuedPhoto(updatedPhoto.id), updatedPhoto);
@@ -178,7 +180,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
             {isColorIsolationEnabled ? <View pointerEvents="none" style={styles.photoFilterBackdrop} /> : <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} /><View pointerEvents="none" style={styles.photoDimmer} /></>}
             <View pointerEvents="none" style={styles.photoPreviewPaper}>
               <View accessibilityLabel={t(isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진')} accessible style={styles.photoPreview}>
-                {isColorIsolationEnabled && colorHex ? <ColorIsolationPreview colorHex={colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
+                {isColorIsolationEnabled && !photo.colorIsolationApplied && colorHex ? <ColorIsolationPreview colorHex={colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
               </View>
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
             </View>
@@ -197,14 +199,14 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
         <Pressable
           accessibilityLabel={t('오늘의 색만 보기')}
           accessibilityRole="switch"
-          accessibilityState={{ checked: isColorIsolationEnabled, disabled: !canIsolateColor }}
-          disabled={!canIsolateColor}
-          onPress={() => setIsColorIsolationEnabled((currentValue) => !currentValue)}
-          style={({ pressed }) => [styles.colorIsolationToggle, pressed && canIsolateColor && styles.pressed, !canIsolateColor && styles.disabled]}>
+          accessibilityState={{ checked: isColorIsolationEnabled, disabled: !canToggleColorIsolation }}
+          disabled={!canToggleColorIsolation}
+          onPress={() => setIsColorIsolationRequested((currentValue) => !currentValue)}
+          style={({ pressed }) => [styles.colorIsolationToggle, pressed && canToggleColorIsolation && styles.pressed, !canToggleColorIsolation && styles.disabled]}>
           <View style={[styles.colorIsolationDot, { backgroundColor: colorHex ?? theme.colors.surfaceMuted }]} />
           <View style={styles.colorIsolationCopy}>
             <AppText style={styles.colorIsolationTitle}>오늘의 색만 보기</AppText>
-            <AppText style={styles.colorIsolationDescription}>{!colorHex ? '색 정보가 없는 이전 사진은 원본으로 저장해요.' : isColorIsolationPreviewAvailable ? '오늘의 색은 남기고 나머지는 흑백으로 저장해요.' : '최신 development build에서 사용할 수 있어요.'}</AppText>
+            <AppText style={styles.colorIsolationDescription}>{!colorHex ? '색 정보가 없는 이전 사진은 원본으로 저장해요.' : isColorIsolationPreviewAvailable ? '오늘의 색은 더 선명하게, 나머지는 차분한 흑백으로 저장해요.' : '최신 development build에서 사용할 수 있어요.'}</AppText>
           </View>
           <View style={[styles.colorIsolationTrack, isColorIsolationEnabled && styles.colorIsolationTrackEnabled]}>
             <View style={[styles.colorIsolationKnob, isColorIsolationEnabled && styles.colorIsolationKnobEnabled]} />

@@ -165,7 +165,7 @@ const translationEntries: readonly Translation[] = [
   entry('발견한 색', 'Found'),
   entry('촬영한 사진을', 'Review your'),
   entry('확인해요!', 'catch!'),
-  entry('오늘의 색은 남기고 나머지는 흑백으로 저장해요.', 'Keep today’s color and save the rest in grayscale.'),
+  entry('오늘의 색은 더 선명하게, 나머지는 차분한 흑백으로 저장해요.', 'Make today’s color more vivid and save the rest in muted grayscale.'),
   entry('최신 development build에서 사용할 수 있어요.', 'Available in the latest development build.'),
   entry('사진 메모', 'Photo memo'),
   entry('뒷마당에서 발견했어요...', 'Found this in the back garden...'),

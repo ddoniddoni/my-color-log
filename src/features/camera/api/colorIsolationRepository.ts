@@ -9,6 +9,7 @@ const COLOR_ISOLATION_JPEG_QUALITY = 85;
 
 export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: string): Promise<PendingPhoto> {
   if (photo.status !== 'local_saved') throw new Error('photo_color_isolation_not_available');
+  if (photo.colorIsolationApplied) return photo;
 
   const uniforms = getColorIsolationUniforms(colorHex);
   if (!uniforms) throw new Error('photo_color_isolation_invalid_color');
@@ -39,9 +40,9 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
     if (!surface) throw new Error('photo_color_isolation_surface_unavailable');
 
     builder = Skia.RuntimeShaderBuilder(runtimeEffect);
-    builder.setUniform('targetColor', uniforms.targetColor);
-    builder.setUniform('threshold', [uniforms.threshold]);
-    builder.setUniform('softness', [uniforms.softness]);
+    for (const [name, value] of Object.entries(uniforms)) {
+      builder.setUniform(name, typeof value === 'number' ? [value] : value);
+    }
     imageFilter = Skia.ImageFilter.MakeRuntimeShader(builder, null, null);
     paint = Skia.Paint();
     paint.setImageFilter(imageFilter);
@@ -58,12 +59,14 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
     const filteredPhoto: PendingPhoto = {
       ...photo,
       byteSize: destination.size,
+      colorIsolationApplied: true,
       height: sourceImage.height(),
       localUri: destination.uri,
       width: sourceImage.width(),
     };
     await updatePendingPhoto(photo.id, {
       byteSize: filteredPhoto.byteSize,
+      colorIsolationApplied: true,
       height: filteredPhoto.height,
       localUri: filteredPhoto.localUri,
       width: filteredPhoto.width,
