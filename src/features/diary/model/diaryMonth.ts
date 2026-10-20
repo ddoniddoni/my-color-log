@@ -1,7 +1,7 @@
 import { type DailyAccent } from '@/src/features/missions/model/dailyMission';
 import type { AppLanguage } from '@/src/lib/localization/languagePreference';
 
-export type DiaryColor = DailyAccent & {
+type DiaryColor = DailyAccent & {
   id: string;
   slug: string;
   nameKo: string;

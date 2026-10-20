@@ -13,7 +13,7 @@ const activeStops = new Map<string, () => void>();
 
 // Only own profile/entry metadata and published missions may cross a restart.
 // Session tokens, room data and signed photo URLs never enter this cache.
-export function sanitizeOfflineRead(key: QueryKey, data: unknown, userId: string): unknown {
+function sanitizeOfflineRead(key: QueryKey, data: unknown, userId: string): unknown {
   if (key[0] === 'profile' && key.length === 2 && key[1] === userId) {
     if (data === null) return null;
     const value = record(data);

@@ -1,7 +1,7 @@
 import type { AppLanguage } from '@/src/lib/localization/languagePreference';
 
 export const ACCOUNT_DELETION_CONFIRMATION = '삭제';
-export const ACCOUNT_DELETION_CONFIRMATIONS: Readonly<Record<AppLanguage, string>> = {
+const ACCOUNT_DELETION_CONFIRMATIONS: Readonly<Record<AppLanguage, string>> = {
   en: 'DELETE',
   ko: ACCOUNT_DELETION_CONFIRMATION,
 };

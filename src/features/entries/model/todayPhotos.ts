@@ -72,8 +72,3 @@ export function getNextPhotoPosition(photos: TodayPhoto[]): number | null {
   }
   return null;
 }
-
-export function getTodayPhotoSlots(photos: TodayPhoto[]): (TodayPhoto | null)[] {
-  const photoByPosition = new Map(photos.map((photo) => [photo.position, photo]));
-  return Array.from({ length: 9 }, (_, index) => photoByPosition.get(index + 1) ?? null);
-}
