@@ -36,6 +36,26 @@ EAS 프로젝트의 **Environment variables**에서 각 environment에 다음 �
 
 명령은 npm을 사용하며 EAS CLI는 `25.2.0`으로 고정했다.
 
+### 무료 Apple 계정으로 본인 iPhone에서 실행
+
+Mac의 Xcode와 iOS SDK, CocoaPods가 필요하다. Xcode의 Apple Accounts에 로그인한 뒤 iPhone을 USB로 연결하고 컴퓨터 신뢰·개발자 모드를 활성화한다. 무료 Personal Team은 본인 기기에서 개발 앱을 실행할 수 있지만 프로비저닝이 7일 뒤 만료되어 다시 빌드·설치해야 한다.
+
+```sh
+# 최초 생성 및 네이티브 설정 변경 후 실행. 생성된 ios/는 Git에서 제외한다.
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+APP_VARIANT=development IOS_PERSONAL_TEAM=1 npx expo prebuild --platform ios
+
+# Personal Team으로 서명하여 연결한 기기에 설치하고 개발 서버 실행
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+APP_VARIANT=development IOS_PERSONAL_TEAM=1 npx expo run:ios --device
+```
+
+`IOS_PERSONAL_TEAM=1`은 development 변형에서만 허용하며, 무료 계정으로 서명할 수 없는 APNs entitlement를 제외한다. 로컬 알림 모듈은 유지하지만 이 빌드에서는 친구방 원격 푸시를 검증할 수 없다. 일반 development·preview·production의 원격 푸시 설정은 유지한다. 무료 계정용으로 생성한 `ios/`를 유료 계정 빌드에 재사용할 때는 해당 환경 변수를 해제하고 prebuild를 다시 실행해야 한다.
+
+Xcode 27의 iOS SDK에 필요한 scene lifecycle은 SDK 호환 `expo-build-properties`의 `enableSceneSupport`로 적용한다. [Expo 빌드 설정](https://docs.expo.dev/versions/v57.0.0/sdk/build-properties/)과 [Apple Personal Team 제한](https://developer.apple.com/help/account/basics/about-your-developer-account)을 따른다.
+
+### EAS 배포 빌드
+
 ```sh
 # Android 기기와 에뮬레이터에 직접 설치할 APK
 npm run build:preview:android
