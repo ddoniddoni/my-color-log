@@ -51,7 +51,7 @@ async function createRenderer() {
         effects.set(key, effect);
       }
       const effect = effects.get(key);
-      const uniforms = uniformsFor(target);
+      const uniforms = uniformsFor(target, candidate);
       const ordered = Array.from({ length: effect.getUniformCount() }, (_, index) => {
         const value = uniforms[effect.getUniformName(index)];
         if (value === undefined) throw new Error('evaluation_uniform_missing');

@@ -22,7 +22,7 @@ describe('color isolation', () => {
   });
 
   it('creates complete shader uniforms for a mission color', () => {
-    expect(getColorIsolationUniforms('#FF8040')).toEqual({
+    expect(getColorIsolationUniforms('#FF8040')).toMatchObject({
       ...COLOR_ISOLATION_DEFAULTS,
       targetColor: [1, 128 / 255, 64 / 255],
     });

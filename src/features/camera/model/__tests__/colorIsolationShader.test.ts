@@ -3,7 +3,7 @@
 
 import { createRequire } from 'node:module';
 import { TextDecoder } from 'node:util';
-import CanvasKitInit, { type CanvasKit, type RuntimeEffect } from 'canvaskit-wasm';
+import CanvasKitInit, { type CanvasKit, type RuntimeEffect, type ColorSpace } from 'canvaskit-wasm';
 
 import { COLOR_ISOLATION_SHADER, getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
 
@@ -30,7 +30,7 @@ afterAll(() => {
   if (textDecoderDescriptor) Object.defineProperty(globalThis, 'TextDecoder', textDecoderDescriptor);
 });
 
-function render(pixel: Pixel, targetHex = '#E53935'): number[] {
+function render(pixel: Pixel, targetHex = '#E53935', sourceSpace?: ColorSpace): number[] {
   const uniforms = getColorIsolationUniforms(targetHex);
   if (!uniforms) throw new Error('invalid_test_color');
   const values = new Map<string, readonly number[]>(
@@ -44,7 +44,7 @@ function render(pixel: Pixel, targetHex = '#E53935'): number[] {
   }).flat();
   const surface = skia.MakeSurface(1, 1);
   if (!surface) throw new Error('test_surface_unavailable');
-  const source = skia.Shader.MakeColor(skia.Color(...pixel), skia.ColorSpace.SRGB);
+  const source = skia.Shader.MakeColor(skia.Color4f(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255, pixel[3]), sourceSpace ?? skia.ColorSpace.SRGB);
   const shader = effect.makeShaderWithChildren(orderedUniforms, [source]);
   const paint = new skia.Paint();
   try {
@@ -141,4 +141,49 @@ describe('color isolation rendered pixels', () => {
   it('does not arbitrarily select a hue for an achromatic target', () => {
     expect(saturation(render([210, 50, 50, 1], '#888888'))).toBeLessThan(0.02);
   });
+
+  it('keeps a red-shifted wine leaf while suppressing a bright pink for a wine mission', () => {
+    expect(saturation(render([92, 44, 49, 1], '#8B1E4B'))).toBeGreaterThan(0.5);
+    expect(saturation(render([236, 64, 122, 1], '#8B1E4B'))).toBeLessThan(0.03);
+    expect(saturation(render([139, 30, 75, 1], '#8B1E4B'))).toBeGreaterThan(0.9);
+  });
+
+  it('retains pale blue sky without amplifying almost-white blue noise', () => {
+    const sky: Pixel = [215, 228, 240, 1];
+    expect(saturation(render(sky, '#29B6F6'))).toBeGreaterThan(saturation(sky));
+    expect(saturation(render([238, 241, 245, 1], '#29B6F6'))).toBeLessThan(0.02);
+  });
+
+  it('finds olive foliage without classifying yellow or brown as leaf green', () => {
+    expect(saturation(render([90, 100, 50, 1], '#43A047'))).toBeGreaterThan(0.5);
+    expect(saturation(render([253, 216, 53, 1], '#43A047'))).toBeLessThan(0.03);
+    expect(saturation(render([110, 65, 38, 1], '#43A047'))).toBeLessThan(0.03);
+  });
+
+  it('classifies equivalent sRGB and Display P3 input colors consistently', () => {
+    // D65 linear sRGB -> Display P3 matrix, then encode with the shared transfer
+    // curve. These are equivalent in-gamut colors, not equal RGB triplets.
+    const toLinear = (v: number) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    const encode = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) * 255;
+    for (const [source, target] of [
+      [[92, 44, 49, 1], '#8B1E4B'],
+      [[215, 228, 240, 1], '#29B6F6'],
+      [[123, 47, 208, 1], '#7B2FD0'],
+    ] as const) {
+      const [r, g, b] = source.slice(0, 3).map((v) => toLinear(v / 255));
+      const p3: Pixel = [encode(0.82259287*r + 0.17753395*g), encode(0.03319951*r + 0.9667835*g), encode(0.01708535*r + 0.07239572*g + 0.91030148*b), 1];
+      const srgbResult = render(source, target);
+      const p3Result = render(p3, target, skia.ColorSpace.DISPLAY_P3);
+      srgbResult.forEach((value, i) => expect(Math.abs(value - p3Result[i])).toBeLessThanOrEqual(2));
+    }
+  });
+
+  it('keeps older lime/coral missions and narrow wine ranges renderable', () => {
+    for (const pixel of [[164, 204, 56, 1], [255, 127, 80, 1], [130, 20, 29, 1]] as const) {
+      const hex = `#${pixel.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+      const result = render(pixel, hex);
+      expect(saturation(result)).toBeGreaterThan(saturation(pixel));
+    }
+  });
+
 });

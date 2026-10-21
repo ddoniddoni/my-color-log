@@ -4,6 +4,7 @@ type Translation = Readonly<Record<AppLanguage, string>>;
 export type TranslationValues = Readonly<Record<string, number | string>>;
 
 const translationEntries: readonly Translation[] = [
+  entry('색 강조를 적용하지 못했어요. 원본으로 저장하거나 색 강조를 다시 켜서 시도해 주세요.', 'Could not apply the color effect. Save the original, or turn the effect on to try again.'),
   entry('연결 후 사진을 볼 수 있어요', 'Photo available when connected'),
   entry('연결 후 처음 시작할 수 있어요', 'Connect to get started'),
   entry('이 기기에 저장된 프로필이 없어요. 인터넷에 연결하면 기록을 준비할게요.', 'No profile is saved on this device yet. Connect to prepare your journal.'),

@@ -18,17 +18,10 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
   if (!sourceFile.exists) throw new Error('photo_color_isolation_source_missing');
 
   const { ImageFormat, Skia } = await import('@shopify/react-native-skia');
-  const sourceData = await Skia.Data.fromURI(photo.localUri);
-  const sourceImage = Skia.Image.MakeImageFromEncoded(sourceData);
-  const runtimeEffect = Skia.RuntimeEffect.Make(COLOR_ISOLATION_SHADER);
-  if (!sourceImage || !runtimeEffect) {
-    sourceData.dispose();
-    sourceImage?.dispose();
-    runtimeEffect?.dispose();
-    throw new Error('photo_color_isolation_render_unavailable');
-  }
-
-  const destination = new File(sourceFile.parentDirectory, `${photo.id}-color-${Date.now()}.jpg`);
+  let sourceData: Awaited<ReturnType<typeof Skia.Data.fromURI>> | null = null;
+  let sourceImage: ReturnType<typeof Skia.Image.MakeImageFromEncoded> = null;
+  let runtimeEffect: ReturnType<typeof Skia.RuntimeEffect.Make> = null;
+  let destination: File | null = null;
   let surface: ReturnType<typeof Skia.Surface.MakeOffscreen> = null;
   let filteredImage: ReturnType<typeof Skia.Image.MakeImageFromEncoded> = null;
   let builder: ReturnType<typeof Skia.RuntimeShaderBuilder> | null = null;
@@ -36,6 +29,11 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
   let paint: ReturnType<typeof Skia.Paint> | null = null;
 
   try {
+    sourceData = await Skia.Data.fromURI(photo.localUri);
+    sourceImage = Skia.Image.MakeImageFromEncoded(sourceData);
+    runtimeEffect = Skia.RuntimeEffect.Make(COLOR_ISOLATION_SHADER);
+    if (!sourceImage || !runtimeEffect) throw new Error('photo_color_isolation_render_unavailable');
+    destination = new File(sourceFile.parentDirectory, `${photo.id}-color-${Date.now()}.jpg`);
     surface = Skia.Surface.MakeOffscreen(sourceImage.width(), sourceImage.height());
     if (!surface) throw new Error('photo_color_isolation_surface_unavailable');
 
@@ -74,7 +72,7 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
     await removeLocalPhotoFile(photo.localUri);
     return filteredPhoto;
   } catch (error) {
-    await removeLocalPhotoFile(destination.uri);
+    if (destination) await removeLocalPhotoFile(destination.uri);
     throw error;
   } finally {
     paint?.dispose();
@@ -82,8 +80,8 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
     builder?.dispose();
     filteredImage?.dispose();
     surface?.dispose();
-    runtimeEffect.dispose();
-    sourceImage.dispose();
-    sourceData.dispose();
+    runtimeEffect?.dispose();
+    sourceImage?.dispose();
+    sourceData?.dispose();
   }
 }
