@@ -62,7 +62,7 @@ test('all candidate shaders execute, preserve target color and reject neutral pi
   const renderer = await createRenderer();
   try {
     const image = swatchImage([[123,47,208], [128,128,128], [255,255,255], [0,0,0]]);
-    for (const candidate of ['baseline', 'hsv', 'oklch']) {
+    for (const candidate of ['baseline', 'hsv', 'oklch', 'current']) {
       const result = renderer.render(image, '#7B2FD0', candidate, true);
       assert.ok(result.rgba[0] > 250, candidate);
       for (const i of [1,2,3]) assert.equal(result.rgba[i*4], 0, candidate);
@@ -77,5 +77,37 @@ test('baseline reproduces pink/wine confusion rather than hiding it in the metri
     assert.equal(result.fp, 1);
     assert.equal(result.tp, 1);
     assert.equal(result.precision, 0.5);
+  } finally { renderer.dispose(); }
+});
+
+
+test('current production mask separates wine/pink and retains pale sky and olive without neutral noise', async () => {
+  const renderer = await createRenderer();
+  try {
+    for (const [hex, positive, negative] of [
+      ['#8B1E4B', [92,44,49], [236,64,122]],
+      ['#29B6F6', [215,228,240], [238,241,245]],
+      ['#43A047', [90,100,50], [253,216,53]],
+    ]) {
+      const mask = renderer.render(swatchImage([positive, negative]), hex, 'current', true);
+      assert.ok(mask.rgba[0] > 128, hex);
+      assert.ok(mask.rgba[4] < 16, hex);
+    }
+  } finally { renderer.dispose(); }
+});
+
+test('a one-pixel color detail survives without coloring its neighbors, including after rotation', async () => {
+  const renderer = await createRenderer();
+  try {
+    const pixels = [[128,128,128], [123,47,208], [128,128,128]];
+    const row = swatchImage(pixels);
+    const horizontal = renderer.render(row, '#7B2FD0', 'current');
+    const vertical = renderer.render({ ...row, width: 1, height: 3 }, '#7B2FD0', 'current');
+    assert.deepEqual(horizontal.rgba, vertical.rgba);
+    for (const index of [0, 2]) {
+      assert.equal(horizontal.rgba[index*4], horizontal.rgba[index*4+1]);
+      assert.equal(horizontal.rgba[index*4+1], horizontal.rgba[index*4+2]);
+    }
+    assert.ok(horizontal.rgba[6] - horizontal.rgba[5] > 100);
   } finally { renderer.dispose(); }
 });

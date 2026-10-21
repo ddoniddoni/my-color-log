@@ -9,7 +9,7 @@ const { syntheticCases } = require('./fixtures.cjs');
 const { MASK_THRESHOLD, rectangleLabels, scoreMask, summarize, validateSceneSplits } = require('./metrics.cjs');
 const palette = require('./palette.json');
 const manifest = require('./photos.json');
-const candidates = ['baseline', 'hsv', 'oklch'];
+const candidates = ['baseline', 'hsv', 'oklch', 'current'];
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 
@@ -91,11 +91,13 @@ async function main() {
     if (group.length) summaries.push({ kind, split, candidate, cases: group.length, ...summarize(group) });
   }
   const report = {
-    version: 1, annotationStatus: manifest.annotationStatus,
+    version: 2, annotationStatus: manifest.annotationStatus,
     maskThreshold: MASK_THRESHOLD, engine: `CanvasKit ${require('canvaskit-wasm/package.json').version} CPU sRGB 8-bit`,
     photoScenes: values.photos ? manifest.photos.length : 0,
     baselineSha256: sha256(await readFile(require.resolve('./baseline.sksl'))),
     candidateSha256: sha256(await readFile(require.resolve('./candidates.cjs'))),
+    productionSha256: require('./production.cjs').sourceSha256,
+    tuningNote: 'Current profiles use all pilot scenes. Historical validation split is not an independent holdout for current.',
     manifestSha256: sha256(await readFile(require.resolve('./photos.json'))),
     // Sparse, agent-reviewed ROIs cannot satisfy the plan's human full-mask release gate.
     releaseGate: { status: 'not-evaluated', reasons: ['40 independent scenes and human full masks pending', '10-color validation coverage pending', 'iOS/Android timing, memory and color-space QA deferred to F'] },
@@ -108,7 +110,7 @@ async function main() {
   };
   await writeFile(join(output, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
   const credits = manifest.photos.map((p) => `<li>${escape(p.id)}: ${escape(p.author)} · <a href="${escape(p.licenseUrl)}">${escape(p.license)}</a> · <a href="${escape(p.source)}">source</a>. Resized, sRGB decoded; candidate images filtered.</li>`).join('');
-  await writeFile(join(output, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Color isolation — exploratory comparison</title><style>body{font:15px system-ui;margin:24px;background:#eee;color:#222}h1{font-size:24px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}figure{margin:0}img{width:100%;display:block}figcaption{min-height:60px;font-size:12px}.source{position:relative}.regions{position:absolute;inset:0}section{margin:40px 0}a{color:#084a96}</style><h1>Exploratory comparison — release gate NOT evaluated</h1><p>6 independent public photo scenes at most. Sparse regions annotated by the coding agent, not human full-image masks. No mobile performance claim. Undefined areas ignored; mask threshold fixed at 0.5.</p>${cards.join('')}<h2>Attribution</h2><ul>${credits}</ul>`);
+  await writeFile(join(output, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Color isolation — exploratory comparison</title><style>body{font:15px system-ui;margin:24px;background:#eee;color:#222}h1{font-size:24px}.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}figure{margin:0}img{width:100%;display:block}figcaption{min-height:60px;font-size:12px}.source{position:relative}.regions{position:absolute;inset:0}section{margin:40px 0}a{color:#084a96}</style><h1>Exploratory comparison — release gate NOT evaluated</h1><p>6 independent public photo scenes at most. Sparse regions annotated by the coding agent, not human full-image masks. Current profiles use all pilot scenes; the historical validation split is not an independent holdout for current. No mobile performance claim. Undefined areas ignored; mask threshold fixed at 0.5.</p>${cards.join('')}<h2>Attribution</h2><ul>${credits}</ul>`);
   console.table(summaries);
   console.log(`Report: ${join(output, 'index.html')}\nRelease gate: not evaluated (see report.json).`);
 }

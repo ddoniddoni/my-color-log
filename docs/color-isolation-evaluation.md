@@ -1,8 +1,8 @@
-# 색 강조 D단계 — 평가 도구와 1차 비교
+# 색 강조 D/E단계 — 평가와 개선 기록
 
 - 날짜: 2026-10-22
 - 관련 요구사항: FR-PHOTO-002/005/006, [실사용 피드백 계획 D/E/F](iphone-feedback-improvement-plan.md)
-- 상태: D 평가 도구·공개 사진 파일럿 완료. 정식 정확도·모바일 성능 측정과 E 구현은 다음 단계다.
+- 상태: D 평가 도구·공개 사진 파일럿과 E 구현·자동 검증 완료. **정식 정확도 검증과 모바일 성능 측정은 미완료.** 아래 D 결과는 당시 실험 기록이며 E 반영 결과는 마지막 절에 있다.
 
 ## 결정
 
@@ -121,3 +121,48 @@ npm run evaluate:color-isolation -- --photos --download \
 사진 없이 실행하면 사진 수를 0으로 기록한다. 다운로드 파일의 SHA-256이나 방향/크기가 다르면 평가를 중단하며 검증 없이 새 사진으로 대체하지 않는다. 결과는 `index.html`(원본/주석/효과/마스크/출처), `report.json`(후보·자료 해시, 부분 영역 수치, 색별 누락, 미완료 사유)이다. `.env`·계정·네트워크 인증이 필요 없고 사진과 대용량 결과를 저장소에 추가하지 않는다.
 
 실행 검증: 신규 Node 평가 테스트 8개, 관련 Jest 3 suite / 19 tests, 전체 Jest 70 suite / 311 tests, `npm run typecheck`, `npm run lint` 통과. 린트에서 Node 전역 사용을 발견해 명시적 import/파일 해석으로 수정했다. 사진 평가 전체 실행과 결과 이미지의 보라·와인 비교를 확인했다. 앱 빌드·기기 연결·설치·공유 서버 변경·커밋·푸시는 수행하지 않았다.
+
+
+## E 구현 결과 (2026-10-22)
+
+D에서 제안한 색상군별 개선을 실제 앱에 반영했다. 새 네이티브 라이브러리나 공간 후처리는 추가하지 않았다. 마스크 함수는 합성과 분리했고, 미리보기/저장이 같은 shader와 uniforms를 사용한다. 평가 도구의 `current`는 TypeScript production 모듈을 직접 transpile해서 읽으므로 앱과 다른 복사 알고리즘을 평가하지 않는다. 보고서에 production SHA-256도 기록한다. 기존 baseline 해시와 주석은 그대로다.
+
+- 와인: 어두운 붉은 보라 목표에서 밝은 핑크를 제외하는 soft 밝기 상한, 붉은 방향 hue 범위, 더 엄격한 암부 억제를 함께 사용한다. 붉은 갈색 전체를 허용하지 않는다.
+- 초록: 노란 기운의 올리브 잎까지 넓히되 레몬/갈색이 들어오지 않도록 하한 hue를 제한한다. 기존 라임도 고려한다.
+- 파랑·민트: 옅은 하늘이 남도록 채도 문턱을 낮추되 거의 흰 픽셀은 억제한다.
+- 나머지 색은 기존 hue 거리 판별을 유지한다. 보라 꽃의 기존 좋은 결과를 보존한다. 명도/채도 연출은 기존 값 0.82/1.35를 유지하며 목표 HEX로 사진을 칠하지 않는다.
+
+Skia 작업 색에서 `toLinearSrgb` → encoded sRGB 판별·합성 → `fromLinearSrgb`로 변환한다. sRGB와 Display P3의 동등한 in-gamut 입력색이 CanvasKit에서 채널당 2/255 이내로 일치함을 확인했다. gamut 밖은 sRGB로 clipping되므로 P3의 넓은 색역을 전부 보존하는 구현은 아니다. native destination 색 공간·기기 화면·JPEG 결과까지 이 테스트로 검증했다고 해석하지 않는다. 관련 계약은 [SkSL 색 공간 문서](https://skia.org/docs/user/sksl/)를 따른다.
+
+E는 D의 모든 파일럿 장면을 조정에 사용했다. 아래 `validation`은 D 당시 분할 이름일 뿐 **E의 독립 holdout이 아니다**. 보고서 HTML/JSON에 이 사실과 `releaseGate.status = not-evaluated`를 함께 남긴다. 마스크 문턱 0.5와 주석은 변경하지 않았다.
+
+| 부분 영역 지표 | Frozen baseline | E current |
+| --- | ---: | ---: |
+| 이전 validation 3장/6조합 macro precision | 0.818 | 0.934 |
+| 동일 macro recall | 0.597 | 0.708 |
+| 동일 macro ROI IoU | 0.552 | 0.670 |
+| 와인 잎 precision / recall | 0.343 / 0.185 | 0.997 / 0.379 |
+| 연한 하늘 recall | 0.734 | 0.904 |
+| 그늘진 초록 잎 recall | 0.013 | 0.311 |
+| 보라 꽃 recall | 0.995 | 0.995 |
+| 핑크 잎 precision / recall | 0.621 / 0.719 | 0.621 / 0.719 |
+| Coffee 와인 부재 FP 면적 | 0.0363% | 0.0283% |
+| Coffee 보라 부재 FP 면적 | 0.00583% | 0.00583% |
+
+하늘/초록의 해당 음성 주석 영역 FP 비율은 각각 2.998%→3.095%, 0.0175%→0.0291%로 소폭 증가했다. precision은 각각 0.990→0.992, 0.951→0.996으로 개선됐지만 모든 배경에서 오검출이 줄었다고 주장하지 않는다. 레드 목표에서 주황 의상과 섞이는 기존 낮은 precision(0.256)은 이번 범위에서 그대로 남는다. 와인의 밝은 반사/붉게 치우친 영역과 초록의 짙은 그림자는 아직 많이 누락된다. 피부·목재가 같은 RGB이면 사물 의미만으로 제외할 수 없다. 압축된 하늘 경계의 얼룩도 후속 QA에 포함한다.
+
+미리보기는 준비 중 원본을 보여주며 모듈 로딩/디코딩/셰이더 실패 시 원본으로 복귀한다. 화면 이탈·URI 변경 뒤 늦은 로딩은 이미지를 붙이지 않고 데이터를 정리한다. 저장은 출력 파일과 큐 갱신이 끝난 뒤에만 이전 파일을 제거한다. 실패하면 효과를 끄고 원본 저장 또는 재시도를 안내하며, 원본을 자동 확정하지 않는다. 복구한 적용 완료 드래프트는 재처리하지 않는다. 파일 형식과 큐 버전은 바꾸지 않았다.
+
+검증 결과: Jest 72 suite / 332 tests, Node 평가 10 tests, typecheck와 lint 통과. React Doctor 0.9.18 새 진단 0개(기준 16개 동일), 현재 84/100. 공통 shader 픽셀·알파·P3 입력·1px 영역·회전, 비동기 완료 취소와 리소스 해제, 쓰기/큐 저장 실패 시 원본 보존, 적용 완료 사진 재시도, 오류 후 원본 저장을 확인했다. [Babel dynamic import 변환](https://babeljs.io/docs/babel-plugin-transform-dynamic-import)을 Jest에만 추가해 기존 lazy import 경로도 실제 테스트했다. 개발 의존성 1개 추가이며 앱의 Metro/네이티브 의존성은 그대로다.
+
+재현 명령:
+
+```sh
+npm run evaluate:color-isolation -- --photos \
+  --cache /tmp/mycolorlog-color-evaluation \
+  --output /tmp/mycolorlog-color-evaluation/phase-e
+```
+
+결과는 `/tmp/mycolorlog-color-evaluation/phase-e/index.html` 및 `report.json`에 있다. 사진·생성 결과는 Git에 넣지 않는다. 최종 production SHA-256: `49182367cee01703e8ae3528263fea97fe79cebb3cf98915ef060dc3426c71f4`.
+
+정식 독립 40장·사람 마스크·10색 기준은 아직 평가하지 못했다. iOS/Android 실제 성능/메모리, 미리보기/1600px 저장 일치, native P3/화면 밀도/축소·crop·회전·JPEG, 실제 사용자 사진은 F에서 확인한다. 이번에는 사용자 지시대로 빌드·기기 연결/실행·공유 서버 반영을 하지 않았다.

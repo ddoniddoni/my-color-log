@@ -105,14 +105,26 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
     }
   };
 
+  const handleColorIsolationError = (): void => {
+    setIsColorIsolationRequested(false);
+    setErrorMessage(t('색 강조를 적용하지 못했어요. 원본으로 저장하거나 색 강조를 다시 켜서 시도해 주세요.'));
+  };
+
   const savePhoto = async (): Promise<void> => {
     if (!photo || isBusy) return;
     setIsSaving(true);
     setErrorMessage(null);
+    let photoToConfirm = photo;
+    if (isColorIsolationEnabled && colorHex && !photo.colorIsolationApplied) {
+      try {
+        photoToConfirm = await applyColorIsolationToPhoto(photo, colorHex);
+      } catch {
+        handleColorIsolationError();
+        setIsSaving(false);
+        return;
+      }
+    }
     try {
-      const photoToConfirm = isColorIsolationEnabled && colorHex
-        ? await applyColorIsolationToPhoto(photo, colorHex)
-        : photo;
       replaceReviewedPhoto(photoToConfirm);
       const dayQueue = await getDayPhotoQueue(photo.userId, photo.dateKey);
       const occupiedPositions = mergeTodayPhotos(entryQuery.data, dayQueue).map((item) => item.position);
@@ -180,7 +192,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
             {isColorIsolationEnabled ? <View pointerEvents="none" style={styles.photoFilterBackdrop} /> : <><Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoBlur} /><View pointerEvents="none" style={styles.photoDimmer} /></>}
             <View pointerEvents="none" style={styles.photoPreviewPaper}>
               <View accessibilityLabel={t(isColorIsolationEnabled ? '오늘의 색만 남긴 사진 미리보기' : '촬영한 오늘의 색 사진')} accessible style={styles.photoPreview}>
-                {isColorIsolationEnabled && !photo.colorIsolationApplied && colorHex ? <ColorIsolationPreview colorHex={colorHex} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
+                {isColorIsolationEnabled && !photo.colorIsolationApplied && colorHex ? <ColorIsolationPreview colorHex={colorHex} onError={handleColorIsolationError} size={136} uri={photo.localUri} /> : <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.localUri }} style={styles.photoPreview} />}
               </View>
               <AppText style={styles.photoFileName}>오늘의 발견</AppText>
             </View>

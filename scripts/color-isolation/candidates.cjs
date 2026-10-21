@@ -1,4 +1,5 @@
 const { readFileSync } = require('node:fs');
+const production = require('./production.cjs');
 
 // Frozen cb63022 baseline. Never replace this with the candidate being evaluated.
 const baseline = readFileSync(require.resolve('./baseline.sksl'), 'utf8');
@@ -62,6 +63,7 @@ function replaceOnce(source, before, after) {
 }
 
 function shaderFor(candidate, maskOnly = false) {
+  if (candidate === 'current') return maskOnly ? production.COLOR_ISOLATION_MASK_SHADER : production.COLOR_ISOLATION_SHADER;
   let source = baseline;
   if (candidate !== 'baseline') {
     if (!['hsv', 'oklch'].includes(candidate)) throw new Error('unknown_candidate');
@@ -71,7 +73,12 @@ function shaderFor(candidate, maskOnly = false) {
   return maskOnly ? replaceOnce(source, result, 'return half4(float3(colorMask), 1.0);') : source;
 }
 
-function uniformsFor(hex) {
+function uniformsFor(hex, candidate) {
+  if (candidate === 'current') {
+    const uniforms = production.getColorIsolationUniforms(hex);
+    if (!uniforms) throw new Error('invalid_target');
+    return uniforms;
+  }
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) throw new Error('invalid_target');
   return {
     targetColor: [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16) / 255),

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { lazy, Suspense } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 
 import { getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
@@ -14,15 +14,25 @@ const ColorIsolationSkiaPreview = nativeSkiaModule === null
 
 export const isColorIsolationPreviewAvailable = ColorIsolationSkiaPreview !== null;
 
-export function ColorIsolationPreview({ colorHex, size, uri }: { colorHex: string; size: number; uri: string }) {
-  const uniforms = getColorIsolationUniforms(colorHex);
-  if (!ColorIsolationSkiaPreview || !uniforms) {
-    return <OriginalPhotoPreview size={size} uri={uri} />;
-  }
+type PreviewProps = { colorHex: string; size: number; uri: string; onError: () => void };
 
-  return <Suspense fallback={<OriginalPhotoPreview size={size} uri={uri} />}><ColorIsolationSkiaPreview size={size} uniforms={uniforms} uri={uri} /></Suspense>;
+export function ColorIsolationPreview({ colorHex, onError, size, uri }: PreviewProps) {
+  const uniforms = getColorIsolationUniforms(colorHex);
+  const original = <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri }} style={{ height: size, width: size }} />;
+  if (!ColorIsolationSkiaPreview || !uniforms) return original;
+
+  return (
+    <PreviewErrorBoundary key={`${uri}:${colorHex}`} fallback={original} onError={onError}>
+      <Suspense fallback={original}>
+        <ColorIsolationSkiaPreview fallback={original} onError={onError} size={size} uniforms={uniforms} uri={uri} />
+      </Suspense>
+    </PreviewErrorBoundary>
+  );
 }
 
-function OriginalPhotoPreview({ size, uri }: { size: number; uri: string }) {
-  return <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri }} style={{ height: size, width: size }} />;
+class PreviewErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode; onError: () => void }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { this.props.onError(); }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
