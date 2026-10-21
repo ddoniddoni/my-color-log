@@ -13,6 +13,17 @@ export default function defineAppConfig({ config }: ConfigContext): ExpoConfig {
   }
   const variant = variants[variantName];
   const identifier = `com.ddoni.mycolorlog${variant.suffix}`;
+  const isPersonalTeam = process.env.IOS_PERSONAL_TEAM === '1';
+  if (isPersonalTeam && variantName !== 'development') {
+    throw new Error('IOS_PERSONAL_TEAM is only supported for development builds.');
+  }
+  const plugins: NonNullable<ExpoConfig['plugins']> = [
+    ...(config.plugins ?? []),
+    ['expo-dev-client', { addGeneratedScheme: variantName === 'development' }],
+    ['expo-build-properties', { ios: { enableSceneSupport: true } }],
+  ];
+  // Mods run in reverse registration order, so remove APNs after notifications adds it.
+  if (isPersonalTeam) plugins.unshift('./plugins/with-ios-personal-team.cjs');
 
   return {
     ...config,
@@ -21,9 +32,6 @@ export default function defineAppConfig({ config }: ConfigContext): ExpoConfig {
     scheme: variant.scheme,
     ios: { ...config.ios, bundleIdentifier: identifier },
     android: { ...config.android, package: identifier },
-    plugins: [
-      ...(config.plugins ?? []),
-      ['expo-dev-client', { addGeneratedScheme: variantName === 'development' }],
-    ],
+    plugins,
   };
 }
