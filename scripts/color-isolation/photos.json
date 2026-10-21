@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "annotationStatus": "agent-reviewed sparse regions; not human ground truth",
+  "maxSide": 640,
+  "photos": [
+    {
+      "id": "astronaut",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/astronaut.png",
+      "sha256": "88431cd9653ccd539741b555fb0a46b61558b301d4110412b5bc28b5e3ea6cb5",
+      "author": "NASA",
+      "license": "Public domain",
+      "licenseUrl": "https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut",
+      "source": "https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut",
+      "split": "development",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "coffee",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/coffee.png",
+      "sha256": "cc02f8ca188b167c775a7101b5d767d1e71792cf762c33d6fa15a4599b5a8de7",
+      "author": "Rachel Michetti / Pikolo Espresso Bar",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.coffee",
+      "split": "development",
+      "width": 600,
+      "height": 400
+    },
+    {
+      "id": "crocus",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/PurpleCrocus.jpg",
+      "sha256": "cdd9679e0f80878eb4ebbc0b0c3acd3727e524ee325c3c5c63c33fbda37d5bec",
+      "author": "Sue Welsh (SuW)",
+      "license": "Public domain",
+      "licenseUrl": "https://commons.wikimedia.org/wiki/File:PurpleCrocus.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:PurpleCrocus.jpg",
+      "split": "development",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": "coleus",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Beautiful_Coleus.jpg",
+      "sha256": "f6fe54f34c2f44ba89a6b0d1a7c8363e7eb1654213898642972eb6a4077da3b4",
+      "author": "Rohitverma9625",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Beautiful_Coleus.jpg",
+      "split": "validation",
+      "width": 427,
+      "height": 640
+    },
+    {
+      "id": "flower",
+      "url": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/1.7.2/sklearn/datasets/images/flower.jpg",
+      "sha256": "a77f6ec41e353afdf8bdff2ea981b2955535d8d83294f8cfa49cf4e423dd5638",
+      "author": "vultilion (scikit-learn README also credits danielbuechele)",
+      "license": "CC-BY-2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "source": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/1.7.2/sklearn/datasets/images/README.txt",
+      "split": "validation",
+      "width": 640,
+      "height": 427
+    },
+    {
+      "id": "china",
+      "url": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/1.7.2/sklearn/datasets/images/china.jpg",
+      "sha256": "8378025ad2519d649d02e32bd98990db4ab572357d9f09841c2fbfbb4fefad29",
+      "author": "danielbuechele",
+      "license": "CC-BY-2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "source": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/1.7.2/sklearn/datasets/images/README.txt",
+      "split": "validation",
+      "width": 640,
+      "height": 427
+    }
+  ],
+  "cases": [
+    {
+      "id": "crocus-purple",
+      "scene": "crocus",
+      "split": "development",
+      "color": "royal-purple",
+      "note": "Purple petals in light/shadow; brown leaves, white petal and green stems excluded.",
+      "regions": [
+        {"label": 1, "bounds": [0.153125, 0.3125, 0.178125, 0.35625]},
+        {"label": 1, "bounds": [0.3828125, 0.5354167, 0.4046875, 0.5833333]},
+        {"label": 1, "bounds": [0.4828125, 0.1958333, 0.503125, 0.2291667]},
+        {"label": 1, "bounds": [0.728125, 0.3020833, 0.746875, 0.3375]},
+        {"label": 1, "bounds": [0.553125, 0.7125, 0.571875, 0.7375]},
+        {"label": 0, "bounds": [0.0234375, 0.025, 0.171875, 0.0875]},
+        {"label": 0, "bounds": [0.859375, 0.725, 0.8859375, 0.74375]},
+        {"label": 0, "bounds": [0.21875, 0.7604167, 0.2296875, 0.7979167]}
+      ]
+    },
+    {
+      "id": "astronaut-orange",
+      "scene": "astronaut",
+      "split": "development",
+      "color": "tangerine-orange",
+      "note": "Orange suit versus face, pale wall and black helmet; ambiguous borders/patches unlabelled.",
+      "regions": [
+        {"label": 1, "bounds": [0.109375, 0.5019531, 0.1894531, 0.5820312]},
+        {"label": 1, "bounds": [0.2871094, 0.5976562, 0.3886719, 0.6582031]},
+        {"label": 1, "bounds": [0.5898438, 0.5214844, 0.640625, 0.6367188]},
+        {"label": 1, "bounds": [0.1269531, 0.8671875, 0.2089844, 0.9101562]},
+        {"label": 0, "bounds": [0.4082031, 0.171875, 0.4726562, 0.1953125]},
+        {"label": 0, "bounds": [0.3925781, 0.2890625, 0.4472656, 0.3164062]},
+        {"label": 0, "bounds": [0.6308594, 0.0683594, 0.7363281, 0.2148438]},
+        {"label": 0, "bounds": [0.6054688, 0.875, 0.6835938, 0.9492188]}
+      ]
+    },
+    {
+      "id": "astronaut-red",
+      "scene": "astronaut",
+      "split": "development",
+      "color": "tomato-red",
+      "note": "Red flag versus orange suit, skin and neutral wall.",
+      "regions": [
+        {"label": 1, "bounds": [0.0722656, 0.3222656, 0.0957031, 0.3613281]},
+        {"label": 1, "bounds": [0.0078125, 0.5039062, 0.0292969, 0.5488281]},
+        {"label": 0, "bounds": [0.4082031, 0.171875, 0.4726562, 0.1953125]},
+        {"label": 0, "bounds": [0.2929688, 0.59375, 0.3789062, 0.65625]},
+        {"label": 0, "bounds": [0.6367188, 0.078125, 0.7304688, 0.2050781]}
+      ]
+    },
+    {
+      "id": "coffee-no-wine",
+      "scene": "coffee",
+      "split": "development",
+      "color": "deep-wine",
+      "note": "Warm brown coffee/wood/porcelain scene without berry-wine; full negative frame.",
+      "regions": [
+        {"label": 0, "bounds": [0.0, 0.0, 1.0, 1.0]}
+      ]
+    },
+    {
+      "id": "coffee-no-purple",
+      "scene": "coffee",
+      "split": "development",
+      "color": "royal-purple",
+      "note": "No purple in warm indoor scene; full negative frame.",
+      "regions": [
+        {"label": 0, "bounds": [0.0, 0.0, 1.0, 1.0]}
+      ]
+    },
+    {
+      "id": "coleus-wine",
+      "scene": "coleus",
+      "split": "validation",
+      "color": "deep-wine",
+      "note": "Dark burgundy leaf regions retained; vivid pink, green and blue sack excluded. Bright pink/wine transition left unlabelled.",
+      "regions": [
+        {"label": 1, "bounds": [0.5761124, 0.3921875, 0.6627635, 0.421875]},
+        {"label": 1, "bounds": [0.0843091, 0.5296875, 0.1569087, 0.5484375]},
+        {"label": 1, "bounds": [0.5971897, 0.5734375, 0.6604215, 0.6015625]},
+        {"label": 1, "bounds": [0.3255269, 0.6390625, 0.3559719, 0.6609375]},
+        {"label": 0, "bounds": [0.2974239, 0.46875, 0.35363, 0.5109375]},
+        {"label": 0, "bounds": [0.4098361, 0.2390625, 0.4543326, 0.25625]},
+        {"label": 0, "bounds": [0.2576112, 0.728125, 0.5503513, 0.846875]},
+        {"label": 0, "bounds": [0.8571429, 0.4984375, 0.941452, 0.5171875]}
+      ]
+    },
+    {
+      "id": "coleus-pink",
+      "scene": "coleus",
+      "split": "validation",
+      "color": "rose-pink",
+      "note": "Vivid pink leaves versus dark wine, green and blue sack; reciprocal wine/pink distinction.",
+      "regions": [
+        {"label": 1, "bounds": [0.2974239, 0.46875, 0.35363, 0.5109375]},
+        {"label": 1, "bounds": [0.4098361, 0.2390625, 0.4543326, 0.25625]},
+        {"label": 1, "bounds": [0.4262295, 0.29375, 0.4824356, 0.3140625]},
+        {"label": 0, "bounds": [0.5761124, 0.3921875, 0.6627635, 0.421875]},
+        {"label": 0, "bounds": [0.0843091, 0.5296875, 0.1569087, 0.5484375]},
+        {"label": 0, "bounds": [0.2576112, 0.728125, 0.5503513, 0.846875]},
+        {"label": 0, "bounds": [0.8571429, 0.4984375, 0.941452, 0.5171875]}
+      ]
+    },
+    {
+      "id": "flower-orange",
+      "scene": "flower",
+      "split": "validation",
+      "color": "tangerine-orange",
+      "note": "Orange interior petals; yellow tips and dark red center excluded as ambiguous.",
+      "regions": [
+        {"label": 1, "bounds": [0.44375, 0.3161593, 0.4828125, 0.3770492]},
+        {"label": 1, "bounds": [0.5296875, 0.323185, 0.5609375, 0.3770492]},
+        {"label": 1, "bounds": [0.5375, 0.5644028, 0.56875, 0.6088993]},
+        {"label": 0, "bounds": [0.034375, 0.1779859, 0.1859375, 0.4262295]},
+        {"label": 0, "bounds": [0.75, 0.175644, 0.890625, 0.4332553]},
+        {"label": 0, "bounds": [0.128125, 0.5854801, 0.2234375, 0.7822014]}
+      ]
+    },
+    {
+      "id": "flower-mint",
+      "scene": "flower",
+      "split": "validation",
+      "color": "mint-green",
+      "note": "Teal foliage background versus orange petals; low-light color retention probe.",
+      "regions": [
+        {"label": 1, "bounds": [0.0703125, 0.2084309, 0.15, 0.3185012]},
+        {"label": 1, "bounds": [0.778125, 0.2529274, 0.8484375, 0.3606557]},
+        {"label": 1, "bounds": [0.1375, 0.6604215, 0.1953125, 0.7400468]},
+        {"label": 0, "bounds": [0.44375, 0.3161593, 0.4828125, 0.3770492]},
+        {"label": 0, "bounds": [0.5296875, 0.323185, 0.5609375, 0.3770492]},
+        {"label": 0, "bounds": [0.5375, 0.5644028, 0.56875, 0.6088993]}
+      ]
+    },
+    {
+      "id": "china-sky",
+      "scene": "china",
+      "split": "validation",
+      "color": "sky-blue",
+      "note": "Pale blue sky versus orange roof and foliage; near-white clouds excluded.",
+      "regions": [
+        {"label": 1, "bounds": [0.0234375, 0.0234192, 0.13125, 0.3138173]},
+        {"label": 1, "bounds": [0.5359375, 0.028103, 0.6484375, 0.3021077]},
+        {"label": 0, "bounds": [0.246875, 0.1850117, 0.28125, 0.2037471]},
+        {"label": 0, "bounds": [0.0703125, 0.8384075, 0.140625, 0.9437939]},
+        {"label": 0, "bounds": [0.8609375, 0.7915691, 0.928125, 0.8969555]}
+      ]
+    },
+    {
+      "id": "china-green",
+      "scene": "china",
+      "split": "validation",
+      "color": "leaf-green",
+      "note": "Sun/shade foliage versus sky and orange roof; blue-green roof excluded.",
+      "regions": [
+        {"label": 1, "bounds": [0.0703125, 0.8384075, 0.140625, 0.9437939]},
+        {"label": 1, "bounds": [0.8609375, 0.7915691, 0.928125, 0.8969555]},
+        {"label": 1, "bounds": [0.0640625, 0.4941452, 0.090625, 0.5503513]},
+        {"label": 0, "bounds": [0.0234375, 0.0234192, 0.13125, 0.3138173]},
+        {"label": 0, "bounds": [0.5359375, 0.028103, 0.6484375, 0.3021077]},
+        {"label": 0, "bounds": [0.246875, 0.1850117, 0.28125, 0.2037471]}
+      ]
+    }
+  ]
+}
