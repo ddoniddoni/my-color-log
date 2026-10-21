@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
-import { colors, spacing } from '@/src/design/tokens';
+import { spacing } from '@/src/design/tokens';
 import { logError } from '@/src/lib/logging/logger';
 
 type AppErrorBoundaryProps = { children: ReactNode };
@@ -32,4 +32,4 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 }
 
-const styles = StyleSheet.create({ container: { flex: 1, justifyContent: 'center', gap: spacing[4], padding: spacing[5], backgroundColor: colors.canvas } });
+const styles = StyleSheet.create({ container: { flex: 1, justifyContent: 'center', gap: spacing[4], padding: spacing[5] } });

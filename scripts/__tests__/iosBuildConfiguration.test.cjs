@@ -20,6 +20,10 @@ for (const variant of ['development', 'preview', 'production']) {
     const result = inspect(variant);
     assert.equal(result.status, 0, result.stderr);
     const config = JSON.parse(result.stdout);
+    assert.equal(config.userInterfaceStyle, 'automatic');
+    assert.equal(config._internal.modResults.ios.infoPlist.UIUserInterfaceStyle, 'Automatic');
+    const appearance = config._internal.modResults.android.strings.resources.string.find((item) => item.$.name === 'expo_system_ui_user_interface_style');
+    assert.equal(appearance?._, 'automatic');
     assert.equal(config._internal.modResults.ios.entitlements['aps-environment'], 'development');
     assert.ok(config._internal.modResults.ios.infoPlist.UIApplicationSceneManifest);
   });

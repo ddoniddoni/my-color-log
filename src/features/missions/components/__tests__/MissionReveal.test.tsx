@@ -1,11 +1,13 @@
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, StyleSheet, View, type AppStateStatus } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { AppText } from '@/src/components/ui/AppText';
 import { playRevealHaptic } from '@/src/features/missions/api/revealHaptics';
 import type { DailyMission, MissionRevealColor } from '@/src/features/missions/model/dailyMission';
 import { MissionReveal } from '../MissionReveal';
+import { ThemeProvider, useAppTheme } from '@/src/design/ThemeProvider';
+import { darkColors } from '@/src/design/tokens';
 
 const mockAnimations: ((finished: boolean) => void)[] = [];
 jest.mock('react-native-reanimated', () => {
@@ -23,7 +25,7 @@ jest.mock('react-native-worklets', () => ({ scheduleOnRN: (callback: () => void)
 jest.mock('expo-font', () => ({ useFonts: () => [true] }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('@/src/features/missions/api/revealHaptics', () => ({ playRevealHaptic: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('@/src/design/ThemeProvider', () => ({ useAppTheme: () => ({ colors: jest.requireActual('@/src/design/tokens').colors }) }));
+jest.mock('@/src/design/themePreference', () => ({ getThemePreference: jest.fn().mockResolvedValue('light'), saveThemePreference: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/lib/localization/LanguageProvider', () => {
   const value = { language: 'ko', t: (text: string) => text, format: (text: string, values: Record<string, string>) => text.replace(/\{(\w+)\}/g, (_, key: string) => values[key]) };
   return { useAppLanguage: () => value, useOptionalAppLanguage: () => value };
@@ -34,6 +36,8 @@ const mission: DailyMission = { id: 'mission', challengeDate: '2026-10-19', miss
 
 describe('color reveal experience', () => {
   let screen: ReactTestRenderer;
+  let theme: ReturnType<typeof useAppTheme>;
+  function ThemeController() { theme = useAppTheme(); return null; }
   const onRevealed = jest.fn<Promise<void>, []>();
   const onContinue = jest.fn();
   const onStart = jest.fn();
@@ -43,9 +47,24 @@ describe('color reveal experience', () => {
     onRevealed.mockResolvedValue(undefined);
   });
   afterEach(async () => { await act(async () => screen?.unmount()); jest.restoreAllMocks(); });
-  const render = (reduceMotion = false, key = 'today') => <MissionReveal key={key} mission={mission} palette={palette} reduceMotion={reduceMotion} isNewDay onStart={onStart} onRevealed={onRevealed} onContinue={onContinue} />;
+  const render = (reduceMotion = false, key = 'today') => <ThemeProvider><ThemeController /><MissionReveal key={key} mission={mission} palette={palette} reduceMotion={reduceMotion} isNewDay onStart={onStart} onRevealed={onRevealed} onContinue={onContinue} /></ThemeProvider>;
   const button = () => screen.root.findByType(Button);
   const hasText = (text: string) => screen.root.findAllByType(AppText).some((node) => node.props.children === text);
+
+  it('changes the theme before and after reveal without restarting or changing the server color', async () => {
+    await act(async () => { screen = create(render(true)); });
+    await act(async () => theme.setPreference('dark'));
+    expect(StyleSheet.flatten(screen.root.findByType(MissionReveal).findAllByType(View)[0].props.style).backgroundColor).toBe(darkColors.canvas);
+    expect(hasText('체리 레드')).toBe(false);
+    await act(async () => button().props.onPress());
+    expect(onRevealed).toHaveBeenCalledTimes(1);
+    await act(async () => theme.setPreference('light'));
+    expect(button().props.label).toBe('이 색으로 기록하기');
+    expect(hasText('체리 레드')).toBe(true);
+    expect(screen.root.findByType(MissionReveal).props.mission).toBe(mission);
+    expect(onRevealed).toHaveBeenCalledTimes(1);
+    expect(onStart).toHaveBeenCalledTimes(1);
+  });
 
   it('keeps the result secret, prevents duplicate starts, then holds the color until Continue', async () => {
     await act(async () => { screen = create(render()); });
