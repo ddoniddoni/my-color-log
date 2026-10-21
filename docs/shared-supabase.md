@@ -35,6 +35,19 @@ npx --yes supabase@2.121.0 functions deploy cl-delete-my-account cl-notify-room-
 
 `--prune`이나 전체 함수 배포를 사용하지 않는다. 이메일 확인·SMTP·비밀번호 복구 Redirect URLs는 공유 설정이므로 다른 서비스의 기존 값을 보존하며 설정한다.
 
+## 팔레트 업데이트 (준비 완료, 공유 서버 미적용)
+
+기존 설치에는 `20261021180718_refresh_cl_mission_palette.sql` **한 파일만** 적용한다. 새 프로젝트도 최초 설치 명령 후 이 migration을 추가 적용해야 현재 팔레트가 된다. 서버의 기존 활성 목록이 검토 당시와 다르거나 새 slug가 이미 있으면 전체 트랜잭션이 실패하므로 원인을 확인한 뒤 별도 migration으로 조정한다. 기존 행을 덮어써서 통과시키지 않는다.
+
+```sh
+npx --yes supabase@2.121.0 db query --linked --project-ref <.env의-대상-project-ref> --yes --file supabase/migrations/20261021180718_refresh_cl_mission_palette.sql
+npm run db:verify:colorlog
+```
+
+독립 설치 기준 전체 팔레트 행은 12개, 활성 후보는 10개다. 과거 색이 더 있는 환경에서는 전체 행 수가 더 클 수 있다. 검증 결과의 `active_palette_slugs`에 `royal-purple`, `deep-wine`이 있고 `coral-pink`, `lime-green`이 없는지 확인한다. 기존 미션과 비활성 색은 그대로 남으며, 이미 결정된 오늘 색도 교체하지 않는다. 새 이력 버전은 migration 내부에서 `cl_private.schema_migrations`에 원자적으로 기록된다.
+
+복구 역시 새 timestamp migration을 추가하여 `coral-pink`·`lime-green`을 활성화하고 `royal-purple`·`deep-wine`을 비활성화한다. 새 색을 참조하는 미션이 생길 수 있으므로 색상 행·미션·사진을 삭제하거나 기존 migration을 편집하지 않는다. 색 인식 개선(D/E) 확인 후 적용하며, 앱 빌드·기기 검증은 전체 수정이 끝난 마지막 단계에서 진행한다.
+
 ## 권한과 탈퇴
 
 모든 Color Log 테이블에 RLS를 적용한다. 사진 버킷에는 제한 정책도 추가하여 다른 앱이 광범위한 허용 정책을 만들더라도 Color Log 사진을 공개하지 못하게 한다. 이 제한은 다른 버킷에서는 항상 통과한다.

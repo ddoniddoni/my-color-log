@@ -1,5 +1,6 @@
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, StyleSheet, View, type AppStateStatus } from 'react-native';
+import { Circle } from 'react-native-svg';
 
 import { Button } from '@/src/components/ui/Button';
 import { AppText } from '@/src/components/ui/AppText';
@@ -7,7 +8,7 @@ import { playRevealHaptic } from '@/src/features/missions/api/revealHaptics';
 import type { DailyMission, MissionRevealColor } from '@/src/features/missions/model/dailyMission';
 import { MissionReveal } from '../MissionReveal';
 import { ThemeProvider, useAppTheme } from '@/src/design/ThemeProvider';
-import { darkColors } from '@/src/design/tokens';
+import { colors, darkColors } from '@/src/design/tokens';
 
 const mockAnimations: ((finished: boolean) => void)[] = [];
 jest.mock('react-native-reanimated', () => {
@@ -50,6 +51,28 @@ describe('color reveal experience', () => {
   const render = (reduceMotion = false, key = 'today') => <ThemeProvider><ThemeController /><MissionReveal key={key} mission={mission} palette={palette} reduceMotion={reduceMotion} isNewDay onStart={onStart} onRevealed={onRevealed} onContinue={onContinue} /></ThemeProvider>;
   const button = () => screen.root.findByType(Button);
   const hasText = (text: string) => screen.root.findAllByType(AppText).some((node) => node.props.children === text);
+
+  it.each([
+    ['royal-purple', '로열 퍼플', 'Royal Purple', '#7B2FD0'],
+    ['deep-wine', '딥 와인', 'Deep Wine', '#8B1E4B'],
+  ])('reveals %s with its name and a themed neutral edge', async (slug, nameKo, nameEn, accent) => {
+    const color = { ...mission.color, id: slug, slug, nameKo, nameEn, accent };
+    const newMission = { ...mission, color };
+    const newPalette = [...palette.slice(0, 9), color];
+    await act(async () => {
+      screen = create(<ThemeProvider><ThemeController /><MissionReveal mission={newMission} palette={newPalette} reduceMotion isNewDay={false} onStart={onStart} onRevealed={onRevealed} onContinue={onContinue} /></ThemeProvider>);
+    });
+    expect(hasText(nameKo)).toBe(false);
+    await act(async () => button().props.onPress());
+    expect(hasText(nameKo)).toBe(true);
+    const hasEdge = (stroke: string) => screen.root.findAllByType(Circle).some((node) => node.props.r === 112 && node.props.stroke === stroke && node.props.fill === 'none');
+    expect(hasEdge(colors.borderStrong)).toBe(true);
+    await act(async () => theme.setPreference('dark'));
+    expect(hasEdge(darkColors.borderStrong)).toBe(true);
+    expect(screen.root.findAllByType(Circle).some((node) => node.props.fill === accent)).toBe(true);
+    expect(onRevealed).toHaveBeenCalledTimes(1);
+    expect(playRevealHaptic).not.toHaveBeenCalled();
+  });
 
   it('changes the theme before and after reveal without restarting or changing the server color', async () => {
     await act(async () => { screen = create(render(true)); });

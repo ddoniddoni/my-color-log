@@ -38,3 +38,11 @@ npm run test:db:room-visibility
 ```sh
 npm run test:db:namespace
 ```
+
+`mission_palette_contract.sql`은 `20261021180718_refresh_cl_mission_palette.sql` 이후 실행한다. 활성 10색, 보라·와인 토큰, 비활성 코랄·라임 보존, 모든 색상에 대한 중복 없는 10칸 공개, 목표 색 포함과 재조회 안정성, 같은 날짜의 개인·친구방 미션 일치, 서로 다른 개인 시간대 계정의 결과 일치, 신규 미션의 활성 후보만 사용, 인증 없는 호출 차단을 검증한다. 365개의 예시 과거 날짜를 생성하고 모두 롤백한다. 따라서 공유 운영 서버에서 실행하면 안 된다.
+
+```sh
+npm run test:db:mission-palette
+```
+
+2026-10-22에는 폐기 가능한 PostgreSQL 18.4에서 Auth 함수·Storage 메타데이터의 테스트 대역과 실제 `authenticated` DB role을 사용해 7개 SQL 계약을 독립 설치 및 기존 33개 migration 뒤 업데이트 각각에서 통과했다. 별도 세션 8개의 동일 날짜 동시 요청 수렴도 확인했다. migration 전후 기존 색상 필드·미션·기록·사진·방 연결·다른 앱 데이터와 공개 RPC 정의/권한을 비교해 변경 없음을 확인했다. 이 결과는 실제 Supabase Auth/Storage HTTP 통합 검증을 대신하지 않는다.
