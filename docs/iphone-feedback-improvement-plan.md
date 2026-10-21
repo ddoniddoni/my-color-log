@@ -1,7 +1,7 @@
 # iPhone 실사용 피드백 개선 계획
 
 - 작성일: 2026-10-22
-- 상태: A 구현·자동 검증 기록 반영 / 이후 단계와 실기기·정식 평가는 대기
+- 상태: A/B 구현·자동 검증 기록 반영 / 이후 단계와 실기기·정식 평가는 대기
 - 기준: `develop`의 `cb63022`, 사용자가 iPhone에서 확인한 5개 문제
 
 헤더와 테마를 먼저 정리하고, 미션 색상 구성을 확정한 뒤 그 색상을 실제 사진에서 잘 찾도록 개선한다. **사용자 제보 1·4번 → 2번 → 3번 → 5번** 순서로 진행한다. 1·4번은 같은 헤더 컴포넌트를 수정하므로 하나의 작업으로 묶는다.
@@ -97,11 +97,11 @@ DB 변경: 없음. 화면별 내용 높이가 달라지므로 오늘 모자이�
 
 - [ ] `내 정보 → 화면 테마 → 어둡게 → 오늘`, `밝게 → 오늘`, `시스템 설정 → OS 모드 변경`을 각각 재현한다. 사용자가 본 실패 경로를 기록한다.
 - [ ] 공개 전·공개 후·사진 0/1/9장·오프라인·조회 오류에서 `preference`와 `resolvedTheme`, 실제 화면 색의 일치 여부를 확인한다. 계정·사진 정보를 로그로 남기지 않는다.
-- [ ] `userInterfaceStyle`을 `automatic`으로 정리한다. Android appearance 지원에 필요한 `expo-system-ui`를 현재 Expo SDK에 맞춰 `npx expo install expo-system-ui`로 추가한다. 공식 설정 근거: [Expo Color themes](https://docs.expo.dev/develop/user-interface/color-themes/).
-- [ ] 수동 선택은 시스템 설정보다 우선하고 `system`일 때만 OS 변경을 따른다. 테마를 바꾸기 위해 오늘 화면을 강제 remount하거나 미션 공개 이력을 초기화하지 않는다.
-- [ ] 이미 테마를 구독하는 컴포넌트를 중복 Provider로 감싸지 않는다. 재현 결과에 따라 정적 색·스타일 캐시·네이티브 배경·화면 전환 배경의 누락 지점만 수정한다.
-- [ ] 저장된 설정을 읽는 동안 밝은 화면이 순간 노출되는지, 초기 저장값 로딩이 새 선택을 덮어쓰는지 확인한다. 저장 실패 시 선택 표시와 재시작 결과가 모순되지 않도록 처리한다.
-- [ ] 네이티브 설정이 바뀌므로 iOS·Android development build를 다시 만든다. Metro 새로고침만으로 검증을 끝내지 않는다. 로컬 Personal Team 서명 설정과 베타·운영 variant 구분은 보존한다.
+- [x] `userInterfaceStyle`을 `automatic`으로 정리한다. Android appearance 지원에 필요한 `expo-system-ui`를 현재 Expo SDK에 맞춰 `npx expo install expo-system-ui`로 추가한다. 공식 설정 근거: [Expo Color themes](https://docs.expo.dev/develop/user-interface/color-themes/).
+- [x] 수동 선택은 시스템 설정보다 우선하고 `system`일 때만 OS 변경을 따른다. 테마를 바꾸기 위해 오늘 화면을 강제 remount하거나 미션 공개 이력을 초기화하지 않는다.
+- [x] 이미 테마를 구독하는 컴포넌트를 중복 Provider로 감싸지 않는다. 재현 결과에 따라 정적 색·스타일 캐시·네이티브 배경·화면 전환 배경의 누락 지점만 수정한다.
+- [x] 저장된 설정을 읽는 동안 밝은 화면이 순간 노출되는지, 초기 저장값 로딩이 새 선택을 덮어쓰는지 확인한다. 저장 실패 시 선택 표시와 재시작 결과가 모순되지 않도록 처리한다.
+- [x] 네이티브 설정이 바뀌므로 iOS·Android development build를 다시 만든다. Metro 새로고침만으로 검증을 끝내지 않는다. 로컬 Personal Team 서명 설정과 베타·운영 variant 구분은 보존한다.
 
 주요 파일: `app.json`, `app.config.ts`, `package.json`, `package-lock.json`, `src/design/ThemeProvider.tsx`, `src/design/themePreference.ts`, `src/features/profile/components/ThemeSettingsModal.tsx`, 오늘 관련 컴포넌트, `app/_layout.tsx`, `scripts/__tests__/iosBuildConfiguration.test.cjs`.
 
@@ -109,9 +109,9 @@ DB 변경: 없음. 화면별 내용 높이가 달라지므로 오늘 모자이�
 
 - [ ] 수동 밝게/어둡게 선택이 네 탭과 색 공개·모달에 즉시 반영된다.
 - [ ] `system` 상태에서 OS 변경·백그라운드 복귀가 반영되고 수동 선택은 OS 변경에 영향받지 않는다.
-- [ ] 앱 종료·재실행 후 선택이 유지된다. AsyncStorage 읽기·쓰기 실패의 복구 동작을 테스트한다.
+- [x] 앱 종료·재실행 후 선택이 유지된다. AsyncStorage 읽기·쓰기 실패의 복구 동작을 테스트한다.
 - [ ] 상태 표시줄·탭 바·헤더·빈 모자이크·버튼·오류 안내가 두 테마에서 읽힌다.
-- [ ] 테마가 바뀌어도 미션 대표색과 사진 자체의 색은 바뀌지 않는다.
+- [x] 테마가 바뀌어도 미션 대표색과 사진 자체의 색은 바뀌지 않는다.
 
 DB 변경: 없음. 네이티브 모듈·설정 변경은 두 플랫폼 빌드 검증이 필요하다.
 
@@ -270,7 +270,7 @@ F의 최종 시나리오:
 
 ## 9. 다음 시작점
 
-다음 단계는 B다. 앞 단계와 의존하는 파일은 단계별로 커밋하고 검증한다. 앱 빌드·기기 설치·실행은 전체 수정 후 F에서 통합한다. 팔레트의 공유 서버 반영과 정식 사진 정확도 검증은 별도로 남긴다.
+다음 단계는 C다. 앞 단계와 의존하는 파일은 단계별로 커밋하고 검증한다. 앱 빌드·기기 설치·실행은 전체 수정 후 F에서 통합한다. 팔레트의 공유 서버 반영과 정식 사진 정확도 검증은 별도로 남긴다.
 
 ## 10. 실행 기록 — A (2026-10-22)
 
@@ -281,3 +281,18 @@ F의 최종 시나리오:
 - React Doctor: `npx --yes react-doctor@latest --verbose --scope changed` 실행, 89/100, 변경 범위 진단 없음. 변경 전 검사는 대상 소스가 없어 생략됐으므로 점수 차이를 측정했다고 주장하지 않는다.
 - 데이터·보안: DB, 인증, 사진 파일, 업로드 큐, 미션 선정, 테마 설정 방식, 의존성·네이티브 구성 변경 없음.
 - 남은 확인: iOS/Android 실제 렌더링과 스크린리더, 320px대 화면·큰 글자의 잘림, 공개 화면 CTA와 오늘 모자이크 배치. 이번 실행에서는 기기 화면 캡처 검증을 수행하지 않았다. B~F는 아직 구현하지 않았다.
+
+## 11. 실행 기록 — B (2026-10-22)
+
+- 브랜치: `fix/today-theme-sync`, 최신 `develop`과 같은 기준 커밋에서 생성. A의 미커밋 변경과 계획 문서를 보존했다. 커밋·푸시·PR은 수행하지 않았다.
+- 원인 확인: 앱 설정과 생성된 iOS Info.plist가 라이트 고정이었고 Android appearance 지원 모듈이 없었다. 기존 TodayJournal/Reveal은 테마 Context를 구독하고 있었다. 수동 선택 경로 자체의 원래 실기기 실패는 재현하지 못했으므로, 설정 고정 문제와 동일 원인이라고 단정하지 않는다.
+- 회귀 재현: ThemeProvider 테스트에서 늦은 초기 읽기의 선택 덮어쓰기, 읽기 오류의 미처리 rejection, 쓰기 실패 후 화면/저장값 불일치, 연속 저장 순서 역전의 4개 실패를 확인한 뒤 수정했다.
+- 구현: `userInterfaceStyle: automatic`, SDK 57 호환 `expo-system-ui ~57.0.4`, 밝고 어두운 네이티브 시작 화면 배경. ThemeProvider는 저장 순서를 보장하고 실패하면 마지막 저장값으로 복구한다. 초기 읽기 실패는 시스템 모드로 대체한다.
+- `ThemeRoot`에서 설정 로딩 후 첫 레이아웃까지 네이티브 시작 화면을 유지하고, 네이티브 루트·내비게이션·상태 표시줄을 같은 테마로 맞춘다. 탭 장면 배경도 테마를 구독한다. 테마 변경 시 화면을 remount하지 않는다. 화면 오류 경계는 테마 Provider 안으로 옮겨 테마가 필요한 오류 UI도 렌더링되도록 했다.
+- 주요 파일: `app.json`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx`, `src/design/ThemeProvider.tsx`, `src/design/ThemeRoot.tsx`, `AppErrorBoundary.tsx`, 테마/오늘/공개 테스트, `scripts/__tests__/iosBuildConfiguration.test.cjs`, package/lockfile. 의존성은 1개만 추가됐으며 lockfile은 21줄 추가다.
+- 자동 검증: 전체 Jest 70 suite / 306 tests 통과. 실제 테마 Provider+설정 모달로 오늘 사진 0/1/9장·오프라인 화면 전환, 공개 전후 상태 유지, 미션 대표색/사진 URI 보존, 설정 재마운트 복원, 읽기·쓰기 실패와 연속 변경을 확인했다. `npm run test:build` 16개 통과: development/preview/production 모두 iOS Automatic과 Android automatic 리소스, 기존 push/Personal Team 분리 유지 확인.
+- 최종 검증: `npm run typecheck`, `npm run lint` 통과. React Doctor의 ref 초기화 경고 수정 후 관련 7 suite / 21 tests 재검증 통과. React Doctor 89/100, 변경 범위 진단 없음으로 A 대비 점수 유지.
+- 네이티브 빌드: Android `:app:assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon` 성공, iOS `xcodebuild ... -configuration Debug -sdk iphoneos -destination 'generic/platform=iOS'` 서명 빌드 성공. 완성 앱의 Info.plist `UIUserInterfaceStyle = Automatic`과 ExpoSystemUI 연결 확인. 빌드 로그는 `/tmp/mycolorlog-theme-android-build.log`, `/tmp/mycolorlog-theme-ios-build.log`에 있다.
+- 기기 작업: 사용자의 연기 요청 직전에 기존 ColorLogDev 업데이트 설치까지 완료됐다. 이후 기기 조회·실행 작업은 진행하지 않았다. 실제 화면 QA와 이후 단계의 기기 반영은 전체 수정 후로 미룬다.
+- 데이터·보안: DB, 로그인, 사진 파일, 미션 선정, 시간대, 업로드 큐 변경 없음. `.env`를 출력하지 않고 `EXPO_NO_DOTENV=1`로 빌드했다. native 생성물과 개인 서명 정보는 Git 제외 상태이며, 재생성 후 기존 로컬 Personal Team 설정을 복구했다.
+- 남은 QA: 실기기에서 네 탭·OS 모드 변경/백그라운드 복귀·강제 종료 재실행·모달/오류/큰 글자 대비 확인. 컴포넌트 테스트와 빌드 성공만으로 실제 화면 검증을 완료했다고 판단하지 않는다.
