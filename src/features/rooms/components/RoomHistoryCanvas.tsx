@@ -13,9 +13,8 @@ import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-gr
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { useAppTheme } from '@/src/design/ThemeProvider';
@@ -45,7 +44,6 @@ export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { 
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
@@ -101,15 +99,10 @@ export function RoomHistoryCanvas({ initialDateKey, initialPhotoId, roomId }: { 
 
   return (
     <View style={styles.page}>
-      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, spacing[2]) }]}>
-        <Pressable accessibilityLabel="친구방으로 돌아가기" accessibilityRole="button" hitSlop={10} onPress={() => router.back()} style={styles.backButton}>
-          <BackIcon />
-        </Pressable>
-        <View style={styles.topCopy}>
-          <AppText style={styles.eyebrow}>ROOM ARCHIVE</AppText>
-          <AppText style={[styles.topTitle, { fontFamily: boldFont }]}>우리의 기록</AppText>
-        </View>
-      </View>
+      <AppHeader title="우리의 기록" leadingAction={{ icon: 'back', accessibilityLabel: '뒤로가기', onPress: () => {
+        if (router.canGoBack()) router.back();
+        else router.replace({ pathname: '/room/[roomId]', params: { roomId } });
+      } }} />
 
       {sessionState.status === 'loading' || historyQuery.isPending ? <HistoryState message="우리의 기록을 불러오고 있어요." /> : null}
       {sessionState.status === 'error' || !userId || historyQuery.isError ? <HistoryState message="기록을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요." /> : null}
@@ -274,11 +267,6 @@ function getRoomMissionPrompt(mission: RoomBoardMission, language: 'en' | 'ko'):
   return language === 'ko' ? mission.promptKo : `Find a scene touched by ${mission.colorNameEn}.`;
 }
 
-function BackIcon() {
-  const { colors } = useAppTheme();
-  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m14.5 5-6 7 6 7" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
-}
-
 function useRoomHistoryStyles() {
   const { colors } = useAppTheme();
   return useMemo(() => createStyles(colors), [colors]);
@@ -287,11 +275,6 @@ function useRoomHistoryStyles() {
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   page: { backgroundColor: colors.canvas, flex: 1 },
-  topBar: { alignItems: 'center', borderBottomColor: colors.ink, borderBottomWidth: 2, flexDirection: 'row', gap: 10, paddingBottom: 12, paddingHorizontal: 16 },
-  backButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  topCopy: { gap: 1 },
-  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  topTitle: { color: colors.ink, fontSize: 20, letterSpacing: -0.5 },
   content: { gap: 22, paddingBottom: 48 },
   intro: { gap: 8, paddingHorizontal: 20, paddingTop: 28 },
   title: { color: colors.ink, fontSize: 33, letterSpacing: -1.4, lineHeight: 40 },

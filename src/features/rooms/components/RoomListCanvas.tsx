@@ -1,9 +1,9 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { useAppTheme } from '@/src/design/ThemeProvider';
@@ -32,7 +32,6 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
   const theme = useAppTheme();
   const { language, t } = useAppLanguage();
   const styles = useRoomListStyles();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const sessionState = useSessionBootstrap();
@@ -157,17 +156,15 @@ export function RoomListCanvas({ initialInviteCode = null }: RoomListCanvasProps
 
   return (
     <View style={styles.page}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing[2]) }]}>
-        <View>
-          <AppText style={styles.eyebrow}>PRIVATE COLOR ROOMS</AppText>
-          <AppText style={styles.headerTitle}>친구방</AppText>
-        </View>
-        <View accessible accessibilityLabel={language === 'ko' ? `참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개` : `${rooms.length} active rooms out of ${MAX_ACTIVE_ROOMS}`} style={styles.countBadge}>
-          <AppText style={styles.countText}>{rooms.length} / {MAX_ACTIVE_ROOMS}</AppText>
-        </View>
-      </View>
+      <AppHeader title="친구방" trailingAction={{ icon: 'settings', accessibilityLabel: '설정 열기', onPress: () => router.navigate('/(tabs)/my') }} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.roomSummary}>
+          <AppText color="secondary">참여 중인 친구방</AppText>
+          <View accessible accessibilityLabel={language === 'ko' ? `참여 중인 친구방 ${rooms.length}개, 최대 ${MAX_ACTIVE_ROOMS}개` : `${rooms.length} active rooms out of ${MAX_ACTIVE_ROOMS}`} style={styles.countBadge}>
+            <AppText localize={false} style={styles.countText}>{rooms.length} / {MAX_ACTIVE_ROOMS}</AppText>
+          </View>
+        </View>
         {rooms.length === 0 ? (
           <View style={styles.emptyCard}>
             <AppText style={styles.emptyEyebrow}>YOUR FIRST ROOM</AppText>
@@ -295,7 +292,8 @@ function RoomListItem({ isEnding, onEnd, onPress, room, userId }: { isEnding: bo
 function RoomListState({ message }: { message: string }) {
   const { colors } = useAppTheme();
   const styles = useRoomListStyles();
-  return <View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.ink} /><AppText style={styles.stateText}>{message}</AppText></View>;
+  const router = useRouter();
+  return <View style={styles.page}><AppHeader title="친구방" trailingAction={{ icon: 'settings', accessibilityLabel: '설정 열기', onPress: () => router.navigate('/(tabs)/my') }} /><View accessibilityLiveRegion="polite" style={styles.state}><ActivityIndicator color={colors.ink} /><AppText style={styles.stateText}>{message}</AppText></View></View>;
 }
 
 function useRoomListStyles() {
@@ -306,9 +304,7 @@ function useRoomListStyles() {
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   page: { backgroundColor: colors.canvas, flex: 1 },
-  header: { alignItems: 'flex-end', borderBottomColor: colors.ink, borderBottomWidth: 2, flexDirection: 'row', justifyContent: 'space-between', paddingBottom: spacing[3], paddingHorizontal: spacing[4] },
-  eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  headerTitle: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1.1, lineHeight: 38 },
+  roomSummary: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing[3], justifyContent: 'space-between' },
   countBadge: { borderColor: colors.ink, borderWidth: 1.5, paddingHorizontal: 10, paddingVertical: 6 },
   countText: { color: colors.ink, fontFamily: 'monospace', fontSize: 12, fontWeight: '700' },
   content: { gap: spacing[8], padding: spacing[4], paddingBottom: 130, paddingTop: spacing[8] },

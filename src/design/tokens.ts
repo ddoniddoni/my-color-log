@@ -42,6 +42,8 @@ export const darkColors: ThemeColors = {
 
 export const spacing = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 } as const;
 
+export const headerMetrics = { minHeight: 56, buttonSize: 44, iconSize: 22, horizontalPadding: spacing[4], verticalPadding: 6 } as const;
+
 export const radius = { sketch: 2, sm: 8, md: 12, lg: 18, xl: 24, pill: 999 } as const;
 
 export const typography = {

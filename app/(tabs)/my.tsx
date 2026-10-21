@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { Screen } from '@/src/components/layout/Screen';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
@@ -189,12 +190,12 @@ export default function MyScreen() {
 }
 
 function MyLoadingScreen() {
-  return <Screen contentContainerStyle={styles.loading}><LoadingSkeleton style={styles.avatarSkeleton} /><LoadingSkeleton style={styles.nameSkeleton} /><LoadingSkeleton style={styles.cardSkeleton} /></Screen>;
+  return <Screen header={<AppHeader title="내 정보" />} contentContainerStyle={styles.loading}><LoadingSkeleton style={styles.avatarSkeleton} /><LoadingSkeleton style={styles.nameSkeleton} /><LoadingSkeleton style={styles.cardSkeleton} /></Screen>;
 }
 
 function MyProfileError({ onRetry }: { onRetry: () => void }) {
   const theme = useAppTheme();
-  return <Screen contentContainerStyle={styles.error}><View style={styles.errorCopy}><AppText variant="title2">내 정보를 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요.</AppText></View><AppText accessibilityRole="button" onPress={onRetry} style={[styles.retry, { color: theme.colors.ink }]}>다시 시도</AppText></Screen>;
+  return <Screen header={<AppHeader title="내 정보" />} contentContainerStyle={styles.error}><View style={styles.errorCopy}><AppText variant="title2">내 정보를 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요.</AppText></View><AppText accessibilityRole="button" onPress={onRetry} style={[styles.retry, { color: theme.colors.ink }]}>다시 시도</AppText></Screen>;
 }
 
 const styles = StyleSheet.create({

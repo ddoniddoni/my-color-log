@@ -2,10 +2,10 @@ import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesq
 import { useFonts } from 'expo-font';
 import { useRef } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
 import { useAppTheme } from '@/src/design/ThemeProvider';
@@ -33,7 +33,6 @@ export function MissionReveal({ mission, palette, reduceMotion, isNewDay, onStar
   const { width, height, fontScale } = useWindowDimensions();
   const contentRef = useRef<ScrollView>(null);
   const compact = height < 700;
-  const insets = useSafeAreaInsets();
   const targetIndex = palette.findIndex((color) => color.id === mission.color.id);
   const reveal = useColorRevealAnimation({ targetIndex, reduceMotion, onStart, onRevealed });
   const size = Math.max(160, Math.min(width - spacing[6] * 2, compact ? 184 : fontScale > 1.3 ? 232 : 272));
@@ -42,14 +41,12 @@ export function MissionReveal({ mission, palette, reduceMotion, isNewDay, onStar
 
   return (
     <View style={[styles.page, { backgroundColor: colors.canvas }]}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing[4]) }]}>
-        <AppText localize={false} style={[styles.wordmark, { fontFamily: fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined }]}>Color Log</AppText>
-        <AppText localize={false} color="secondary" variant="caption" style={styles.date}>{formatDateKey(mission.challengeDate, language, 'shortWithWeekday')}</AppText>
-      </View>
+      <AppHeader title="오늘" />
 
       <ScrollView ref={contentRef} contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}
         onContentSizeChange={() => { if (reveal.hasResult) contentRef.current?.scrollToEnd({ animated: !reduceMotion }); }}>
         <View style={[styles.heading, compact && styles.headingCompact]}>
+          <AppText localize={false} color="secondary" variant="caption" style={styles.date}>{formatDateKey(mission.challengeDate, language, 'shortWithWeekday')}</AppText>
           <AppText color="secondary" variant="caption" style={styles.eyebrow}>{isNewDay ? '새로운 하루가 시작됐어요' : '하루에 하나, 나만의 발견'}</AppText>
           <AppText accessibilityRole="header" variant="display" style={[styles.title, compact && styles.titleCompact]}>{'하루의 시작,\n하나의 색.'}</AppText>
         </View>
@@ -172,8 +169,6 @@ function ringArc(index: number, count: number): string {
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4], paddingHorizontal: spacing[6], paddingBottom: spacing[4], flexWrap: 'wrap' },
-  wordmark: { fontSize: 20, lineHeight: 26, fontWeight: '700', letterSpacing: -0.7 },
   date: { fontVariant: ['tabular-nums'] },
   content: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[6], paddingTop: spacing[5], paddingBottom: spacing[6] },
   contentCompact: { paddingTop: spacing[3], paddingBottom: spacing[4] },

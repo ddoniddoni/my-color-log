@@ -14,10 +14,10 @@ import { useFonts } from 'expo-font';
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { useAppTheme } from '@/src/design/ThemeProvider';
@@ -55,8 +55,11 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const goBack = (): void => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/room');
+  };
   const queryClient = useQueryClient();
   const sessionState = useSessionBootstrap();
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id ?? null : null;
@@ -263,11 +266,11 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
   };
 
   if (sessionState.status === 'loading' || roomQuery.isPending) {
-    return <RoomStatusCanvas message="친구방을 확인하고 있어요." />;
+    return <RoomStatusCanvas onBack={goBack} message="친구방을 확인하고 있어요." />;
   }
 
   if (sessionState.status === 'error' || !userId || roomQuery.isError) {
-    return <RoomStatusCanvas message="친구방을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요." />;
+    return <RoomStatusCanvas onBack={goBack} message="친구방을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요." />;
   }
 
   if (roomQuery.data) {
@@ -291,9 +294,8 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
           onOpenManagement={() => setIsRoomManagementVisible(true)}
           onRefreshBoard={() => { void roomTodayBoardQuery.refetch(); }}
           onShowNotice={showNotice}
-          onBack={() => router.back()}
+          onBack={goBack}
           room={room}
-          topInset={insets.top}
         />
         <RoomManagementModal
           currentUserId={userId}
@@ -317,17 +319,7 @@ export function RoomSetupCanvas({ initialPhotoId, roomId }: { initialPhotoId?: s
 
   return (
     <View style={styles.page}>
-      <View style={styles.appBarShadow}>
-        <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
-          <View accessible accessibilityLabel="기록 아이콘" accessibilityRole="image" style={styles.appBarIcon}>
-            <PencilIcon />
-          </View>
-          <AppText style={[styles.brand, { fontFamily: heavyFont }]}>Color Log</AppText>
-          <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.appBarIcon}>
-            <GearIcon />
-          </View>
-        </View>
-      </View>
+      <AppHeader title="친구방" leadingAction={{ icon: 'back', accessibilityLabel: '뒤로가기', onPress: goBack }} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.intro}>
@@ -490,13 +482,16 @@ function HardShadowButton({ accessibilityLabel, disabled = false, label, onPress
   );
 }
 
-function RoomStatusCanvas({ message }: { message: string }) {
+function RoomStatusCanvas({ message, onBack }: { message: string; onBack: () => void }) {
   const { colors } = useAppTheme();
   const styles = useRoomSetupStyles();
   return (
-    <View accessibilityLiveRegion="polite" style={styles.statusPage}>
-      <ActivityIndicator color={colors.ink} />
-      <AppText style={styles.statusText}>{message}</AppText>
+    <View style={styles.page}>
+      <AppHeader title="친구방" leadingAction={{ icon: 'back', accessibilityLabel: '뒤로가기', onPress: onBack }} />
+      <View accessibilityLiveRegion="polite" style={styles.statusPage}>
+        <ActivityIndicator color={colors.ink} />
+        <AppText style={styles.statusText}>{message}</AppText>
+      </View>
     </View>
   );
 }
@@ -522,34 +517,24 @@ type ActiveRoomCanvasProps = {
   onRefreshBoard: () => void;
   onShowNotice: (title: string, description: string) => void;
   room: ActiveRoom;
-  topInset: number;
 };
 
-function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, initialPhotoId, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, onShowNotice, room, topInset }: ActiveRoomCanvasProps) {
+function ActiveRoomCanvas({ boldFont, board, currentUserId, dateKey, heavyFont, initialPhotoId, inviteShareAction, isBoardError, isBoardLoading, isBoardRefreshing, onBack, onOpenManagement, onRefreshBoard, onShowNotice, room }: ActiveRoomCanvasProps) {
   const styles = useRoomSetupStyles();
-  const { language, t } = useAppLanguage();
+  const { language } = useAppLanguage();
   const formattedDate = formatDateKey(dateKey, language, 'numeric');
 
   return (
     <View style={styles.page}>
-      <View style={[styles.roomTopBar, { paddingTop: Math.max(topInset, 8) }]}>
-        <Pressable accessibilityLabel={t('친구방 목록으로 돌아가기')} accessibilityRole="button" hitSlop={10} onPress={onBack} style={styles.roomBackButton}>
-          <AppText style={styles.roomBackText}>‹</AppText>
-        </Pressable>
-        <View style={styles.roomDateGroup}>
-          <View accessible accessibilityLabel={t('우리 방 아이콘')} accessibilityRole="image" style={styles.roomMark}>
-            <AppText style={[styles.roomMarkText, { fontFamily: boldFont }]}>{room.emoji ?? room.name.slice(0, 1)}</AppText>
-          </View>
-          <View style={styles.roomDateCopy}>
-            <AppText style={[styles.roomDate, { fontFamily: boldFont }]}>{formattedDate}</AppText>
-            <AppText numberOfLines={1} style={styles.roomTimeZone}>{getTimeZoneDisplayName(room.timeZone)}</AppText>
-          </View>
-        </View>
-        <Pressable accessibilityLabel={t('친구방 관리 열기')} accessibilityRole="button" onPress={onOpenManagement} style={styles.roomSettingsMark}><GearIcon /></Pressable>
-      </View>
+      <AppHeader
+        title="친구방"
+        leadingAction={{ icon: 'back', accessibilityLabel: '뒤로가기', onPress: onBack }}
+        trailingAction={{ icon: 'settings', accessibilityLabel: '친구방 관리 열기', onPress: onOpenManagement }}
+      />
 
       <ScrollView contentContainerStyle={styles.activeRoomContent} showsVerticalScrollIndicator={false}>
         <View style={styles.roomBannerWrap}>
+          <AppText localize={false} color="secondary" variant="caption">{formattedDate} · {getTimeZoneDisplayName(room.timeZone)}</AppText>
           <View style={styles.roomBanner}>
             <AppText numberOfLines={1} style={[styles.roomBannerTitle, { fontFamily: heavyFont }]}>{room.emoji ? `${room.emoji} ${room.name}` : room.name}</AppText>
           </View>
@@ -808,16 +793,6 @@ export function JoinRoomModal({ isPending, onClose, onJoin, preview }: { isPendi
   );
 }
 
-function PencilIcon() {
-  const { colors } = useAppTheme();
-  return <Svg height={22} viewBox="0 0 24 24" width={22}><Path d="m5 19 3.3-.7L19 7.6 16.4 5 5.7 15.7 5 19Z" fill="none" stroke={colors.ink} strokeLinejoin="round" strokeWidth={1.8} /><Path d="m15.7 5.7 2.6 2.6" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.8} /></Svg>;
-}
-
-function GearIcon() {
-  const { colors } = useAppTheme();
-  return <Svg height={21} viewBox="0 0 24 24" width={21}><Circle cx={12} cy={12} fill="none" r={3} stroke={colors.ink} strokeWidth={1.7} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.7} /></Svg>;
-}
-
 function KeyIcon() {
   const { colors } = useAppTheme();
   return <Svg height={48} viewBox="0 0 48 48" width={48}><Circle cx={17} cy={19} fill="none" r={8} stroke={colors.ink} strokeWidth={2} /><Path d="m23 25 14 14m-5-5 3-3m-7-2 3-3" fill="none" stroke={colors.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
@@ -877,10 +852,6 @@ function createStyles(colors: ThemeColors) {
   page: { backgroundColor: colors.canvas, flex: 1 },
   statusPage: { alignItems: 'center', backgroundColor: colors.canvas, flex: 1, gap: 12, justifyContent: 'center', padding: 24 },
   statusText: { color: colors.textSecondary, fontSize: 14, textAlign: 'center' },
-  appBarShadow: { backgroundColor: colors.ink, paddingBottom: 4 },
-  appBar: { alignItems: 'center', backgroundColor: colors.surface, borderBottomColor: colors.ink, borderBottomWidth: 3, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingBottom: 8, paddingHorizontal: 16 },
-  appBarIcon: { alignItems: 'center', height: 32, justifyContent: 'center', width: 32 },
-  brand: { color: colors.ink, fontSize: 25, fontWeight: '800', letterSpacing: -1.1, lineHeight: 30, transform: [{ rotate: '-2deg' }] },
   content: { gap: 40, paddingBottom: 138, paddingHorizontal: 16, paddingTop: 40 },
   intro: { gap: 8 },
   title: { color: colors.ink, fontSize: 32, fontWeight: '800', letterSpacing: -1.2, lineHeight: 38 },
@@ -916,18 +887,8 @@ function createStyles(colors: ThemeColors) {
   recentEmptyCopy: { flex: 1, gap: 2 },
   recentEmptyTitle: { color: colors.ink, fontSize: 15, fontWeight: '700', lineHeight: 20 },
   recentEmptyDescription: { color: colors.textSecondary, fontSize: 10, lineHeight: 14 },
-  roomTopBar: { alignItems: 'center', backgroundColor: colors.canvas, flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 8, paddingHorizontal: 16 },
-  roomBackButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  roomBackText: { color: colors.ink, fontSize: 42, fontWeight: '300', lineHeight: 42 },
-  roomDateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  roomDateCopy: { maxWidth: 160 },
-  roomMark: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.ink, borderRadius: 20, borderWidth: 2, height: 40, justifyContent: 'center', overflow: 'hidden', width: 40 },
-  roomMarkText: { color: colors.ink, fontSize: 18, fontWeight: '700' },
-  roomDate: { color: colors.ink, fontSize: 19, fontWeight: '700', letterSpacing: -0.35, lineHeight: 24 },
-  roomTimeZone: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 8, letterSpacing: 0.35, lineHeight: 11 },
-  roomSettingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   activeRoomContent: { gap: 40, paddingBottom: 40, paddingHorizontal: 16, paddingTop: 24 },
-  roomBannerWrap: { alignItems: 'center' },
+  roomBannerWrap: { alignItems: 'center', gap: 12 },
   roomBanner: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 2.5, maxWidth: '100%', paddingHorizontal: 26, paddingVertical: 13, transform: [{ rotate: '-1deg' }] },
   roomBannerTitle: { color: colors.ink, fontSize: 28, fontWeight: '800', letterSpacing: -0.9, lineHeight: 33, maxWidth: 300, textAlign: 'center' },
   boardSection: { gap: 24 },

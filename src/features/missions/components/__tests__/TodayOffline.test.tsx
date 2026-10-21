@@ -9,16 +9,20 @@ import { MISSION_REVEAL_SLOT_COUNT } from '../../model/missionRevealWheel';
 import { MissionReveal } from '../MissionReveal';
 import { TodayJournal } from '../TodayJournal';
 import { AppText } from '@/src/components/ui/AppText';
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { getDailyMission } from '../../api/missionRepository';
 import { hasRevealedMission } from '../../api/revealRepository';
 
 const mockStorage = new Map<string, string>();
+const mockNavigate = jest.fn();
 jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: {
   getItem: async (key: string) => mockStorage.get(key) ?? null,
   setItem: async (key: string, value: string) => { mockStorage.set(key, value); },
   removeItem: async (key: string) => { mockStorage.delete(key); },
 } }));
-jest.mock('expo-router', () => ({ useFocusEffect: jest.fn() }));
+jest.mock('expo-router', () => ({ useFocusEffect: jest.fn(), useRouter: () => ({ navigate: mockNavigate }) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) }));
+jest.mock('@/src/design/ThemeProvider', () => ({ useAppTheme: () => ({ colors: jest.requireActual('@/src/design/tokens').colors }) }));
 jest.mock('@/src/features/auth/hooks/useSessionBootstrap', () => ({ useSessionBootstrap: () => ({ status: 'ready', session: { user: { id: 'owner' } }, retry: jest.fn() }) }));
 jest.mock('@/src/lib/localization/deviceTimeZone', () => ({ useDeviceTimeZone: () => 'Asia/Seoul' }));
 jest.mock('../../hooks/useDailyColorClock', () => ({ useDailyColorClock: () => ({ dateKey: '2026-10-19', isNewDay: false, millisecondsUntilMidnight: 1000 }) }));
@@ -31,7 +35,6 @@ jest.mock('@/src/features/camera/components/PhotoDraftRecovery', () => ({ PhotoD
 jest.mock('@/src/features/camera/components/PhotoSourceModal', () => ({ PhotoSourceModal: () => null }));
 jest.mock('@/src/features/entries/components/TodayPhotoManagerModal', () => ({ TodayPhotoManagerModal: () => null }));
 jest.mock('@/src/components/feedback/LoadingSkeleton', () => ({ LoadingSkeleton: 'LoadingSkeleton' }));
-jest.mock('@/src/components/layout/Screen', () => ({ Screen: 'Screen' }));
 jest.mock('@/src/components/ui/AppText', () => ({ AppText: 'AppText' }));
 jest.mock('@/src/components/ui/Button', () => ({ Button: 'Button' }));
 jest.mock('../TodayJournal', () => ({ TodayJournal: 'TodayJournal' }));
@@ -79,6 +82,8 @@ describe('today after offline restart', () => {
     await seed(); await mount();
     expect(screen.root.findByType(TodayJournal).props.mission).toEqual(mission);
     expect(getDailyMission).not.toHaveBeenCalled();
+    await act(async () => screen.root.findByType(TodayJournal).props.onSettingsPress());
+    expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/my');
   });
 
   it('keeps the cached color reveal on screen until Continue is pressed offline', async () => {
@@ -96,5 +101,9 @@ describe('today after offline restart', () => {
     expect(screen.root.findAllByType(AppText).some((node) => node.props.children === '오늘의 색을 불러올 수 없어요')).toBe(true);
     expect(screen.root.findAllByType(TodayJournal)).toHaveLength(0);
     expect(getDailyMission).not.toHaveBeenCalled();
+    const header = screen.root.findByType(AppHeader);
+    expect(header.props.title).toBe('오늘');
+    await act(async () => header.props.trailingAction.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/my');
   });
 });
