@@ -8,9 +8,9 @@ import { BricolageGrotesque_400Regular } from '@expo-google-fonts/bricolage-grot
 import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
 import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque/800ExtraBold';
 import { useFonts } from 'expo-font';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
@@ -59,19 +59,12 @@ export function MyProfileCanvas({
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
-  const insets = useSafeAreaInsets();
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
 
   return (
     <View style={[styles.page, { backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.appBarShadow, { backgroundColor: theme.colors.black }]}>
-        <View style={[styles.appBar, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.ink, paddingTop: Math.max(insets.top, 8) }]}>
-          <View accessible accessibilityLabel={t('메뉴')} accessibilityRole="image" style={styles.appBarIcon}><MenuIcon color={theme.colors.ink} /></View>
-          <AppText style={[styles.brand, { color: theme.colors.ink, fontFamily: boldFont }]}>Color Log</AppText>
-          <View accessible accessibilityLabel={t('설정')} accessibilityRole="image" style={styles.appBarIcon}><GearIcon color={theme.colors.ink} /></View>
-        </View>
-      </View>
+      <AppHeader title="내 정보" />
 
       <ScrollView alwaysBounceVertical={false} bounces={false} contentContainerStyle={styles.content} overScrollMode="never" showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
@@ -145,14 +138,6 @@ function MarkerLine({ colors, strong = false }: { colors: ThemeColors; strong?: 
   return <View style={[styles.markerLine, { backgroundColor: colors.ink }, strong ? styles.markerLineStrong : styles.markerLineSoft]} />;
 }
 
-function MenuIcon({ color }: { color: string }) {
-  return <Svg height={21} viewBox="0 0 24 24" width={21}><Path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke={color} strokeLinecap="round" strokeWidth={2} /></Svg>;
-}
-
-function GearIcon({ color }: { color: string }) {
-  return <Svg height={21} viewBox="0 0 24 24" width={21}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={color} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
-}
-
 function DoodleAvatar({ color, fill }: { color: string; fill: string }) {
   return <Svg height={64} viewBox="0 0 72 72" width={64}><Circle cx={36} cy={36} fill={fill} r={34} stroke={color} strokeWidth={1.5} /><Path d="M22 29c-5-2-4-9 1-10 4-1 6 3 6 6m20 4c5-2 4-9-1-10-4-1-6 3-6 6M23 30c1-9 25-10 27 0v15c-2 9-24 9-27 0V30Z" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.45} /><Circle cx={31} cy={36} fill={color} r={1.7} /><Circle cx={42} cy={36} fill={color} r={1.7} /><Path d="M32 45c2 1.6 6 1.6 8 0m-8-13 3-2 2 2 3-2" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} /></Svg>;
 }
@@ -167,10 +152,6 @@ function LogoutIcon({ color }: { color: string }) {
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  appBarShadow: { paddingBottom: 3 },
-  appBar: { alignItems: 'center', borderBottomWidth: 1.5, flexDirection: 'row', justifyContent: 'space-between', minHeight: 50, paddingBottom: 8, paddingHorizontal: 16 },
-  appBarIcon: { alignItems: 'center', height: 32, justifyContent: 'center', width: 32 },
-  brand: { fontSize: 20, fontWeight: '700', letterSpacing: -0.4, lineHeight: 26, transform: [{ rotate: '-1deg' }] },
   content: { alignItems: 'stretch', flexGrow: 1, gap: 16, paddingBottom: 20, paddingHorizontal: 16, paddingTop: 20 },
   profileSection: { alignItems: 'center', gap: 4 },
   avatar: { alignItems: 'center', borderRadius: 999, borderWidth: 1.5, height: 70, justifyContent: 'center', marginBottom: 4, width: 70 },

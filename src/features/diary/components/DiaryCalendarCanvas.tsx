@@ -15,6 +15,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { NinePhotoMosaic, type NinePhotoMosaicPhoto } from '@/src/components/ui/NinePhotoMosaic';
 import { useAppTheme } from '@/src/design/ThemeProvider';
@@ -150,13 +151,7 @@ export function DiaryCalendarCanvas() {
 
   return (
     <View style={styles.page}>
-      <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 8) }]}>
-        <View style={styles.dateGroup}>
-          <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}><ProfileSketch /></View>
-          <AppText localize={false} style={[styles.headerDate, { fontFamily: boldFont }]}>{formatDateKey(todayKey, language, 'numeric')}</AppText>
-        </View>
-        <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}><SettingsSketch /></View>
-      </View>
+      <AppHeader title="다이어리" trailingAction={{ icon: 'settings', accessibilityLabel: '설정 열기', onPress: () => router.navigate('/(tabs)/my') }} />
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 48) }]} ref={scrollViewRef} showsVerticalScrollIndicator={false}>
         <View style={styles.monthHeader}>
@@ -455,16 +450,6 @@ function getDateKey(cursor: MonthCursor, day: number): string {
 }
 
 
-function ProfileSketch() {
-  const { colors } = useAppTheme();
-  return <Svg height={28} viewBox="0 0 28 28" width={28}><Circle cx={14} cy={14} fill={colors.canvas} r={13} stroke={colors.ink} strokeWidth={1.25} /><Circle cx={10} cy={12} fill={colors.ink} r={1.4} /><Circle cx={18} cy={12} fill={colors.ink} r={1.4} /><Path d="M9.5 17c1.4 1.7 3 2.5 4.5 2.5s3.1-.8 4.5-2.5M8.2 8.5c2.5-2.1 9.1-2.1 11.6 0" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.25} /></Svg>;
-}
-
-function SettingsSketch() {
-  const { colors } = useAppTheme();
-  return <Svg height={23} viewBox="0 0 24 24" width={23}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={colors.ink} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={colors.ink} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
-}
-
 function StarIcon() {
   const { colors } = useAppTheme();
   return <Svg height={18} viewBox="0 0 24 24" width={18}><Path d="m12 3 2.1 5.5 5.9.2-4.6 3.7 1.6 5.7-5-3.4-5 3.4 1.6-5.7L4 8.7l5.9-.2L12 3Z" fill={colors.ink} stroke={colors.ink} strokeLinejoin="round" strokeWidth={1.1} /></Svg>;
@@ -494,11 +479,6 @@ function useDiaryStyles() {
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   page: { backgroundColor: colors.canvas, flex: 1 },
-  appBar: { alignItems: 'center', backgroundColor: colors.canvas, flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 10, paddingHorizontal: 16 },
-  dateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  profileMark: { height: 32, width: 32 },
-  headerDate: { color: colors.ink, fontSize: 12, fontWeight: '700', letterSpacing: -0.1, lineHeight: 16 },
-  settingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   content: { gap: 32, paddingHorizontal: 16, paddingTop: 16 },
   monthHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
   monthTitleButton: { minHeight: 44, justifyContent: 'center', paddingRight: spacing[2] },

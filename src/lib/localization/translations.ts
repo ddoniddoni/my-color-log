@@ -229,6 +229,8 @@ const translationEntries: readonly Translation[] = [
   entry('색을 기록하려면 설정에서 카메라 접근을 허용해 주세요.', 'Allow camera access in Settings to start recording colors.'),
   entry('카메라 허용', 'Allow camera'),
   entry('설정 열기', 'Open settings'),
+  entry('뒤로가기', 'Go back'),
+  entry('참여 중인 친구방', 'Your rooms'),
   entry('공유 캔버스', 'Shared canvas'),
   entry('규칙', 'Rules'),
   entry('기록', 'History'),

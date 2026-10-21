@@ -1,7 +1,9 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { LoadingSkeleton } from '@/src/components/feedback/LoadingSkeleton';
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { Screen } from '@/src/components/layout/Screen';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
@@ -35,6 +37,7 @@ export default function TodayScreen() {
 }
 
 function TodayContent() {
+  const router = useRouter();
   const cacheReady = useOfflineCacheReady();
   const timeZone = useDeviceTimeZone();
   const { dateKey, isNewDay, millisecondsUntilMidnight } = useDailyColorClock(timeZone);
@@ -98,6 +101,7 @@ function TodayContent() {
         onPhotoLongPress={(photo) => setSelectedPhotoId(photo.id)}
         onPhotoPress={(photo) => setSelectedPhotoId(photo.id)}
         onRetrySync={() => void photoSync.retryFailed()}
+        onSettingsPress={() => router.navigate('/(tabs)/my')}
         photos={photos}
         networkStatus={networkStatus}
         pendingPhotoCount={pendingPhotoCount}
@@ -128,11 +132,16 @@ function TodayContent() {
 }
 
 function TodayLoadingScreen({ isNewDay = false }: { isNewDay?: boolean }) {
-  return <Screen>{isNewDay ? <AppText accessibilityLiveRegion="polite" variant="title2">새로운 하루의 색을 준비하고 있어요</AppText> : null}<LoadingSkeleton style={styles.headerSkeleton} /><LoadingSkeleton style={styles.heroSkeleton} /><LoadingSkeleton style={styles.bodySkeleton} /></Screen>;
+  return <Screen header={<TodayHeader />}>{isNewDay ? <AppText accessibilityLiveRegion="polite" variant="title2">새로운 하루의 색을 준비하고 있어요</AppText> : null}<LoadingSkeleton style={styles.headerSkeleton} /><LoadingSkeleton style={styles.heroSkeleton} /><LoadingSkeleton style={styles.bodySkeleton} /></Screen>;
 }
 
 function TodayMissionError({ onRetry }: { onRetry: () => void }) {
-  return <Screen contentContainerStyle={styles.errorContent}><View style={styles.errorCopy}><AppText variant="title2">오늘의 색을 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요. 임의의 색으로 바꾸지는 않을게요.</AppText></View><Button label="다시 시도" onPress={onRetry} /></Screen>;
+  return <Screen header={<TodayHeader />} contentContainerStyle={styles.errorContent}><View style={styles.errorCopy}><AppText variant="title2">오늘의 색을 불러올 수 없어요</AppText><AppText color="secondary">연결되면 다시 시도할 수 있어요. 임의의 색으로 바꾸지는 않을게요.</AppText></View><Button label="다시 시도" onPress={onRetry} /></Screen>;
+}
+
+function TodayHeader() {
+  const router = useRouter();
+  return <AppHeader title="오늘" trailingAction={{ icon: 'settings', accessibilityLabel: '설정 열기', onPress: () => router.navigate('/(tabs)/my') }} />;
 }
 
 const styles = StyleSheet.create({

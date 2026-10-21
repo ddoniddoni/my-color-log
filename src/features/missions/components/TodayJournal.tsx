@@ -4,9 +4,9 @@ import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-gr
 import { useFonts } from 'expo-font';
 import { useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
+import { AppHeader } from '@/src/components/layout/AppHeader';
 import { AppText } from '@/src/components/ui/AppText';
 import { Button } from '@/src/components/ui/Button';
 import { NinePhotoMosaic } from '@/src/components/ui/NinePhotoMosaic';
@@ -35,10 +35,11 @@ type TodayJournalProps = {
   onPhotoLongPress: (photo: TodayPhoto) => void;
   onPhotoPress: (photo: TodayPhoto) => void;
   onRetrySync: () => void;
+  onSettingsPress: () => void;
   timeZone: string;
 };
 
-export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, networkStatus, pendingPhotoCount, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, timeZone }: TodayJournalProps) {
+export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, networkStatus, pendingPhotoCount, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, onSettingsPress, timeZone }: TodayJournalProps) {
   const theme = useAppTheme();
   const { format, language, t } = useAppLanguage();
   const [fontsLoaded] = useFonts({
@@ -46,7 +47,6 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
-  const insets = useSafeAreaInsets();
   const bodyFont = fontsLoaded ? 'BricolageGrotesque_400Regular' : undefined;
   const boldFont = fontsLoaded ? 'BricolageGrotesque_700Bold' : undefined;
   const heavyFont = fontsLoaded ? 'BricolageGrotesque_800ExtraBold' : undefined;
@@ -63,17 +63,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
 
   return (
     <View style={[styles.page, { backgroundColor: theme.colors.canvas }]}>
-      <View style={[styles.appBar, { backgroundColor: theme.colors.canvas, paddingTop: Math.max(insets.top, 8) }]}>
-        <View style={styles.dateGroup}>
-          <View accessible accessibilityLabel="내 프로필 그림" accessibilityRole="image" style={styles.profileMark}>
-            <ProfileSketch color={theme.colors.ink} fill={theme.colors.canvas} />
-          </View>
-          <AppText localize={false} style={[styles.headerDate, { color: theme.colors.ink, fontFamily: boldFont }]}>{formatDateKey(mission.challengeDate, language, 'numeric')}</AppText>
-        </View>
-        <View accessible accessibilityLabel="설정은 준비 중이에요" accessibilityRole="image" style={styles.settingsMark}>
-          <SettingsSketch color={theme.colors.ink} />
-        </View>
-      </View>
+      <AppHeader title="오늘" trailingAction={{ icon: 'settings', accessibilityLabel: '설정 열기', onPress: onSettingsPress }} />
 
       <View
         onLayout={({ nativeEvent }) => {
@@ -83,7 +73,7 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
         style={[styles.content, { paddingHorizontal: journalLayout.horizontalPadding }, isCompact && styles.contentCompact]}>
         <View style={styles.titleGroup}>
           <AppText localize={false} numberOfLines={2} style={[styles.title, { color: theme.colors.ink, fontFamily: heavyFont }, isCompact && styles.titleCompact]}>{photos.length === 9 ? t('오늘의 색을 가득 채웠어요.') : format('오늘의 {colorName}을\n찾아봐요.', { colorName })}</AppText>
-          <AppText numberOfLines={1} style={[styles.weekday, { color: theme.colors.textSecondary, fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>{getTimeZoneDisplayName(timeZone)} · {mission.challengeDate}</AppText>
+          <AppText numberOfLines={1} style={[styles.weekday, { color: theme.colors.textSecondary, fontFamily: bodyFont }, isCompact && styles.weekdayCompact]}>{getTimeZoneDisplayName(timeZone)} · {formatDateKey(mission.challengeDate, language, 'numeric')}</AppText>
         </View>
 
         {photos.length === 0
@@ -173,14 +163,6 @@ function Tag({ colors, label }: { colors: ThemeColors; label: string }) {
   return <View style={[styles.tag, { borderColor: colors.ink }]}><AppText style={[styles.tagText, { color: colors.ink }]}>{label}</AppText></View>;
 }
 
-function ProfileSketch({ color, fill }: { color: string; fill: string }) {
-  return <Svg height={28} viewBox="0 0 28 28" width={28}><Circle cx={14} cy={14} fill={fill} r={13} stroke={color} strokeWidth={1.25} /><Circle cx={10} cy={12} fill={color} r={1.4} /><Circle cx={18} cy={12} fill={color} r={1.4} /><Path d="M9.5 17c1.4 1.7 3 2.5 4.5 2.5s3.1-.8 4.5-2.5M8.2 8.5c2.5-2.1 9.1-2.1 11.6 0" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.25} /></Svg>;
-}
-
-function SettingsSketch({ color }: { color: string }) {
-  return <Svg height={23} viewBox="0 0 24 24" width={23}><Circle cx={12} cy={12} fill="none" r={3.1} stroke={color} strokeWidth={1.5} /><Path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2m14.5-6.5-1.4 1.4M7 17l-1.4 1.4m0-12.8L7 7m9.6 9.6 1.4 1.4" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
-}
-
 function PencilSketch({ color }: { color: string }) {
   return <Svg height={82} viewBox="0 0 82 82" width={82}><Path d="m18 61 8-2 34-34-6-6-34 34-2 8ZM54 19l4-4a3 3 0 0 1 4 4l-4 4" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} /><Path d="M14 67c11-1 22 4 30 1" fill="none" stroke={color} strokeLinecap="round" strokeWidth={1.5} /></Svg>;
 }
@@ -188,11 +170,6 @@ function PencilSketch({ color }: { color: string }) {
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  appBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingBottom: 10, paddingHorizontal: spacing[4] },
-  dateGroup: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  profileMark: { height: 32, width: 32 },
-  headerDate: { fontSize: 13, fontWeight: '700', letterSpacing: -0.15, lineHeight: 17 },
-  settingsMark: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   content: { flex: 1, justifyContent: 'space-between', paddingBottom: 12, paddingTop: 12 },
   contentCompact: { paddingBottom: 8, paddingTop: 8 },
   titleGroup: { gap: 6 },
