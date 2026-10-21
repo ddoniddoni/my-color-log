@@ -142,6 +142,7 @@ function ColorDisc({ colors, mission, palette, progress, rotation, reduceMotion 
           </Defs>
           <Circle cx={150} cy={150} r={112} fill={mission.color.accent} />
           <Circle cx={150} cy={150} r={112} fill="url(#color-light)" />
+          <Circle cx={150} cy={150} r={112} fill="none" stroke={colors.borderStrong} strokeWidth={1} />
           <Circle cx={150} cy={150} r={104} fill="none" stroke={mission.color.onAccent} strokeWidth={0.6} strokeOpacity={0.25} />
         </Svg>
       </Animated.View>
