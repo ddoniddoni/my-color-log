@@ -1,7 +1,6 @@
 import { File } from 'expo-file-system';
 
 import { type DailyEntry, type EntryPhoto, parseDailyEntry, parseEntryPhoto } from '@/src/features/entries/model/dailyEntry';
-import { notifyRoomPhotoUploaded } from '@/src/features/notifications/api/roomPushNotificationRepository';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { getQueuedPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { shareEntryToActiveRoom } from '@/src/features/rooms/api/roomRepository';
@@ -90,12 +89,9 @@ export async function syncPendingPhoto(photo: PendingPhoto): Promise<SyncPending
     return { entryId, wasCancelled: true };
   }
 
-  const wasSharedToRoom = await shareEntryToActiveRoom(entryId);
-  if (wasSharedToRoom) {
-    void notifyRoomPhotoUploaded(latestPhoto.id).catch(() => {
-      // A push failure must never turn a safely synced photo back into a failed upload.
-    });
-  }
+  // Photo/share DB triggers enqueue notifications atomically. Delivery and
+  // retries are server-owned and continue after this app exits.
+  await shareEntryToActiveRoom(entryId);
   return { entryId, wasCancelled: false, photo: saved.photo, photos: saved.photos };
 }
 

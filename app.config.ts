@@ -30,8 +30,13 @@ export default function defineAppConfig({ config }: ConfigContext): ExpoConfig {
     name: variant.name,
     slug: 'mycolorlog',
     scheme: variant.scheme,
+    extra: { ...config.extra, iosRemotePushEnabled: !isPersonalTeam },
     ios: { ...config.ios, bundleIdentifier: identifier },
-    android: { ...config.android, package: identifier },
+    android: {
+      ...config.android,
+      package: identifier,
+      ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
+    },
     plugins,
   };
 }

@@ -23,7 +23,6 @@ jest.mock('@/src/features/sync/queue/photoQueue', () => ({
   updatePendingPhoto: async (_id: string, update: Partial<PendingPhoto>) => { if (mockQueued) mockQueued = { ...mockQueued, ...update }; },
 }));
 jest.mock('@/src/features/rooms/api/roomRepository', () => ({ shareEntryToActiveRoom: async () => false }));
-jest.mock('@/src/features/notifications/api/roomPushNotificationRepository', () => ({ notifyRoomPhotoUploaded: jest.fn() }));
 jest.mock('@/src/lib/supabase/entryPhotoUrls', () => ({ ENTRY_PHOTO_BUCKET: 'private-photos', getEntryPhotoSignedUrls: jest.fn() }));
 
 describe('photo upload reconciliation', () => {

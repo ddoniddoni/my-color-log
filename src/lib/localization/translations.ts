@@ -4,6 +4,8 @@ type Translation = Readonly<Record<AppLanguage, string>>;
 export type TranslationValues = Readonly<Record<string, number | string>>;
 
 const translationEntries: readonly Translation[] = [
+  entry('친구방 알림을 사용할 수 없어요', 'Room notifications are unavailable'),
+  entry('현재 설치된 앱은 친구방 푸시를 지원하지 않아요. 아침·저녁 알림은 사용할 수 있어요.', 'This installed app does not support room push notifications. Morning and evening reminders are available.'),
   entry('색 강조를 적용하지 못했어요. 원본으로 저장하거나 색 강조를 다시 켜서 시도해 주세요.', 'Could not apply the color effect. Save the original, or turn the effect on to try again.'),
   entry('연결 후 사진을 볼 수 있어요', 'Photo available when connected'),
   entry('연결 후 처음 시작할 수 있어요', 'Connect to get started'),

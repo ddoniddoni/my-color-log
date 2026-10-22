@@ -27,7 +27,7 @@ export function useRoomPhotoNotificationNavigation(userId: string | null): void 
 
       const data = response.notification.request.content.data;
       const isToday = isTodayNotification(data, userId);
-      const route = parseRoomPhotoNotificationRoute(data);
+      const route = parseRoomPhotoNotificationRoute(data, userId);
       if (!route && !isToday) return;
 
       handledResponseId.current = responseId;

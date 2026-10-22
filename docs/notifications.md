@@ -44,6 +44,8 @@ npm test -- --runInBand
 
 친구방 푸시의 실기기 검증에는 별도로 EAS 프로젝트 ID, 플랫폼별 푸시 자격 증명, development/release build와 두 테스트 계정이 필요하다. 이 작업에서는 푸시 자격 증명 설정이나 실제 푸시 발송을 수행하지 않는다.
 
+친구방 알림의 서버 대기열·재시도·전달 결과 처리 및 운영 적용 순서는 [친구방 푸시 운영 문서](room-push-notifications.md)를 따른다. 개인 아침·저녁 알림은 위의 로컬 예약 방식을 유지한다.
+
 베타 빌드에서는 `app.json`의 연결된 EAS 프로젝트를 통해 프로젝트 ID를 읽는다. `EXPO_PUBLIC_EAS_PROJECT_ID`는 네이티브 설정이 없는 도구의 fallback이다. 개발·베타·출시 앱 식별자가 다르므로 FCM/APNs 등록도 해당 식별자에 맞춰 준비한다. [베타 빌드·설치 및 실기기 QA](beta-builds.md)를 따른다.
 
 공식 API와 플랫폼 참고: [Expo SDK 57 Notifications](https://docs.expo.dev/versions/v57.0.0/sdk/notifications/).

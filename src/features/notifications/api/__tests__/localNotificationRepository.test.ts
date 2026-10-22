@@ -137,4 +137,14 @@ describe('native daily reminder reconciliation', () => {
     await expect(saveNotificationSettings(enabled)).resolves.toBe('unavailable');
     expect((await getNotificationSettings()).evening.enabled).toBe(false);
   });
+  it('suppresses foreground room alerts for another account or after logout', async () => {
+    await configureLocalNotificationPresentation();
+    const handler = native.setNotificationHandler.mock.calls[0][0];
+    const notification = { request: { identifier: 'room-push', content: { data: { destination: 'room', recipientUserId: 'other' } } } };
+    await expect(handler.handleNotification(notification)).resolves.toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+    notification.request.content.data.recipientUserId = 'owner';
+    await expect(handler.handleNotification(notification)).resolves.toMatchObject({ shouldShowBanner: true });
+    await syncDailyReminderContext(null);
+    await expect(handler.handleNotification(notification)).resolves.toMatchObject({ shouldShowBanner: false });
+  });
 });

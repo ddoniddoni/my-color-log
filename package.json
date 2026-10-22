@@ -77,6 +77,7 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run test:color-isolation && npm run test:build",
     "test:db:namespace": "npx --yes supabase@2.121.0 db query --local --yes --file supabase/tests/cl_namespace_contract.sql",
     "test:db:mission-palette": "npx --yes supabase@2.121.0 db query --local --yes --file supabase/tests/mission_palette_contract.sql",
+    "test:db:room-push": "npx --yes supabase@2.121.0 db query --local --yes --file supabase/tests/room_push_contract.sql",
     "db:install:colorlog": "node scripts/colorlog-db.cjs --install",
     "db:verify:colorlog": "node scripts/colorlog-db.cjs",
     "test:color-isolation": "node --test scripts/color-isolation/__tests__/*.test.cjs",
