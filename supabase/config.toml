@@ -424,14 +424,11 @@ entrypoint = "./functions/cl-delete-my-account/index.ts"
 [functions.cl-notify-room-photo]
 enabled = true
 verify_jwt = true
+import_map = "./functions/cl-notify-room-photo/deno.json"
+entrypoint = "./functions/cl-notify-room-photo/index.ts"
 
 [functions.cl-process-room-push]
+enabled = true
 # Scheduler-only endpoint: the handler requires CL_PUSH_WORKER_SECRET.
 verify_jwt = false
-import_map = "./functions/cl-notify-room-photo/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/cl-notify-room-photo/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/cl-notify-room-photo/*.html" ]
+entrypoint = "./functions/cl-process-room-push/index.ts"

@@ -29,6 +29,8 @@ npm run db:verify:colorlog
 
 친구방 알림의 `20261022111011_reliable_cl_room_push_queue.sql`과 서버 함수/스케줄러 설정은 [친구방 푸시 운영 문서](room-push-notifications.md)를 따른다. migration만 적용하면 worker가 자동 활성화되지 않는다.
 
+2026-10-23 현재 `.env` 대상 서버에는 해당 알림 migration과 두 함수, 전용 비밀, `cl-room-push-worker` 분당 실행을 적용하고 HTTP 200을 확인했다. 기존 다른 앱의 Cron과 개인 기록·사진은 유지했다. 전용 Firebase `mycolorlog-ddoni`와 EAS `preview`의 Android FCM V1 키·앱 설정 파일 등록도 완료했고 실제 전송 없는 FCM 검증 요청은 HTTP 200이었다. 최종 앱 빌드와 기기 수신 검증은 남아 있다. 보라·와인 팔레트 migration의 미적용 상태는 아래와 같다.
+
 최초 설치의 서버 함수는 대상 프로젝트를 명시해 아래 두 개를 배포한다. 친구방 알림 worker 추가 배포와 활성화는 위 운영 문서의 순서를 따른다.
 
 ```sh
