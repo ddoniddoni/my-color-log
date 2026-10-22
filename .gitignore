@@ -36,6 +36,8 @@ yarn-error.*
 .env*.local
 !.env.example
 credentials.json
+google-services*.json
+*firebase-adminsdk*.json
 
 # typescript
 *.tsbuildinfo

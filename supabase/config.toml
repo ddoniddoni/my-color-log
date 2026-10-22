@@ -424,6 +424,10 @@ entrypoint = "./functions/cl-delete-my-account/index.ts"
 [functions.cl-notify-room-photo]
 enabled = true
 verify_jwt = true
+
+[functions.cl-process-room-push]
+# Scheduler-only endpoint: the handler requires CL_PUSH_WORKER_SECRET.
+verify_jwt = false
 import_map = "./functions/cl-notify-room-photo/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx

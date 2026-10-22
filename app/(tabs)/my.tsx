@@ -124,9 +124,11 @@ export default function MyScreen() {
             const result = await notificationSettings.save(settings);
             if (result === 'saved') {
               try {
-                const pushResult = await syncRoomPhotoPushNotifications(settings.roomPhotoPushEnabled);
+                const pushResult = await syncRoomPhotoPushNotifications(settings.roomPhotoPushEnabled, { requestPermission: true });
                 if (pushResult === 'project_id_missing') {
                   showNotice('친구방 푸시 준비 중', '친구방 사진 알림은 EAS 프로젝트 연결과 development build 설치 후 사용할 수 있어요. 아침·저녁 알림 설정은 저장됐어요.');
+                } else if (pushResult === 'unsupported_build') {
+                  showNotice('친구방 알림을 사용할 수 없어요', '현재 설치된 앱은 친구방 푸시를 지원하지 않아요. 아침·저녁 알림은 사용할 수 있어요.');
                 } else if (pushResult === 'unavailable') {
                   showNotice('앱 업데이트가 필요해요', '친구방 사진 알림을 사용하려면 최신 development build를 다시 설치해 주세요.');
                 } else if (pushResult === 'permission_denied') {

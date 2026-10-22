@@ -4,10 +4,10 @@
 
 ## 객체 이름
 
-- 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사
+- 최초 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사. 친구방 알림 migration 적용 후 대기열 테이블 1개가 추가된다.
 - 내부 권한 함수와 설치 이력: `cl_private`
 - 비공개 사진 버킷: `cl-entry-photos` (JPEG, 최대 8 MiB)
-- 서버 함수: `cl-delete-my-account`, `cl-notify-room-photo`
+- 서버 함수: `cl-delete-my-account`, `cl-notify-room-photo`, `cl-process-room-push`
 - 실시간 구독: `cl_entry_room_shares`, `cl_room_photo_reactions`
 
 Auth는 Supabase 프로젝트 전체가 공유한다. 테이블 접두사는 Auth 계정·이메일 설정·비밀번호를 분리하지 않는다. 기존 공유 계정으로 로그인한 이용자는 Color Log 프로필을 별도로 만든다. 다른 앱의 `profiles` 테이블이나 Auth 가입 트리거는 변경하지 않는다.
@@ -27,7 +27,9 @@ npm run db:verify:colorlog
 
 이후 변경은 새로운 timestamp migration으로 작성하고 해당 파일만 명시적으로 적용한다. 공유 `supabase_migrations` 이력 대신 `cl_private.schema_migrations`에 Color Log 적용 버전을 기록한다.
 
-서버 함수는 대상 프로젝트를 명시해 두 개만 배포한다.
+친구방 알림의 `20261022111011_reliable_cl_room_push_queue.sql`과 서버 함수/스케줄러 설정은 [친구방 푸시 운영 문서](room-push-notifications.md)를 따른다. migration만 적용하면 worker가 자동 활성화되지 않는다.
+
+최초 설치의 서버 함수는 대상 프로젝트를 명시해 아래 두 개를 배포한다. 친구방 알림 worker 추가 배포와 활성화는 위 운영 문서의 순서를 따른다.
 
 ```sh
 npx --yes supabase@2.121.0 functions deploy cl-delete-my-account cl-notify-room-photo --project-ref <대상-project-ref> --use-api

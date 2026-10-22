@@ -1,4 +1,5 @@
 import { type Session } from '@supabase/supabase-js';
+import { signOutWithRoomPushCleanup } from '@/src/features/notifications/api/roomPushNotificationRepository';
 
 import { mapSignInErrorCode, mapSignUpErrorCode } from '@/src/features/auth/model/authErrors';
 import { logError } from '@/src/lib/logging/logger';
@@ -29,6 +30,8 @@ export async function signInWithEmailPassword(email: string, password: string): 
 }
 
 export async function signOutCurrentSession(): Promise<void> {
-  const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
-  if (error) throw new Error('sign_out_failed');
+  await signOutWithRoomPushCleanup(async () => {
+    const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
+    if (error) throw new Error('sign_out_failed');
+  });
 }

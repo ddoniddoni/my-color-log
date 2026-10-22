@@ -4,8 +4,9 @@ export type RoomPhotoNotificationRoute = {
   roomId: string;
 };
 
-export function parseRoomPhotoNotificationRoute(value: unknown): RoomPhotoNotificationRoute | null {
+export function parseRoomPhotoNotificationRoute(value: unknown, userId?: string): RoomPhotoNotificationRoute | null {
   if (!isRecord(value) || value.destination !== 'room') return null;
+  if ('recipientUserId' in value && value.recipientUserId !== userId) return null;
   if (!isUuid(value.roomId) || !isUuid(value.photoId) || !isDateKey(value.dateKey)) return null;
   return { dateKey: value.dateKey, photoId: value.photoId, roomId: value.roomId };
 }

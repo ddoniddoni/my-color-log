@@ -10,6 +10,7 @@ function inspect(variant, personalTeam = false) {
       APP_VARIANT: variant,
       IOS_PERSONAL_TEAM: personalTeam ? '1' : '',
       EXPO_NO_DOTENV: '1',
+      GOOGLE_SERVICES_JSON: '',
     },
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -21,6 +22,7 @@ for (const variant of ['development', 'preview', 'production']) {
     assert.equal(result.status, 0, result.stderr);
     const config = JSON.parse(result.stdout);
     assert.equal(config.userInterfaceStyle, 'automatic');
+    assert.equal(config.extra.iosRemotePushEnabled, true);
     assert.equal(config._internal.modResults.ios.infoPlist.UIUserInterfaceStyle, 'Automatic');
     const appearance = config._internal.modResults.android.strings.resources.string.find((item) => item.$.name === 'expo_system_ui_user_interface_style');
     assert.equal(appearance?._, 'automatic');
@@ -35,6 +37,7 @@ test('personal development removes only remote push signing and uses a separate 
   const config = JSON.parse(result.stdout);
   assert.equal(config._internal.modResults.ios.entitlements['aps-environment'], undefined);
   assert.equal(config.ios.bundleIdentifier, 'com.ddoni.mycolorlog.dev');
+  assert.equal(config.extra.iosRemotePushEnabled, false);
   assert.ok(config.plugins.includes('expo-notifications'));
   assert.ok(config._internal.modResults.ios.infoPlist.UIApplicationSceneManifest);
 });
@@ -46,3 +49,15 @@ for (const variant of ['preview', 'production']) {
     assert.match(result.stderr, /IOS_PERSONAL_TEAM is only supported for development builds/);
   });
 }
+
+test('Android Firebase file configuration follows the selected app variant', () => {
+  const result = spawnSync(process.execPath, [require.resolve('expo/bin/cli'), 'config', '--type', 'public', '--json'], {
+    encoding: 'utf8',
+    env: { ...process.env, APP_VARIANT: 'preview', IOS_PERSONAL_TEAM: '', EXPO_NO_DOTENV: '1', GOOGLE_SERVICES_JSON: '/tmp/colorlog-firebase-fixture.json' },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const config = JSON.parse(result.stdout);
+  assert.equal(config.android.package, 'com.ddoni.mycolorlog.preview');
+  assert.equal(config.android.googleServicesFile, '/tmp/colorlog-firebase-fixture.json');
+  assert.ok(config.extra.eas.projectId);
+});

@@ -63,7 +63,7 @@ function AppProviderContent({ children }: PropsWithChildren) {
 function AppRuntime({ children, networkStatus, userId, sessionReady }: PropsWithChildren<{ networkStatus: 'offline' | 'online' | 'unknown'; userId: string | null; sessionReady: boolean }>) {
   const cacheReady = useOfflineCacheReady();
   useDailyReminders(userId, sessionReady && cacheReady);
-  useRoomPhotoPushRegistration(userId);
+  useRoomPhotoPushRegistration(userId, networkStatus);
   useProfileTimeZoneSync(userId);
 
   return (

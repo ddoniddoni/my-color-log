@@ -49,7 +49,8 @@ export async function configureLocalNotificationPresentation(): Promise<void> {
       const data = notification.request.content.data ?? {};
       const context = currentContext;
       const isDaily = isDailyReminderIdentifier(notification.request.identifier);
-      const show = !isDaily || (context != null
+      const isRoom = data.destination === 'room';
+      const show = isRoom ? context != null && (!data.recipientUserId || data.recipientUserId === context.userId) : !isDaily || (context != null
         && (!data.userId || data.userId === context.userId)
         && (data.kind !== 'evening' || (data.dateKey === context.dateKey && context.hasRecordedToday === false)));
       return { shouldPlaySound: show, shouldSetBadge: false, shouldShowBanner: show, shouldShowList: show };

@@ -1,5 +1,7 @@
 # DB 계약 테스트
 
+친구방 알림은 `room_push_contract.sql`로 검증한다. 새 `20261022111011_reliable_cl_room_push_queue.sql` 적용 후 `npm run test:db:room-push`를 실행한다. 테스트는 임시 Auth 사용자와 세션을 만들고 `authenticated`/`service_role`로 전환해 기기 등록, 예약 트리거, 큐 접근 차단, 중복 방지, lease, receipt, 자격 재확인을 검증한 뒤 롤백한다. 실제 푸시 발송은 하지 않는다.
+
 `room_visibility_contract.sql`은 PRD `FR-MISSION-004`, `FR-ROOM-009`의 방 날짜 경계와 읽기 권한을 검증한다.
 
 ## 실행

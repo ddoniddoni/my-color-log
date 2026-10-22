@@ -62,4 +62,10 @@ describe('notification taps', () => {
     await act(async () => { listener(response(data)); });
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/room-history', params: { roomId: data.roomId, photoId: data.photoId, dateKey: data.dateKey } });
   });
+  it('ignores a room notification addressed to the previous account', async () => {
+    await act(async () => { screen = create(<Harness userId="owner" />); });
+    await act(async () => { listener(response({ destination: 'room', recipientUserId: 'previous', roomId: '22222222-2222-4222-8222-222222222222', photoId: '33333333-3333-4333-8333-333333333333', dateKey: '2026-10-18' })); });
+    expect(getRoom).not.toHaveBeenCalled();
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
 });
