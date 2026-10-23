@@ -10,6 +10,7 @@ export function toRoomError(error: RoomRpcError): Error {
   if (message.includes('room_emoji_invalid')) return new Error('room_emoji_invalid');
   if (message.includes('active_room_limit_reached')) return new Error('active_room_limit_reached');
   if (message.includes('room_already_joined')) return new Error('room_already_joined');
+  if (message.includes('room_invite_already_used')) return new Error('room_invite_already_used');
   if (message.includes('room_invite_not_available')) return new Error('room_invite_not_available');
   if (message.includes('room_invite_cannot_join_self')) return new Error('room_invite_cannot_join_self');
   if (message.includes('room_member_limit_reached')) return new Error('room_member_limit_reached');

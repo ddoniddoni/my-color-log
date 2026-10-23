@@ -2,6 +2,8 @@
 
 친구방 알림은 `room_push_contract.sql`로 검증한다. 새 `20261022111011_reliable_cl_room_push_queue.sql` 적용 후 `npm run test:db:room-push`를 실행한다. 테스트는 임시 Auth 사용자와 세션을 만들고 `authenticated`/`service_role`로 전환해 기기 등록, 예약 트리거, 큐 접근 차단, 중복 방지, lease, receipt, 자격 재확인을 검증한 뒤 롤백한다. 실제 푸시 발송은 하지 않는다.
 
+친구방 재가입은 `20261023173429_fix_cl_room_rejoin.sql` 적용 후 `npm run test:db:room-rejoin`으로 검증한다. 새 초대 재가입, 사용한 초대 거절, 강퇴 후 새 초대, 이전 방장 권한 미복구, 정원/활성 방 제한, 만료/취소/소진/본인 초대, 종료된 방, 익명·미인증 차단을 실제 RPC로 확인한다. 서울·LA·키리티마티 방에서 재가입일 이전 사진·Storage·방 보드 접근 차단과 본인 기록 보존도 검사한다. fixture 생성만 관리자 권한을 사용하고 가입/조회는 `authenticated` 역할로 실행한다. 모든 데이터는 롤백한다.
+
 `room_visibility_contract.sql`은 PRD `FR-MISSION-004`, `FR-ROOM-009`의 방 날짜 경계와 읽기 권한을 검증한다.
 
 ## 실행
