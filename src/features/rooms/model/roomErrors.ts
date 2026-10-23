@@ -8,6 +8,7 @@ export function getRoomErrorMessage(error: Error, language: AppLanguage = 'ko'):
   if (error.message === 'room_emoji_invalid') return '방 이모지는 8자 이하로 입력해 주세요.';
   if (error.message === 'active_room_limit_reached') return '참여 중인 친구방은 최대 3개까지 만들거나 들어갈 수 있어요.';
   if (error.message === 'room_already_joined') return '이미 참여 중인 친구방이에요.';
+  if (error.message === 'room_invite_already_used') return '이미 사용한 초대 코드예요. 방장에게 새 초대 코드를 부탁해 주세요.';
   if (error.message === 'room_invite_not_available') return '초대가 만료됐거나 사용 가능 횟수가 끝났어요.';
   if (error.message === 'room_invite_cannot_join_self') return '내가 만든 초대 코드로는 참여할 수 없어요.';
   if (error.message === 'room_member_limit_reached') return '이 방은 이미 6명으로 가득 찼어요.';
@@ -26,6 +27,7 @@ function getEnglishRoomErrorMessage(code: string): string {
   if (code === 'room_emoji_invalid') return 'Enter a room emoji with 8 characters or fewer.';
   if (code === 'active_room_limit_reached') return 'You can create or join up to 3 rooms.';
   if (code === 'room_already_joined') return 'You already joined this room.';
+  if (code === 'room_invite_already_used') return 'You already used this invite. Ask the room owner for a new invite code.';
   if (code === 'room_invite_not_available') return 'This invite expired or has no uses left.';
   if (code === 'room_invite_cannot_join_self') return 'You cannot join with an invite code you created.';
   if (code === 'room_member_limit_reached') return 'This room already has 6 members.';
