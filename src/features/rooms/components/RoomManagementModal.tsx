@@ -1,10 +1,12 @@
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useMemo, useRef, useState } from 'react';
 
 import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog';
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
+import { RoomReportForm } from '@/src/features/reports/components/RoomReportForm';
+import { useRoomReport } from '@/src/features/reports/hooks/useRoomReport';
 import { getInviteExpiryLabel, type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
 import { getRoomManagementState } from '@/src/features/rooms/model/roomLifecycle';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
@@ -37,9 +39,16 @@ type RoomManagementConfirmation =
 
 export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, onNotice, onRemoveMember, onReissueInvite, onRevokeInvite, onTransfer, onUpdateSettings, pendingAction, room, visible }: RoomManagementModalProps) {
   const styles = useRoomManagementStyles();
+  const { format, t } = useAppLanguage();
+  const report = useRoomReport();
   const managementState = getRoomManagementState(room, currentUserId);
-  const isPending = pendingAction !== null;
+  const isPending = pendingAction !== null || report.isPending;
   const [confirmation, setConfirmation] = useState<RoomManagementConfirmation | null>(null);
+  const close = (): void => {
+    if (isPending) return;
+    if (report.target) report.close();
+    else onClose();
+  };
 
   const confirm = (): void => {
     if (!confirmation || isPending) return;
@@ -58,20 +67,28 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
 
   return (
     <>
-      <Modal animationType="fade" onRequestClose={() => !isPending && onClose()} statusBarTranslucent transparent visible={visible}>
-        <View style={styles.overlay}>
-          <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={onClose} style={StyleSheet.absoluteFill} />
-          <View accessibilityViewIsModal style={styles.card}>
+      <Modal animationType="fade" onRequestClose={close} statusBarTranslucent transparent visible={visible}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
+          <Pressable accessibilityLabel={t(report.target ? '신고 닫기' : '친구방 관리 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={close} style={StyleSheet.absoluteFill} />
+          <View accessibilityViewIsModal style={[styles.card, report.target && styles.reportCard]}>
+          {report.target ? <RoomReportForm report={report} /> : <>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>PRIVATE ROOM SETTINGS</AppText>
               <AppText style={styles.title}>{room.emoji ? `${room.emoji} ${room.name}` : room.name}</AppText>
             </View>
-            <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={onClose} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
+            <Pressable accessibilityLabel="친구방 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} hitSlop={3} onPress={close} style={styles.closeButton}><AppText style={styles.closeText}>×</AppText></Pressable>
           </View>
 
           <View style={styles.body}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+              {room.members.some((member) => member.id !== currentUserId) ? <View style={styles.section}>
+                <AppText variant="bodyStrong">멤버 신고</AppText>
+                {room.members.filter((member) => member.id !== currentUserId).map((member) => <View key={member.id} style={styles.memberControlRow}>
+                  <AppText localize={false} style={styles.memberCopy}>{member.nickname}</AppText>
+                  <Pressable accessibilityLabel={format('{name} 님 신고', { name: member.nickname })} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={() => report.open({ kind: 'member', roomId: room.id, targetId: member.id })} style={styles.removeMemberButton}><AppText style={styles.removeMemberText}>신고</AppText></Pressable>
+                </View>)}
+              </View> : null}
               {managementState.canLeaveRoom ? (
                 <>
                   <AppText style={styles.description}>방에서 나가도 내 개인 다이어리와 사진은 유지돼요.</AppText>
@@ -145,8 +162,9 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
               </View>
             ) : null}
           </View>
+          </>}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <RoomManagementConfirmationDialog confirmation={confirmation} isPending={isPending} onClose={() => setConfirmation(null)} onConfirm={confirm} />
     </>
@@ -274,6 +292,7 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   overlay: { alignItems: 'center', backgroundColor: colors.overlay, flex: 1, justifyContent: 'center', padding: 20 },
   card: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 2, boxShadow: `7px 7px 0px ${colors.black}`, gap: 16, maxHeight: '88%', maxWidth: 390, padding: 20, width: '100%' },
+  reportCard: { padding: 0 },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   body: { flexShrink: 1, gap: 14 },
   content: { gap: 16 },

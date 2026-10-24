@@ -8,6 +8,8 @@ import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { RoomPhotoReactionBar } from '@/src/features/reactions/components/RoomPhotoReactionBar';
+import { RoomReportForm } from '@/src/features/reports/components/RoomReportForm';
+import { useRoomReport } from '@/src/features/reports/hooks/useRoomReport';
 import { type RoomBoardMember, type RoomBoardMission } from '@/src/features/rooms/model/roomTodayBoard';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 
@@ -24,6 +26,7 @@ type RoomMemberPhotoViewerProps = {
 export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, mission, onClose, roomId, timeZone }: RoomMemberPhotoViewerProps) {
   const styles = useRoomMemberPhotoViewerStyles();
   const { format, language, t } = useAppLanguage();
+  const report = useRoomReport();
   const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
     day: '2-digit',
     hour: '2-digit',
@@ -44,7 +47,8 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
   if (!photo || !member || !mission) return null;
 
   return (
-    <AppModal accessibilityLabel={t('멤버 사진 닫기')} contentStyle={styles.card} onClose={onClose} visible>
+    <AppModal accessibilityLabel={t(report.target ? '신고 닫기' : '멤버 사진 닫기')} contentStyle={styles.card} isBusy={report.isPending} onClose={report.target ? report.close : onClose} visible>
+      {report.target ? <RoomReportForm report={report} /> : <>
             <View style={styles.header}>
               <View style={styles.headerCopy}>
                 <AppText style={styles.eyebrow}>TODAY&apos;S SHARED PHOTO</AppText>
@@ -72,9 +76,11 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
           <AppText style={styles.memoLabel}>MEMO</AppText>
           <AppText localize={false} style={styles.memo}>{photo.caption ?? t('남긴 메모가 없어요.')}</AppText>
           {currentUserId && roomId ? <RoomPhotoReactionBar isOwnPhoto={member.id === currentUserId} photoId={photo.id} roomId={roomId} userId={currentUserId} /> : null}
+          {currentUserId && roomId && member.id !== currentUserId ? <Pressable accessibilityLabel={t('사진 신고')} accessibilityRole="button" onPress={() => report.open({ kind: 'photo', roomId, targetId: photo.id })} style={styles.reportButton}><AppText style={styles.reportText}>사진 신고</AppText></Pressable> : null}
           <AppText style={styles.readOnly}>이 사진은 멤버의 개인 기록을 참조해 읽기 전용으로 보여요.</AppText>
         </View>
       </ScrollView>
+      </>}
     </AppModal>
   );
 }
@@ -125,5 +131,7 @@ function createStyles(colors: ThemeColors) {
   memoLabel: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.8 },
   memo: { color: colors.ink, fontSize: 14, fontStyle: 'italic', lineHeight: 20 },
   readOnly: { color: colors.textSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  reportButton: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
+  reportText: { color: colors.danger, fontSize: 14, fontWeight: '600' },
   });
 }

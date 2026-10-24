@@ -4,7 +4,7 @@
 
 ## 객체 이름
 
-- 최초 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사. 친구방 알림 migration 적용 후 대기열 테이블 1개가 추가된다.
+- 최초 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사. 친구방 알림 migration 적용 후 대기열 테이블 1개, 신고 migration 적용 후 접수 테이블 1개가 추가된다.
 - 내부 권한 함수와 설치 이력: `cl_private`
 - 비공개 사진 버킷: `cl-entry-photos` (JPEG, 최대 8 MiB)
 - 서버 함수: `cl-delete-my-account`, `cl-notify-room-photo`, `cl-process-room-push`
@@ -28,6 +28,8 @@ npm run db:verify:colorlog
 이후 변경은 새로운 timestamp migration으로 작성하고 해당 파일만 명시적으로 적용한다. 공유 `supabase_migrations` 이력 대신 `cl_private.schema_migrations`에 Color Log 적용 버전을 기록한다.
 
 친구방 알림의 `20261022111011_reliable_cl_room_push_queue.sql`과 서버 함수/스케줄러 설정은 [친구방 푸시 운영 문서](room-push-notifications.md)를 따른다. migration만 적용하면 worker가 자동 활성화되지 않는다.
+
+친구방 신고는 `20261024174731_add_cl_room_reports.sql`로 추가한다. 2026-10-25 `.env` 대상 서버에 이 파일만 적용했으며 기존 객체 328개의 정의·권한은 유지했다. 접수 테이블 `cl_room_reports`와 운영자 확인 방법, 검증 범위는 [신고 접수 문서](room-reports.md)를 따른다. 팔레트·재가입 migration의 미적용 상태는 이번 작업에서 바꾸지 않았다.
 
 2026-10-23 현재 `.env` 대상 서버에는 해당 알림 migration과 두 함수, 전용 비밀, `cl-room-push-worker` 분당 실행을 적용하고 HTTP 200을 확인했다. 기존 다른 앱의 Cron과 개인 기록·사진은 유지했다. 전용 Firebase `mycolorlog-ddoni`와 EAS `preview`의 Android FCM V1 키·앱 설정 파일 등록도 완료했고 실제 전송 없는 FCM 검증 요청은 HTTP 200이었다. 최종 앱 빌드와 기기 수신 검증은 남아 있다. 보라·와인 팔레트 migration의 미적용 상태는 아래와 같다.
 
