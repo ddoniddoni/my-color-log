@@ -1,3 +1,4 @@
+import { withRoomPhotoNonce } from '@/src/features/rooms/model/roomPhotoUrl';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,6 +9,9 @@ import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
 import { RoomPhotoReactionBar } from '@/src/features/reactions/components/RoomPhotoReactionBar';
+import { UserBlockForm } from '@/src/features/blocks/components/UserBlockForm';
+import { useUserBlockAction } from '@/src/features/blocks/hooks/useUserBlocks';
+import { useRoomPhotoAccess } from '@/src/features/rooms/hooks/useRoomPhotoAccess';
 import { RoomReportForm } from '@/src/features/reports/components/RoomReportForm';
 import { useRoomReport } from '@/src/features/reports/hooks/useRoomReport';
 import { type RoomBoardMember, type RoomBoardMission } from '@/src/features/rooms/model/roomTodayBoard';
@@ -27,6 +31,8 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
   const styles = useRoomMemberPhotoViewerStyles();
   const { format, language, t } = useAppLanguage();
   const report = useRoomReport();
+  const block = useUserBlockAction(currentUserId, onClose);
+  const { headers: imageHeaders, cacheNonce } = useRoomPhotoAccess();
   const photoDateFormatter = useMemo(() => new Intl.DateTimeFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
     day: '2-digit',
     hour: '2-digit',
@@ -47,8 +53,8 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
   if (!photo || !member || !mission) return null;
 
   return (
-    <AppModal accessibilityLabel={t(report.target ? '신고 닫기' : '멤버 사진 닫기')} contentStyle={styles.card} isBusy={report.isPending} onClose={report.target ? report.close : onClose} visible>
-      {report.target ? <RoomReportForm report={report} /> : <>
+    <AppModal accessibilityLabel={t(report.target ? '신고 닫기' : '멤버 사진 닫기')} contentStyle={styles.card} isBusy={report.isPending || block.isPending} onClose={block.target ? block.close : report.target ? report.close : onClose} visible>
+      {block.target ? <UserBlockForm action={block} /> : report.target ? <RoomReportForm report={report} /> : <>
             <View style={styles.header}>
               <View style={styles.headerCopy}>
                 <AppText style={styles.eyebrow}>TODAY&apos;S SHARED PHOTO</AppText>
@@ -61,7 +67,7 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
 
       <ScrollView bounces={false} contentContainerStyle={styles.scrollContent} style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.photoArea}>
-          <Image accessibilityLabel={format('{name}의 {position}번째 공유 사진', { name: member.nickname, position: selectedIndex + 1 })} cachePolicy="memory-disk" contentFit="contain" source={photo.signedUrl ? { uri: photo.signedUrl } : null} style={styles.photo} />
+          <Image accessibilityLabel={format('{name}의 {position}번째 공유 사진', { name: member.nickname, position: selectedIndex + 1 })} cachePolicy="none" contentFit="contain" source={photo.imageUrl && imageHeaders ? { uri: withRoomPhotoNonce(photo.imageUrl, cacheNonce), headers: imageHeaders } : null} style={styles.photo} />
           {previousPhoto ? <Pressable accessibilityLabel={t('이전 사진')} accessibilityRole="button" onPress={() => setSelectedPhotoId(previousPhoto.id)} style={[styles.navButton, styles.previousButton]}><Chevron direction="left" /></Pressable> : null}
           {nextPhoto ? <Pressable accessibilityLabel={t('다음 사진')} accessibilityRole="button" onPress={() => setSelectedPhotoId(nextPhoto.id)} style={[styles.navButton, styles.nextButton]}><Chevron direction="right" /></Pressable> : null}
         </View>
@@ -77,6 +83,7 @@ export function RoomMemberPhotoViewer({ currentUserId, initialPhotoId, member, m
           <AppText localize={false} style={styles.memo}>{photo.caption ?? t('남긴 메모가 없어요.')}</AppText>
           {currentUserId && roomId ? <RoomPhotoReactionBar isOwnPhoto={member.id === currentUserId} photoId={photo.id} roomId={roomId} userId={currentUserId} /> : null}
           {currentUserId && roomId && member.id !== currentUserId ? <Pressable accessibilityLabel={t('사진 신고')} accessibilityRole="button" onPress={() => report.open({ kind: 'photo', roomId, targetId: photo.id })} style={styles.reportButton}><AppText style={styles.reportText}>사진 신고</AppText></Pressable> : null}
+          {currentUserId && roomId && member.id !== currentUserId ? <Pressable accessibilityLabel={format('{name} 님 차단', { name: member.nickname })} accessibilityRole="button" onPress={() => block.open({ id: member.id, nickname: member.nickname, shouldBlock: true })} style={styles.reportButton}><AppText style={styles.reportText}>사용자 차단</AppText></Pressable> : null}
           <AppText style={styles.readOnly}>이 사진은 멤버의 개인 기록을 참조해 읽기 전용으로 보여요.</AppText>
         </View>
       </ScrollView>

@@ -12,6 +12,7 @@ import { deleteCurrentAccount } from '@/src/features/auth/api/accountRepository'
 import { signOutCurrentSession } from '@/src/features/auth/api/authRepository';
 import { AccountDeletionModal } from '@/src/features/auth/components/AccountDeletionModal';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
+import { BlockedUsersModal } from '@/src/features/blocks/components/BlockedUsersModal';
 import { NotificationSettingsModal } from '@/src/features/notifications/components/NotificationSettingsModal';
 import { syncRoomPhotoPushNotifications } from '@/src/features/notifications/api/roomPushNotificationRepository';
 import { useNotificationSettings } from '@/src/features/notifications/hooks/useNotificationSettings';
@@ -39,6 +40,7 @@ export default function MyScreen() {
   const userId = sessionState.status === 'ready' ? sessionState.session?.user.id : undefined;
   const profileQuery = useProfile(userId);
   const roomsQuery = useMyRooms(userId ?? null);
+  const [isBlockedUsersVisible, setIsBlockedUsersVisible] = useState(false);
   const [isAccountDeletionVisible, setIsAccountDeletionVisible] = useState(false);
   const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [isProfileEditVisible, setIsProfileEditVisible] = useState(false);
@@ -86,6 +88,7 @@ export default function MyScreen() {
         deletingAccount={deleteAccountMutation.isPending}
         email={email}
         nickname={profileQuery.data.nickname}
+        onBlockedUsersPress={() => setIsBlockedUsersVisible(true)}
         onDeleteAccountPress={() => setIsAccountDeletionVisible(true)}
         onLanguagePress={() => setIsLanguageSettingsVisible(true)}
         onNotificationsPress={() => setIsNotificationSettingsVisible(true)}
@@ -99,6 +102,7 @@ export default function MyScreen() {
         languagePreferenceLabel={language.language === 'ko' ? '한국어' : 'English'}
         themePreferenceLabel={getThemePreferenceLabel(theme.preference, language.language)}
       />
+      {isBlockedUsersVisible && userId ? <BlockedUsersModal userId={userId} onClose={() => setIsBlockedUsersVisible(false)} /> : null}
       <ProfileNicknameModal
         isSaving={updateNicknameMutation.isPending}
         nickname={profileQuery.data.nickname}

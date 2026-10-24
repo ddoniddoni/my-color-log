@@ -10,7 +10,7 @@ export function useRoomTodayBoard(userId: string | null, dateKey: string, roomId
   const queryClient = useQueryClient();
   const query = useQuery({
     enabled: userId !== null && roomId !== null,
-    queryFn: () => getRoomTodayBoard(roomId ?? ''),
+    queryFn: ({ signal }) => getRoomTodayBoard(roomId ?? '', signal),
     queryKey: roomId ? queryKeys.roomTodayBoard(userId ?? 'signed-out', roomId, dateKey) : ['roomTodayBoard', userId ?? 'signed-out', dateKey, 'unselected'],
     refetchInterval: 15_000,
     staleTime: 10_000,

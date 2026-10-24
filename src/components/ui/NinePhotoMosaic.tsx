@@ -17,12 +17,14 @@ export type NinePhotoMosaicPhoto = {
 type NinePhotoMosaicProps = {
   accessibilityLabel: string;
   photos: NinePhotoMosaicPhoto[];
+  imageHeaders?: Record<string, string>;
+  imageCachePolicy?: 'none' | 'memory-disk';
   onEmptyPress?: () => void;
   onPhotoPress?: (photo: NinePhotoMosaicPhoto) => void;
   onPhotoLongPress?: (photo: NinePhotoMosaicPhoto) => void;
 };
 
-export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPhotoLongPress, onPhotoPress }: NinePhotoMosaicProps) {
+export function NinePhotoMosaic({ accessibilityLabel, photos, imageHeaders, imageCachePolicy = 'memory-disk', onEmptyPress, onPhotoLongPress, onPhotoPress }: NinePhotoMosaicProps) {
   const theme = useAppTheme();
   const slots = getNinePhotoMosaicSlots(photos);
 
@@ -50,7 +52,7 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, onEmptyPress, onPh
             const content = (
               <>
                 {photo.uri
-                  ? <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri: photo.uri }} style={styles.photoImage} />
+                  ? <Image cachePolicy={imageCachePolicy} contentFit="cover" source={{ uri: photo.uri, headers: imageHeaders }} style={styles.photoImage} />
                   : <View style={styles.unavailablePhoto}><AppText variant="caption" color="secondary">연결 후 사진을 볼 수 있어요</AppText></View>}
                 {photo.status && photo.status !== 'synced' ? <View style={[
                   styles.photoStatus,

@@ -5,6 +5,8 @@ import { AppConfirmationDialog } from '@/src/components/ui/AppConfirmationDialog
 import { AppText } from '@/src/components/ui/AppText';
 import { useAppTheme } from '@/src/design/ThemeProvider';
 import { type ThemeColors } from '@/src/design/tokens';
+import { UserBlockForm } from '@/src/features/blocks/components/UserBlockForm';
+import { useBlockedUsers, useUserBlockAction } from '@/src/features/blocks/hooks/useUserBlocks';
 import { RoomReportForm } from '@/src/features/reports/components/RoomReportForm';
 import { useRoomReport } from '@/src/features/reports/hooks/useRoomReport';
 import { getInviteExpiryLabel, type ActiveRoom, type RoomMember, validateRoomEmoji, validateRoomName } from '@/src/features/rooms/model/room';
@@ -41,12 +43,15 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
   const styles = useRoomManagementStyles();
   const { format, t } = useAppLanguage();
   const report = useRoomReport();
+  const blocks = useBlockedUsers(currentUserId, visible);
+  const block = useUserBlockAction(currentUserId);
   const managementState = getRoomManagementState(room, currentUserId);
-  const isPending = pendingAction !== null || report.isPending;
+  const isPending = pendingAction !== null || report.isPending || block.isPending;
   const [confirmation, setConfirmation] = useState<RoomManagementConfirmation | null>(null);
   const close = (): void => {
     if (isPending) return;
-    if (report.target) report.close();
+    if (block.target) block.close();
+    else if (report.target) report.close();
     else onClose();
   };
 
@@ -70,8 +75,8 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
       <Modal animationType="fade" onRequestClose={close} statusBarTranslucent transparent visible={visible}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
           <Pressable accessibilityLabel={t(report.target ? '신고 닫기' : '친구방 관리 닫기')} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={close} style={StyleSheet.absoluteFill} />
-          <View accessibilityViewIsModal style={[styles.card, report.target && styles.reportCard]}>
-          {report.target ? <RoomReportForm report={report} /> : <>
+          <View accessibilityViewIsModal style={[styles.card, (report.target || block.target) && styles.reportCard]}>
+          {block.target ? <UserBlockForm action={block} /> : report.target ? <RoomReportForm report={report} /> : <>
           <View style={styles.header}>
             <View>
               <AppText style={styles.eyebrow}>PRIVATE ROOM SETTINGS</AppText>
@@ -83,10 +88,11 @@ export function RoomManagementModal({ currentUserId, onClose, onEnd, onLeave, on
           <View style={styles.body}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
               {room.members.some((member) => member.id !== currentUserId) ? <View style={styles.section}>
-                <AppText variant="bodyStrong">멤버 신고</AppText>
+                <AppText variant="bodyStrong">멤버 관리</AppText>
                 {room.members.filter((member) => member.id !== currentUserId).map((member) => <View key={member.id} style={styles.memberControlRow}>
                   <AppText localize={false} style={styles.memberCopy}>{member.nickname}</AppText>
                   <Pressable accessibilityLabel={format('{name} 님 신고', { name: member.nickname })} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={() => report.open({ kind: 'member', roomId: room.id, targetId: member.id })} style={styles.removeMemberButton}><AppText style={styles.removeMemberText}>신고</AppText></Pressable>
+                  <Pressable accessibilityLabel={format(blocks.data?.some((user) => user.id === member.id) ? '{name} 님 차단 해제' : '{name} 님 차단', { name: member.nickname })} accessibilityRole="button" accessibilityState={{ disabled: isPending }} disabled={isPending} onPress={() => block.open({ id: member.id, nickname: member.nickname, shouldBlock: !blocks.data?.some((user) => user.id === member.id) })} style={styles.removeMemberButton}><AppText style={styles.removeMemberText}>{blocks.data?.some((user) => user.id === member.id) ? '차단 해제' : '차단'}</AppText></Pressable>
                 </View>)}
               </View> : null}
               {managementState.canLeaveRoom ? (

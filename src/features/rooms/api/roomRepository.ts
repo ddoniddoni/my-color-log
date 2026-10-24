@@ -11,7 +11,7 @@ import { parseRoomHistoryRows, type RoomHistoryDay } from '@/src/features/rooms/
 import { toRoomError } from '@/src/features/rooms/model/roomRpcError';
 import { logError } from '@/src/lib/logging/logger';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
-import { getEntryPhotoSignedUrls } from '@/src/lib/supabase/entryPhotoUrls';
+import { getRoomPhotoUrls } from '@/src/features/rooms/model/roomPhotoUrl';
 
 export async function getMyRooms(): Promise<ActiveRoom[]> {
   const { data, error } = await getSupabaseClient().rpc('cl_get_my_rooms_v2');
@@ -27,27 +27,30 @@ export async function getRoom(roomId: string): Promise<ActiveRoom | null> {
   return rooms[0] ?? null;
 }
 
-export async function getRoomTodayBoard(roomId: string): Promise<RoomTodayBoard | null> {
-  const { data, error } = await getSupabaseClient().rpc('cl_get_room_today_board', { p_room_id: roomId });
+export async function getRoomTodayBoard(roomId: string, signal?: AbortSignal): Promise<RoomTodayBoard | null> {
+  const request = getSupabaseClient().rpc('cl_get_room_today_board', { p_room_id: roomId });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
   if (error || !Array.isArray(data)) throw new Error('room_today_board_fetch_failed');
 
-  const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));
-  return parseRoomTodayBoardRows(data, signedUrlByPath);
+  const imageUrlByPath = getRoomPhotoUrls(getStoragePaths(data));
+  return parseRoomTodayBoardRows(data, imageUrlByPath);
 }
 
-export async function getRoomHistory(roomId: string): Promise<RoomHistoryDay[]> {
-  const { data, error } = await getSupabaseClient().rpc('cl_get_room_history', { p_room_id: roomId });
+export async function getRoomHistory(roomId: string, signal?: AbortSignal): Promise<RoomHistoryDay[]> {
+  const request = getSupabaseClient().rpc('cl_get_room_history', { p_room_id: roomId });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
   if (error || !Array.isArray(data)) throw new Error('room_history_fetch_failed');
   return parseRoomHistoryRows(data);
 }
 
-export async function getRoomDayBoard(roomId: string, dateKey: string): Promise<RoomTodayBoard | null> {
+export async function getRoomDayBoard(roomId: string, dateKey: string, signal?: AbortSignal): Promise<RoomTodayBoard | null> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new Error('invalid_room_history_date');
-  const { data, error } = await getSupabaseClient().rpc('cl_get_room_day_board', { p_date_key: dateKey, p_room_id: roomId });
+  const request = getSupabaseClient().rpc('cl_get_room_day_board', { p_date_key: dateKey, p_room_id: roomId });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
   if (error || !Array.isArray(data)) throw new Error('room_history_board_fetch_failed');
 
-  const signedUrlByPath = await getEntryPhotoSignedUrls(getStoragePaths(data));
-  return parseRoomTodayBoardRows(data, signedUrlByPath);
+  const imageUrlByPath = getRoomPhotoUrls(getStoragePaths(data));
+  return parseRoomTodayBoardRows(data, imageUrlByPath);
 }
 
 export async function createRoom(name: string, emoji: string | null, timeZone: string): Promise<CreatedRoom> {
