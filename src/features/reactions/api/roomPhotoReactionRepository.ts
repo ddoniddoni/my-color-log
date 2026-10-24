@@ -5,11 +5,12 @@ import {
 } from '@/src/features/reactions/model/roomPhotoReaction';
 import { getSupabaseClient } from '@/src/lib/supabase/client';
 
-export async function getRoomPhotoReactions(roomId: string, photoId: string): Promise<RoomPhotoReactionSummary[]> {
-  const { data, error } = await getSupabaseClient().rpc('cl_get_room_photo_reactions', {
+export async function getRoomPhotoReactions(roomId: string, photoId: string, signal?: AbortSignal): Promise<RoomPhotoReactionSummary[]> {
+  const request = getSupabaseClient().rpc('cl_get_room_photo_reactions', {
     p_photo_id: photoId,
     p_room_id: roomId,
   });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
   if (error) throw new Error('room_photo_reactions_fetch_failed');
   return parseRoomPhotoReactionSummaries(data);
 }

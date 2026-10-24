@@ -18,7 +18,7 @@ it('removes nonfunctional header icons while keeping the theme settings entry us
   let screen!: ReactTestRenderer;
   try {
     await act(async () => {
-      screen = create(<MyProfileCanvas deletingAccount={false} email="member@example.invalid" languagePreferenceLabel="한국어" nickname="색수집가" onDeleteAccountPress={noop} onLanguagePress={noop} onNotificationsPress={noop} onProfileEditPress={noop} onRoomsPress={noop} onSignOutPress={noop} onThemePress={onThemePress} rooms={[]} roomsStatus="ready" signingOut={false} themePreferenceLabel="시스템 설정" />);
+      screen = create(<MyProfileCanvas deletingAccount={false} email="member@example.invalid" languagePreferenceLabel="한국어" nickname="색수집가" onBlockedUsersPress={noop} onDeleteAccountPress={noop} onLanguagePress={noop} onNotificationsPress={noop} onProfileEditPress={noop} onRoomsPress={noop} onSignOutPress={noop} onThemePress={onThemePress} rooms={[]} roomsStatus="ready" signingOut={false} themePreferenceLabel="시스템 설정" />);
     });
     const header = screen.root.findByType(AppHeader);
     expect(header.props.title).toBe('내 정보');

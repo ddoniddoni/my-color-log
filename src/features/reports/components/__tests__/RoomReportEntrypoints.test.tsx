@@ -9,6 +9,11 @@ import { RoomMemberPhotoViewer } from '@/src/features/rooms/components/RoomMembe
 import { type ActiveRoom } from '@/src/features/rooms/model/room';
 import { type RoomBoardMember, type RoomBoardMission } from '@/src/features/rooms/model/roomTodayBoard';
 
+jest.mock('@/src/lib/env/publicEnv', () => ({ getPublicEnv: () => ({ supabaseUrl: 'https://project.example', supabasePublishableKey: 'public' }) }));
+jest.mock('@/src/lib/supabase/entryPhotoUrls', () => ({ ENTRY_PHOTO_BUCKET: 'cl-entry-photos' }));
+jest.mock('expo-router', () => ({ useFocusEffect: jest.fn() }));
+jest.mock('@/src/features/rooms/hooks/useRoomPhotoAccess', () => ({ useRoomPhotoAccess: () => ({ headers: undefined, cacheNonce: 'test-nonce' }) }));
+jest.mock('@/src/features/blocks/api/userBlockRepository', () => ({ getBlockedUsers: jest.fn().mockResolvedValue([]), setUserBlock: jest.fn() }));
 jest.mock('@/src/design/ThemeProvider', () => ({ useAppTheme: () => ({ colors: jest.requireActual('@/src/design/tokens').colors }) }));
 jest.mock('@/src/lib/localization/LanguageProvider', () => {
   const language = { language: 'ko', t: (text: string) => text, format: (text: string, values: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key])) };
@@ -20,7 +25,7 @@ jest.mock('@/src/features/reactions/components/RoomPhotoReactionBar', () => ({ R
 const mission: RoomBoardMission = { id: 'mission', titleKo: '오늘', promptKo: '오늘', colorNameKo: '파랑', colorNameEn: 'Blue', colorHex: '#0000ff' };
 const member: RoomBoardMember = {
   id: 'owner', nickname: '방장', role: 'owner', joinedAt: '2026-10-01T00:00:00Z',
-  photos: ['photo1', 'photo2'].map((id, i) => ({ id, entryId: 'entry', position: i + 1, storagePath: '', caption: null, capturedAt: '2026-10-01T00:00:00Z', width: 100, height: 100, byteSize: 100, signedUrl: null })),
+  photos: ['photo1', 'photo2'].map((id, i) => ({ id, entryId: 'entry', position: i + 1, storagePath: '', caption: null, capturedAt: '2026-10-01T00:00:00Z', width: 100, height: 100, byteSize: 100, imageUrl: null })),
 };
 const room: ActiveRoom = {
   id: 'room', name: '친구방', emoji: null, status: 'active', timeZone: 'Asia/Seoul', maxMembers: 6, inviteCode: null, inviteExpiresAt: null,

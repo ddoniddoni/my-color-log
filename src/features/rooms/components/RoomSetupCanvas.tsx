@@ -1,3 +1,5 @@
+import { withRoomPhotoNonce } from '@/src/features/rooms/model/roomPhotoUrl';
+import { useRoomPhotoAccess } from '@/src/features/rooms/hooks/useRoomPhotoAccess';
 import {
   ActivityIndicator,
   Modal,
@@ -699,18 +701,19 @@ function RoomTodayBoardSection({ board, boldFont, currentUserId, initialPhotoId,
 }
 
 function RoomMemberMosaic({ member, onCapture, onOpenPhoto }: { member: RoomBoardMember; onCapture: (() => void) | null; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
+  const { headers: imageHeaders, cacheNonce } = useRoomPhotoAccess();
   const { language } = useAppLanguage();
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
-    photo.signedUrl ? [{
+    photo.imageUrl && imageHeaders ? [{
       accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
       capturedAt: photo.capturedAt,
       id: photo.id,
       position: photo.position,
-      uri: photo.signedUrl,
+      uri: withRoomPhotoNonce(photo.imageUrl, cacheNonce),
     }] : []
   ));
   return (
-    <NinePhotoMosaic
+    <NinePhotoMosaic imageHeaders={imageHeaders} imageCachePolicy="none"
       accessibilityLabel={language === 'ko' ? `${member.nickname}의 오늘 사진 ${photos.length}장, 9칸 기록판` : `${member.nickname}’s ${photos.length} photos today, 9-slot record board`}
       onEmptyPress={onCapture ?? undefined}
       onPhotoPress={(photo) => {

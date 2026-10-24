@@ -8,8 +8,9 @@ import { queryKeys } from '@/src/lib/query/queryKeys';
 export function useRoomDayBoard(userId: string | null, roomId: string | null, dateKey: string | null) {
   const query = useQuery({
     enabled: userId !== null && roomId !== null && dateKey !== null,
-    queryFn: () => getRoomDayBoard(roomId ?? '', dateKey ?? ''),
+    queryFn: ({ signal }) => getRoomDayBoard(roomId ?? '', dateKey ?? '', signal),
     queryKey: roomId && dateKey ? queryKeys.roomHistoryBoard(userId ?? 'signed-out', roomId, dateKey) : ['roomHistoryBoard', userId ?? 'signed-out', roomId ?? 'unselected', dateKey ?? 'unselected'],
+    refetchInterval: 15_000,
     staleTime: 20_000,
   });
   const { refetch } = query;

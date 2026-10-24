@@ -22,6 +22,7 @@ type MyProfileCanvasProps = {
   email: string;
   languagePreferenceLabel: string;
   nickname: string;
+  onBlockedUsersPress: () => void;
   onDeleteAccountPress: () => void;
   onLanguagePress: () => void;
   onNotificationsPress: () => void;
@@ -40,6 +41,7 @@ export function MyProfileCanvas({
   email,
   languagePreferenceLabel,
   nickname,
+  onBlockedUsersPress,
   onDeleteAccountPress,
   onLanguagePress,
   onNotificationsPress,
@@ -78,6 +80,8 @@ export function MyProfileCanvas({
         <View style={styles.menuList}>
           <MarkerLine colors={theme.colors} strong />
           <MenuRow colors={theme.colors} disabled={deletingAccount} label="프로필 수정" onPress={onProfileEditPress} />
+          <MarkerLine colors={theme.colors} />
+          <MenuRow colors={theme.colors} disabled={deletingAccount} label="차단한 사용자" onPress={onBlockedUsersPress} />
           <MarkerLine colors={theme.colors} />
           <MenuRow colors={theme.colors} disabled={deletingAccount} label="알림 설정" onPress={onNotificationsPress} />
           <MarkerLine colors={theme.colors} />

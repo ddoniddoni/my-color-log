@@ -1,3 +1,5 @@
+import { withRoomPhotoNonce } from '@/src/features/rooms/model/roomPhotoUrl';
+import { useRoomPhotoAccess } from '@/src/features/rooms/hooks/useRoomPhotoAccess';
 import {
   ActivityIndicator,
   FlatList,
@@ -235,18 +237,19 @@ const HistoryMemberItem = memo(function HistoryMemberItem({ boldFont, dateKey, i
 
 function RoomHistoryMosaic({ member, onOpenPhoto }: { member: RoomBoardMember; onOpenPhoto: (photo: RoomBoardPhoto) => void }) {
   const { format } = useAppLanguage();
+  const { headers: imageHeaders, cacheNonce } = useRoomPhotoAccess();
   const photos: NinePhotoMosaicPhoto[] = member.photos.flatMap((photo) => (
-    photo.signedUrl ? [{
+    photo.imageUrl && imageHeaders ? [{
       accessibilityLabel: getPhotoAccessibilityLabel({ caption: photo.caption, ownerName: member.nickname, position: photo.position }),
       capturedAt: photo.capturedAt,
       id: photo.id,
       position: photo.position,
-      uri: photo.signedUrl,
+      uri: withRoomPhotoNonce(photo.imageUrl, cacheNonce),
     }] : []
   ));
 
   return (
-    <NinePhotoMosaic
+    <NinePhotoMosaic imageHeaders={imageHeaders} imageCachePolicy="none"
       accessibilityLabel={format('{name}의 기록 사진 {count}장, 9칸 기록판', { count: photos.length, name: member.nickname })}
       onPhotoPress={(photo) => {
         const roomPhoto = member.photos.find((candidate) => candidate.id === photo.id);

@@ -51,7 +51,8 @@ begin
         'cl_room_daily_missions',
         'cl_room_members',
         'cl_room_photo_reactions',
-        'cl_rooms'
+        'cl_rooms',
+        'cl_user_blocks'
       ])) then
       raise exception 'security_contract_authenticated_select:%', public_table.relname;
     end if;

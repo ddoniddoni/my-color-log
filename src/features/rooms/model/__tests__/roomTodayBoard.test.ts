@@ -73,7 +73,7 @@ describe('room today board parser', () => {
       dateKey: '2026-07-17',
       roomId: 'room-1',
       members: [
-        expect.objectContaining({ id: 'user-1', photos: [expect.objectContaining({ entryId: 'entry-1', signedUrl: 'https://signed.example/photo-1' }), expect.objectContaining({ signedUrl: null })] }),
+        expect.objectContaining({ id: 'user-1', photos: [expect.objectContaining({ entryId: 'entry-1', imageUrl: 'https://signed.example/photo-1' }), expect.objectContaining({ imageUrl: null })] }),
         expect.objectContaining({ id: 'user-2', photos: [] }),
       ],
     }));

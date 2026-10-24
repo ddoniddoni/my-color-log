@@ -17,7 +17,7 @@ export type RoomBoardPhoto = {
   width: number;
   height: number;
   byteSize: number;
-  signedUrl: string | null;
+  imageUrl: string | null;
 };
 
 export type RoomBoardMember = {
@@ -54,7 +54,7 @@ export function getRoomPhotoMosaicSlots(member: RoomBoardMember): RoomPhotoMosai
   });
 }
 
-export function parseRoomTodayBoardRows(value: unknown, signedUrlByPath: Map<string, string>): RoomTodayBoard | null {
+export function parseRoomTodayBoardRows(value: unknown, imageUrlByPath: Map<string, string>): RoomTodayBoard | null {
   if (!Array.isArray(value)) throw new Error('invalid_room_today_board_response');
   if (value.length === 0) return null;
 
@@ -72,7 +72,7 @@ export function parseRoomTodayBoardRows(value: unknown, signedUrlByPath: Map<str
     const roomPhoto = row.photo;
     if (roomPhoto) {
       if (member.photos.some((photo) => photo.id === roomPhoto.id)) throw new Error('invalid_room_today_board_response');
-      member.photos.push({ ...roomPhoto, signedUrl: signedUrlByPath.get(roomPhoto.storagePath) ?? null });
+      member.photos.push({ ...roomPhoto, imageUrl: imageUrlByPath.get(roomPhoto.storagePath) ?? null });
     }
   }
 
@@ -96,7 +96,7 @@ type ParsedRoomTodayBoardRow = {
   dateKey: string;
   mission: RoomBoardMission;
   member: Omit<RoomBoardMember, 'photos'>;
-  photo: Omit<RoomBoardPhoto, 'signedUrl'> | null;
+  photo: Omit<RoomBoardPhoto, 'imageUrl'> | null;
 };
 
 function parseRoomTodayBoardRow(value: unknown): ParsedRoomTodayBoardRow {
@@ -127,7 +127,7 @@ function parseRoomTodayBoardRow(value: unknown): ParsedRoomTodayBoardRow {
   };
 }
 
-function parsePhoto(row: Record<string, unknown>): Omit<RoomBoardPhoto, 'signedUrl'> | null {
+function parsePhoto(row: Record<string, unknown>): Omit<RoomBoardPhoto, 'imageUrl'> | null {
   if (row.photo_id === null) return null;
 
   const photoPosition = row.photo_position;

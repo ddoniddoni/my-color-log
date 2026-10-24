@@ -14,8 +14,9 @@ export function useRoomPhotoReactions({ photoId, roomId, userId }: { photoId: st
     : ['roomPhotoReactions', userId ?? 'signed-out', roomId ?? 'unselected', photoId ?? 'unselected'] as const;
   const query = useQuery({
     enabled: userId !== null && roomId !== null && photoId !== null,
-    queryFn: () => getRoomPhotoReactions(roomId ?? '', photoId ?? ''),
+    queryFn: ({ signal }) => getRoomPhotoReactions(roomId ?? '', photoId ?? '', signal),
     queryKey,
+    refetchInterval: 15_000,
     staleTime: 15_000,
   });
   const { refetch } = query;

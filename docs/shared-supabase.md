@@ -4,7 +4,7 @@
 
 ## 객체 이름
 
-- 최초 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사. 친구방 알림 migration 적용 후 대기열 테이블 1개, 신고 migration 적용 후 접수 테이블 1개가 추가된다.
+- 최초 테이블 14개와 공개 RPC·인덱스·트리거: `cl_` 접두사. 친구방 알림 migration 적용 후 대기열 테이블 1개, 신고 migration 적용 후 접수 테이블 1개, 차단 migration 적용 후 차단 테이블 1개가 추가된다.
 - 내부 권한 함수와 설치 이력: `cl_private`
 - 비공개 사진 버킷: `cl-entry-photos` (JPEG, 최대 8 MiB)
 - 서버 함수: `cl-delete-my-account`, `cl-notify-room-photo`, `cl-process-room-push`
@@ -40,6 +40,8 @@ npx --yes supabase@2.121.0 functions deploy cl-delete-my-account cl-notify-room-
 ```
 
 `--prune`이나 전체 함수 배포를 사용하지 않는다. 이메일 확인·SMTP·비밀번호 복구 Redirect URLs는 공유 설정이므로 다른 서비스의 기존 값을 보존하며 설정한다.
+
+사용자 차단은 `20261024191117_add_cl_user_blocks.sql`로 추가한다. 설치 순서·상호 차단 범위·접근 한계·실기기 검증은 [사용자 차단 문서](user-blocks.md)를 따른다.
 
 ## 팔레트 업데이트 (준비 완료, 공유 서버 미적용)
 
