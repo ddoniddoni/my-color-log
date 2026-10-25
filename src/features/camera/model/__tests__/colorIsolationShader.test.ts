@@ -118,6 +118,42 @@ describe('color isolation rendered pixels', () => {
     expect(saturation(render([210, 55, 50, 1], '#FF0000'))).toBeGreaterThan(0.8);
   });
 
+  // Representative cool pink / raspberry swatches, not pixels extracted from
+  // the user's already-filtered screenshot. Include highlights and shadows.
+  it.each<Pixel>([
+    [210, 50, 95, 1],
+    [170, 75, 105, 1],
+    [115, 45, 65, 1],
+    [230, 140, 165, 1],
+    [220, 40, 76, 1],
+  ])('does not emphasize a cool pink as tomato red (%i, %i, %i)', (r, g, b, a) => {
+    for (const target of ['#E53935', '#FF0000']) {
+      expect(saturation(render([r, g, b, a], target))).toBeLessThan(0.03);
+    }
+    // Tightening red must not remove these shades from an actual pink mission.
+    expect(saturation(render([r, g, b, a], '#EC407A'))).toBeGreaterThan(0.3);
+  });
+
+  it('softly separates red from raspberry while keeping the hue wrap-around', () => {
+    const core = saturation(render([240, 0, 8, 1], '#FF0000'));
+    const edge = saturation(render([240, 0, 32, 1], '#FF0000'));
+    const outside = saturation(render([240, 0, 52, 1], '#FF0000'));
+    expect(core).toBeGreaterThan(0.9);
+    expect(edge).toBeGreaterThan(0.15);
+    expect(edge).toBeLessThan(0.8);
+    expect(outside).toBeLessThan(0.03);
+  });
+
+  it('retains saturated dark reds without reopening the boundary for muted pink shadows or wine', () => {
+    // Dark red flag samples from the existing NASA astronaut evaluation scene.
+    for (const pixel of [[92, 8, 27, 1], [89, 8, 25, 1], [109, 11, 28, 1], [115, 12, 30, 1]] as const) {
+      expect(saturation(render(pixel))).toBeGreaterThan(0.8);
+    }
+    for (const pixel of [[115, 45, 65, 1], [65, 4, 20, 1], [139, 30, 75, 1]] as const) {
+      expect(saturation(render(pixel))).toBeLessThan(0.03);
+    }
+  });
+
   it('fades nearby hues smoothly without retaining distant orange', () => {
     const core = saturation(render([240, 40, 0, 1], '#FF0000'));
     const edge = saturation(render([240, 80, 0, 1], '#FF0000'));
@@ -154,6 +190,24 @@ describe('color isolation rendered pixels', () => {
     expect(saturation(render([238, 241, 245, 1], '#29B6F6'))).toBeLessThan(0.02);
   });
 
+  it('finds wood and coffee browns without emphasizing bright orange, beige or white', () => {
+    for (const pixel of [[141, 110, 99, 1], [110, 65, 38, 1], [85, 56, 35, 1], [160, 125, 85, 1]] as const) {
+      expect(saturation(render(pixel, '#8D6E63'))).toBeGreaterThan(0.2);
+    }
+    for (const pixel of [[245, 124, 0, 1], [253, 216, 53, 1], [215, 196, 163, 1], [238, 237, 234, 1], [210, 50, 95, 1]] as const) {
+      expect(saturation(render(pixel, '#8D6E63'))).toBeLessThan(0.03);
+    }
+  });
+
+  it('finds beige paper and fabric without emphasizing gray, white, brown or vivid yellow', () => {
+    for (const pixel of [[215, 196, 163, 1], [230, 210, 175, 1], [190, 170, 140, 1]] as const) {
+      expect(saturation(render(pixel, '#D7C4A3'))).toBeGreaterThan(0.15);
+    }
+    for (const pixel of [[180, 180, 180, 1], [245, 243, 239, 1], [141, 110, 99, 1], [110, 65, 38, 1], [253, 216, 53, 1], [245, 124, 0, 1]] as const) {
+      expect(saturation(render(pixel, '#D7C4A3'))).toBeLessThan(0.03);
+    }
+  });
+
   it('finds olive foliage without classifying yellow or brown as leaf green', () => {
     expect(saturation(render([90, 100, 50, 1], '#43A047'))).toBeGreaterThan(0.5);
     expect(saturation(render([253, 216, 53, 1], '#43A047'))).toBeLessThan(0.03);
@@ -169,6 +223,11 @@ describe('color isolation rendered pixels', () => {
       [[92, 44, 49, 1], '#8B1E4B'],
       [[215, 228, 240, 1], '#29B6F6'],
       [[123, 47, 208, 1], '#7B2FD0'],
+      [[210, 50, 95, 1], '#E53935'],
+      [[220, 40, 76, 1], '#E53935'],
+      [[210, 50, 55, 1], '#E53935'],
+      [[110, 65, 38, 1], '#8D6E63'],
+      [[215, 196, 163, 1], '#D7C4A3'],
     ] as const) {
       const [r, g, b] = source.slice(0, 3).map((v) => toLinear(v / 255));
       const p3: Pixel = [encode(0.82259287*r + 0.17753395*g), encode(0.03319951*r + 0.9667835*g), encode(0.01708535*r + 0.07239572*g + 0.91030148*b), 1];
