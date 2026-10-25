@@ -206,7 +206,7 @@ export function PhotoReviewScreen({ reviewContext }: { reviewContext: PhotoRevie
           </View>
         </View>
 
-        <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>{t('발견한 색')} {colorTag}</AppText></View>
+        <View style={styles.colorLabel}><AppText numberOfLines={1} style={styles.colorLabelText}>{t('오늘의 색')} {colorTag}</AppText></View>
 
         <Pressable
           accessibilityLabel={t('오늘의 색만 보기')}

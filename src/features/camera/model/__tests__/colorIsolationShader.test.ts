@@ -118,6 +118,42 @@ describe('color isolation rendered pixels', () => {
     expect(saturation(render([210, 55, 50, 1], '#FF0000'))).toBeGreaterThan(0.8);
   });
 
+  // Representative cool pink / raspberry swatches, not pixels extracted from
+  // the user's already-filtered screenshot. Include highlights and shadows.
+  it.each<Pixel>([
+    [210, 50, 95, 1],
+    [170, 75, 105, 1],
+    [115, 45, 65, 1],
+    [230, 140, 165, 1],
+    [220, 40, 76, 1],
+  ])('does not emphasize a cool pink as tomato red (%i, %i, %i)', (r, g, b, a) => {
+    for (const target of ['#E53935', '#FF0000']) {
+      expect(saturation(render([r, g, b, a], target))).toBeLessThan(0.03);
+    }
+    // Tightening red must not remove these shades from an actual pink mission.
+    expect(saturation(render([r, g, b, a], '#EC407A'))).toBeGreaterThan(0.3);
+  });
+
+  it('softly separates red from raspberry while keeping the hue wrap-around', () => {
+    const core = saturation(render([240, 0, 8, 1], '#FF0000'));
+    const edge = saturation(render([240, 0, 32, 1], '#FF0000'));
+    const outside = saturation(render([240, 0, 52, 1], '#FF0000'));
+    expect(core).toBeGreaterThan(0.9);
+    expect(edge).toBeGreaterThan(0.15);
+    expect(edge).toBeLessThan(0.8);
+    expect(outside).toBeLessThan(0.03);
+  });
+
+  it('retains saturated dark reds without reopening the boundary for muted pink shadows or wine', () => {
+    // Dark red flag samples from the existing NASA astronaut evaluation scene.
+    for (const pixel of [[92, 8, 27, 1], [89, 8, 25, 1], [109, 11, 28, 1], [115, 12, 30, 1]] as const) {
+      expect(saturation(render(pixel))).toBeGreaterThan(0.8);
+    }
+    for (const pixel of [[115, 45, 65, 1], [65, 4, 20, 1], [139, 30, 75, 1]] as const) {
+      expect(saturation(render(pixel))).toBeLessThan(0.03);
+    }
+  });
+
   it('fades nearby hues smoothly without retaining distant orange', () => {
     const core = saturation(render([240, 40, 0, 1], '#FF0000'));
     const edge = saturation(render([240, 80, 0, 1], '#FF0000'));
@@ -169,6 +205,9 @@ describe('color isolation rendered pixels', () => {
       [[92, 44, 49, 1], '#8B1E4B'],
       [[215, 228, 240, 1], '#29B6F6'],
       [[123, 47, 208, 1], '#7B2FD0'],
+      [[210, 50, 95, 1], '#E53935'],
+      [[220, 40, 76, 1], '#E53935'],
+      [[210, 50, 55, 1], '#E53935'],
     ] as const) {
       const [r, g, b] = source.slice(0, 3).map((v) => toLinear(v / 255));
       const p3: Pixel = [encode(0.82259287*r + 0.17753395*g), encode(0.03319951*r + 0.9667835*g), encode(0.01708535*r + 0.07239572*g + 0.91030148*b), 1];

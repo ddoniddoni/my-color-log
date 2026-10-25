@@ -20,6 +20,7 @@ export type ColorIsolationUniforms = {
   saturationRange: Range;
   shadowRange: Range;
   valueCeiling: Range;
+  separateRedFromPink: number;
 };
 
 // Classification is independent of compositing. The target HEX and classifier
@@ -36,6 +37,7 @@ const CLASSIFIER = `
   uniform float2 saturationRange;
   uniform float2 shadowRange;
   uniform float2 valueCeiling;
+  uniform float separateRedFromPink;
 
   float3 encodeSrgb(float3 linear) {
     float3 c = clamp(linear, 0.0, 1.0);
@@ -64,6 +66,21 @@ const CLASSIFIER = `
       float delta = mod(hueAngle(rgb) - hueAngle(targetColor) + 540.0, 360.0) - 180.0;
       float2 bounds = delta < 0.0 ? hueRange.xy : hueRange.zw;
       hueMatch = 1.0 - smoothstep(bounds.x, bounds.y, abs(delta));
+    }
+    if (separateRedFromPink > 0.5) {
+      // The symmetric distance above accepts raspberry hues as red. Keep the
+      // existing match, but fade its cool side between 356 and 350 degrees.
+      // Use an absolute family boundary so a slightly warmer target cannot
+      // widen this back into pink. Reds on either side of zero still match.
+      float hue = hueAngle(rgb);
+      float signedHue = hue > 180.0 ? hue - 360.0 : hue;
+      float redBoundary = smoothstep(-10.0, -4.0, signedHue);
+      // A saturated dark red can shift toward blue in shadow. Give only those
+      // pixels a small extension; muted pink shadows and wine stay excluded.
+      // The normal shadow/noise floor still applies after this hue decision.
+      float darkRed = (1.0 - smoothstep(0.50, 0.65, hi)) * smoothstep(0.82, 0.90, saturation);
+      float darkRedBoundary = smoothstep(-16.0, -12.0, signedHue);
+      hueMatch *= mix(redBoundary, darkRedBoundary, darkRed);
     }
     float colorPresence = smoothstep(saturationRange.x, saturationRange.y, saturation);
     float shadowPresence = smoothstep(shadowRange.x, shadowRange.y, hi);
@@ -125,6 +142,7 @@ export function getColorIsolationUniforms(colorHex: string): ColorIsolationUnifo
     ...COLOR_ISOLATION_DEFAULTS, targetColor,
     hueRange: [10.8, 27.6, 10.8, 27.6], useHueRange: 0,
     saturationRange: [0.05, 0.18], shadowRange: [0.04, 0.12], valueCeiling: [1, 1.01],
+    separateRedFromPink: 0,
   };
 
   if (hue >= 315 && hue <= 355 && hi < 0.65) {
@@ -136,6 +154,10 @@ export function getColorIsolationUniforms(colorHex: string): ColorIsolationUnifo
     uniforms.shadowRange = [0.08, 0.18];
     uniforms.useHueRange = 1;
     uniforms.valueCeiling = [hi + 0.10, hi + 0.25];
+  } else if (hue <= 12 || hue >= 355) {
+    // Tomato/pure red needs a tighter cool boundary than pink or wine. Keep
+    // the original brightness/saturation tolerance for red shading/reflection.
+    uniforms.separateRedFromPink = 1;
   } else if (hue >= 80 && hue < 150) {
     // Allow yellow-green foliage, but keep lemon yellow and brown outside.
     // Absolute lower bounds also protect older lime missions from over-widening.
