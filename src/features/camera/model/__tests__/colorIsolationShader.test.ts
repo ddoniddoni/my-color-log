@@ -190,6 +190,24 @@ describe('color isolation rendered pixels', () => {
     expect(saturation(render([238, 241, 245, 1], '#29B6F6'))).toBeLessThan(0.02);
   });
 
+  it('finds wood and coffee browns without emphasizing bright orange, beige or white', () => {
+    for (const pixel of [[141, 110, 99, 1], [110, 65, 38, 1], [85, 56, 35, 1], [160, 125, 85, 1]] as const) {
+      expect(saturation(render(pixel, '#8D6E63'))).toBeGreaterThan(0.2);
+    }
+    for (const pixel of [[245, 124, 0, 1], [253, 216, 53, 1], [215, 196, 163, 1], [238, 237, 234, 1], [210, 50, 95, 1]] as const) {
+      expect(saturation(render(pixel, '#8D6E63'))).toBeLessThan(0.03);
+    }
+  });
+
+  it('finds beige paper and fabric without emphasizing gray, white, brown or vivid yellow', () => {
+    for (const pixel of [[215, 196, 163, 1], [230, 210, 175, 1], [190, 170, 140, 1]] as const) {
+      expect(saturation(render(pixel, '#D7C4A3'))).toBeGreaterThan(0.15);
+    }
+    for (const pixel of [[180, 180, 180, 1], [245, 243, 239, 1], [141, 110, 99, 1], [110, 65, 38, 1], [253, 216, 53, 1], [245, 124, 0, 1]] as const) {
+      expect(saturation(render(pixel, '#D7C4A3'))).toBeLessThan(0.03);
+    }
+  });
+
   it('finds olive foliage without classifying yellow or brown as leaf green', () => {
     expect(saturation(render([90, 100, 50, 1], '#43A047'))).toBeGreaterThan(0.5);
     expect(saturation(render([253, 216, 53, 1], '#43A047'))).toBeLessThan(0.03);
@@ -208,6 +226,8 @@ describe('color isolation rendered pixels', () => {
       [[210, 50, 95, 1], '#E53935'],
       [[220, 40, 76, 1], '#E53935'],
       [[210, 50, 55, 1], '#E53935'],
+      [[110, 65, 38, 1], '#8D6E63'],
+      [[215, 196, 163, 1], '#D7C4A3'],
     ] as const) {
       const [r, g, b] = source.slice(0, 3).map((v) => toLinear(v / 255));
       const p3: Pixel = [encode(0.82259287*r + 0.17753395*g), encode(0.03319951*r + 0.9667835*g), encode(0.01708535*r + 0.07239572*g + 0.91030148*b), 1];

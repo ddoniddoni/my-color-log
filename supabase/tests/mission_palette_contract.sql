@@ -5,19 +5,24 @@ begin;
 do $$
 begin
   if (select array_agg(slug order by slug) from public.cl_color_palette where is_active)
-    is distinct from array['clear-blue','deep-wine','leaf-green','lemon-yellow','mint-green',
-      'rose-pink','royal-purple','sky-blue','tangerine-orange','tomato-red']::text[] then
+    is distinct from array['everyday-beige','everyday-blue','everyday-brown','everyday-green','everyday-orange',
+      'everyday-pink','everyday-purple','everyday-red','everyday-wine','everyday-yellow']::text[] then
     raise exception 'palette_active_pool_mismatch';
   end if;
   if (select count(*) from public.cl_color_palette where slug in ('coral-pink','lime-green') and not is_active) <> 2 then
     raise exception 'palette_historical_colors_not_preserved';
   end if;
-  if not exists (select 1 from public.cl_color_palette where slug='royal-purple' and hex='#7B2FD0' and on_color_hex='#FFFFFF')
-    or not exists (select 1 from public.cl_color_palette where slug='deep-wine' and hex='#8B1E4B' and on_color_hex='#FFFFFF') then
+  if (select count(*) from public.cl_color_palette where is_active and selection_weight=4) <> 8
+    or not exists (select 1 from public.cl_color_palette where slug='everyday-red' and on_color_hex='#000000')
+    or (select count(*) from public.cl_color_palette where slug in ('everyday-purple','everyday-wine') and selection_weight=1) <> 2
+    or not exists (select 1 from public.cl_color_palette where slug='everyday-brown' and name_ko='갈색' and name_en='Brown' and hex='#8D6E63')
+    or not exists (select 1 from public.cl_color_palette where slug='everyday-beige' and name_ko='베이지' and name_en='Beige' and hex='#D7C4A3') then
     raise exception 'palette_new_color_tokens_mismatch';
   end if;
   if not (select relrowsecurity from pg_class where oid='public.cl_color_palette'::regclass)
     or has_table_privilege('authenticated','public.cl_color_palette','UPDATE')
+    or has_column_privilege('authenticated','public.cl_color_palette','selection_weight','UPDATE')
+    or has_function_privilege('anon','public.cl_get_daily_mission(date)','EXECUTE')
     or has_function_privilege('anon','public.cl_get_mission_reveal_palette(date)','EXECUTE')
     or not has_function_privilege('authenticated','public.cl_get_mission_reveal_palette(date)','EXECUTE') then
     raise exception 'palette_permissions_changed';
@@ -92,18 +97,32 @@ begin
     if room_mission is distinct from fixture.mission_id then raise exception 'palette_room_and_solo_disagree'; end if;
   end loop;
 
-  -- The date-based server schedule must choose both new colors naturally.
-  for fixture in select d::date as date_key from generate_series(date '2002-01-01',date '2002-12-31',interval '1 day') d loop
+  -- Weighted server selection must favor everyday colors, without user order or time-zone dependence.
+  for fixture in select d::date as date_key from generate_series(date '2002-01-01',date '2004-12-31',interval '1 day') d loop
     select * into mission from public.cl_get_daily_mission(fixture.date_key);
     insert into palette_results values(fixture.date_key,mission.color_slug,mission.id);
   end loop;
-  if not exists(select 1 from palette_results where color_slug='royal-purple')
-    or not exists(select 1 from palette_results where color_slug='deep-wine') then
+  if not exists(select 1 from palette_results where color_slug='everyday-purple')
+    or not exists(select 1 from palette_results where color_slug='everyday-wine') then
     raise exception 'palette_new_colors_never_selected';
   end if;
-  if exists(select 1 from palette_results where color_slug in ('coral-pink','lime-green')) then
+  if exists(select 1 from palette_results where color_slug not like 'everyday-%') then
     raise exception 'palette_inactive_color_selected_for_new_mission';
   end if;
+  if (select count(*) from palette_results where color_slug in ('everyday-purple','everyday-wine')) not between 30 and 100
+    or (select count(distinct color_slug) from palette_results) <> 10 then
+    raise exception 'palette_rare_color_frequency_wrong';
+  end if;
+  begin
+    update public.cl_color_palette set selection_weight=10 where slug='everyday-wine';
+    raise exception 'palette_weight_client_mutation_allowed';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.cl_get_daily_mission((current_date+10)::date);
+    raise exception 'palette_future_mission_allowed';
+  exception when raise_exception then
+    if sqlerrm <> 'Future daily missions cannot be created' then raise; end if;
+  end;
 end;
 $$;
 

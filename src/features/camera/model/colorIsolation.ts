@@ -18,6 +18,7 @@ export type ColorIsolationUniforms = {
   hueRange: readonly [number, number, number, number];
   useHueRange: number;
   saturationRange: Range;
+  saturationCeiling: Range;
   shadowRange: Range;
   valueCeiling: Range;
   separateRedFromPink: number;
@@ -35,6 +36,7 @@ const CLASSIFIER = `
   uniform float4 hueRange;
   uniform float useHueRange;
   uniform float2 saturationRange;
+  uniform float2 saturationCeiling;
   uniform float2 shadowRange;
   uniform float2 valueCeiling;
   uniform float separateRedFromPink;
@@ -82,7 +84,8 @@ const CLASSIFIER = `
       float darkRedBoundary = smoothstep(-16.0, -12.0, signedHue);
       hueMatch *= mix(redBoundary, darkRedBoundary, darkRed);
     }
-    float colorPresence = smoothstep(saturationRange.x, saturationRange.y, saturation);
+    float colorPresence = smoothstep(saturationRange.x, saturationRange.y, saturation)
+      * (1.0 - smoothstep(saturationCeiling.x, saturationCeiling.y, saturation));
     float shadowPresence = smoothstep(shadowRange.x, shadowRange.y, hi);
     float targetPresence = smoothstep(0.05, 0.18, (targetHi - targetLo) / max(targetHi, 0.001));
     float brightnessPresence = 1.0 - smoothstep(valueCeiling.x, valueCeiling.y, hi);
@@ -142,10 +145,27 @@ export function getColorIsolationUniforms(colorHex: string): ColorIsolationUnifo
     ...COLOR_ISOLATION_DEFAULTS, targetColor,
     hueRange: [10.8, 27.6, 10.8, 27.6], useHueRange: 0,
     saturationRange: [0.05, 0.18], shadowRange: [0.04, 0.12], valueCeiling: [1, 1.01],
+    saturationCeiling: [1, 1.01],
     separateRedFromPink: 0,
   };
 
-  if (hue >= 315 && hue <= 355 && hi < 0.65) {
+  if (hue >= 12 && hue <= 50 && hi < 0.70) {
+    // Brown spans warm woods and coffee, but bright orange/yellow and beige
+    // must not survive merely because they share a hue with those materials.
+    uniforms.hueRange = [hue - 10, hue - 2, 40 - hue, 55 - hue].map((v) => Math.max(0, v)) as [number, number, number, number];
+    uniforms.useHueRange = 1;
+    uniforms.valueCeiling = [0.68, 0.82];
+    uniforms.saturationBoost = 1.10;
+  } else if (hue >= 25 && hue <= 55 && hi >= 0.70 && chroma / hi < 0.40) {
+    // Beige is light, softly colored paper/fabric; it is neither neutral white
+    // nor a fully saturated yellow/orange. Do not recolor it into orange.
+    uniforms.hueRange = [hue - 25, hue - 15, 50 - hue, 60 - hue].map((v) => Math.max(0, v)) as [number, number, number, number];
+    uniforms.useHueRange = 1;
+    uniforms.saturationRange = [0.08, 0.18];
+    uniforms.saturationCeiling = [0.38, 0.52];
+    uniforms.shadowRange = [0.58, 0.70];
+    uniforms.saturationBoost = 1.10;
+  } else if (hue >= 315 && hue <= 355 && hi < 0.65) {
     // Dark berry colors need a brightness ceiling to separate wine from pink.
     // Stop the red-side extension before orange/brown coffee and wood hues.
     const redEdge = Math.min(28, 360 - hue);

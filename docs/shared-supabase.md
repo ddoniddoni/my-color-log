@@ -29,9 +29,9 @@ npm run db:verify:colorlog
 
 친구방 알림의 `20261022111011_reliable_cl_room_push_queue.sql`과 서버 함수/스케줄러 설정은 [친구방 푸시 운영 문서](room-push-notifications.md)를 따른다. migration만 적용하면 worker가 자동 활성화되지 않는다.
 
-친구방 신고는 `20261024174731_add_cl_room_reports.sql`로 추가한다. 2026-10-25 `.env` 대상 서버에 이 파일만 적용했으며 기존 객체 328개의 정의·권한은 유지했다. 접수 테이블 `cl_room_reports`와 운영자 확인 방법, 검증 범위는 [신고 접수 문서](room-reports.md)를 따른다. 팔레트·재가입 migration의 미적용 상태는 이번 작업에서 바꾸지 않았다.
+친구방 신고는 `20261024174731_add_cl_room_reports.sql`로 추가한다. 2026-10-25 `.env` 대상 서버에 이 파일만 적용했으며 기존 객체 328개의 정의·권한은 유지했다. 접수 테이블 `cl_room_reports`와 운영자 확인 방법, 검증 범위는 [신고 접수 문서](room-reports.md)를 따른다. 당시 팔레트·재가입 migration은 적용하지 않았으며, 이후 팔레트 적용 상태는 아래 절을 따른다.
 
-2026-10-23 현재 `.env` 대상 서버에는 해당 알림 migration과 두 함수, 전용 비밀, `cl-room-push-worker` 분당 실행을 적용하고 HTTP 200을 확인했다. 기존 다른 앱의 Cron과 개인 기록·사진은 유지했다. 전용 Firebase `mycolorlog-ddoni`와 EAS `preview`의 Android FCM V1 키·앱 설정 파일 등록도 완료했고 실제 전송 없는 FCM 검증 요청은 HTTP 200이었다. 최종 앱 빌드와 기기 수신 검증은 남아 있다. 보라·와인 팔레트 migration의 미적용 상태는 아래와 같다.
+2026-10-23 현재 `.env` 대상 서버에는 해당 알림 migration과 두 함수, 전용 비밀, `cl-room-push-worker` 분당 실행을 적용하고 HTTP 200을 확인했다. 기존 다른 앱의 Cron과 개인 기록·사진은 유지했다. 전용 Firebase `mycolorlog-ddoni`와 EAS `preview`의 Android FCM V1 키·앱 설정 파일 등록도 완료했고 실제 전송 없는 FCM 검증 요청은 HTTP 200이었다. 최종 앱 빌드와 기기 수신 검증은 남아 있다. 이후 팔레트 변경 상태는 아래와 같다.
 
 최초 설치의 서버 함수는 대상 프로젝트를 명시해 아래 두 개를 배포한다. 친구방 알림 worker 추가 배포와 활성화는 위 운영 문서의 순서를 따른다.
 
@@ -43,18 +43,26 @@ npx --yes supabase@2.121.0 functions deploy cl-delete-my-account cl-notify-room-
 
 사용자 차단은 `20261024191117_add_cl_user_blocks.sql`로 추가한다. 설치 순서·상호 차단 범위·접근 한계·실기기 검증은 [사용자 차단 문서](user-blocks.md)를 따른다.
 
-## 팔레트 업데이트 (준비 완료, 공유 서버 미적용)
+## 팔레트 업데이트
 
-기존 설치에는 `20261021180718_refresh_cl_mission_palette.sql` **한 파일만** 적용한다. 새 프로젝트도 최초 설치 명령 후 이 migration을 추가 적용해야 현재 팔레트가 된다. 서버의 기존 활성 목록이 검토 당시와 다르거나 새 slug가 이미 있으면 전체 트랜잭션이 실패하므로 원인을 확인한 뒤 별도 migration으로 조정한다. 기존 행을 덮어써서 통과시키지 않는다.
+현재 버전은 `20261025185955_everyday_cl_mission_colors.sql`이다. 최초 `cl_` 설치와 이전 보라·와인 팔레트 설치 양쪽을 지원한다. 아직 적용하지 않은 프로젝트에는 **이 파일만** 추가 적용한다. `20261021180718_refresh_cl_mission_palette.sql`을 건너뛸 수 있으며 새 팔레트 적용 후 이를 뒤늦게 실행하면 안 된다. 알 수 없는 활성 목록 또는 `everyday-*` 충돌은 전체 트랜잭션을 실패시키므로 원인을 확인하고 새 migration으로 조정한다. 기존 행을 덮어쓰거나 전체 `db push`를 사용하지 않는다.
 
 ```sh
-npx --yes supabase@2.121.0 db query --linked --project-ref <.env의-대상-project-ref> --yes --file supabase/migrations/20261021180718_refresh_cl_mission_palette.sql
+npx --yes supabase@2.121.0 db query --linked --project-ref <.env의-대상-project-ref> --yes --file supabase/migrations/20261025185955_everyday_cl_mission_colors.sql
 npm run db:verify:colorlog
 ```
 
-독립 설치 기준 전체 팔레트 행은 12개, 활성 후보는 10개다. 과거 색이 더 있는 환경에서는 전체 행 수가 더 클 수 있다. 검증 결과의 `active_palette_slugs`에 `royal-purple`, `deep-wine`이 있고 `coral-pink`, `lime-green`이 없는지 확인한다. 기존 미션과 비활성 색은 그대로 남으며, 이미 결정된 오늘 색도 교체하지 않는다. 새 이력 버전은 migration 내부에서 `cl_private.schema_migrations`에 원자적으로 기록된다.
+활성 후보는 `everyday-*` 10색이며 기본 8색의 `selection_weight=4`, 보라·와인은 `1`이다. 전체 행 수는 이전 설치 이력에 따라 다르다(최초 `cl_` 설치에서 바로 적용하면 20개). 기존 행은 비활성화만 하며 이름·HEX·ID와 이미 결정된 오늘 색을 보존한다. 새 이력 버전은 migration 내부에서 `cl_private.schema_migrations`에 원자적으로 기록된다. 일반 사용자는 가중치를 수정할 수 없다. 세부 색과 선택 규칙은 [색 공개 문서](color-reveal.md)를 따른다.
 
-복구 역시 새 timestamp migration을 추가하여 `coral-pink`·`lime-green`을 활성화하고 `royal-purple`·`deep-wine`을 비활성화한다. 새 색을 참조하는 미션이 생길 수 있으므로 색상 행·미션·사진을 삭제하거나 기존 migration을 편집하지 않는다. 색 인식 개선(D/E) 확인 후 적용하며, 앱 빌드·기기 검증은 전체 수정이 끝난 마지막 단계에서 진행한다.
+복구는 새 timestamp migration으로 이전 활성 목록과 미션 선택 함수를 복원한다. 새 색을 참조하는 미션이 생길 수 있으므로 색상 행·미션·사진을 삭제하거나 기존 migration을 편집하지 않는다. 앱 빌드·기기 검증은 전체 수정이 끝난 마지막 단계에서 진행한다.
+
+### 2026-10-26 공유 서버 적용·검증
+
+`.env` 대상 `mwepkrdlvdreoojrqegr`에 일상 팔레트 migration 한 파일을 적용했다. 기존 보라·와인 migration 및 별개 재가입 migration은 이번에도 적용하지 않았다. 적용 후 활성 10개/전체 20개이며 이전 색상 행의 이름·HEX·ID와 기존 일일 미션 5개의 전체 필드가 동일하다. 기존 객체 340개의 정의/권한을 비교한 결과 의도한 `cl_color_palette`의 가중치 열·제약과 `cl_get_daily_mission(date)` 함수만 달라졌다. 다른 앱 객체·정책·Auth 트리거는 그대로다.
+
+읽기 전용 namespace 검사에서 Color Log 테이블 17개의 RLS와 비공개 사진 버킷을 확인했다. 보안 Advisor 결과는 전후 동일한 경고 45개/오류 0개이며 새 경고는 없다. 서버 메타데이터로 8:2 색 구분과 가중치를 확인했고, 임시 실제 Auth 계정 2개의 publishable-key 세션으로 서로 다른 시간대에서도 기존 미션이 같고 과거 목표색을 포함한 10칸 공개가 동작함을 확인했다. 팔레트 직접 조회/가중치 수정 및 인증 없는 RPC는 차단된다. 앱의 정상 조회 경로는 공개 테이블 SELECT가 아닌 RPC다.
+
+QA 계정·프로필은 모두 정리했으며 검증을 위해 새 전역 미션·사진을 만들지 않았다. 로컬 DB에서는 3개 설치 경로의 SQL 계약 11개씩과 최종 동시 요청/세션 날짜 설정 검증을 통과했다. 앱의 갈색·베이지 강조 개선은 최신 JS를 로드해야 반영된다. 네이티브 의존성은 바뀌지 않았고 이번에 네이티브 빌드·실기기 QA를 실행하지 않았다.
 
 ## 권한과 탈퇴
 

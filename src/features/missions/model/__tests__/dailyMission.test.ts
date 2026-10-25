@@ -17,11 +17,13 @@ describe('daily mission mapping', () => {
   });
 
   it.each([
-    ['royal-purple', '로열 퍼플', 'Royal Purple', '#7B2FD0', '#F0E5FC', '#49177F'],
-    ['deep-wine', '딥 와인', 'Deep Wine', '#8B1E4B', '#F6E3EB', '#56102C'],
-  ])('preserves the server identity and display tokens of %s', (slug, nameKo, nameEn, accent, tint, shade) => {
-    const mission = parseDailyMission({ ...missionRow, color_id: slug, color_slug: slug, color_name_ko: nameKo, color_name_en: nameEn, color_hex: accent, color_tint_hex: tint, color_shade_hex: shade });
-    expect(mission.color).toEqual({ id: slug, slug, nameKo, nameEn, accent, accentTint: tint, accentShade: shade, onAccent: '#FFFFFF' });
+    ['royal-purple', '로열 퍼플', 'Royal Purple', '#7B2FD0', '#F0E5FC', '#49177F', '#FFFFFF'],
+    ['deep-wine', '딥 와인', 'Deep Wine', '#8B1E4B', '#F6E3EB', '#56102C', '#FFFFFF'],
+    ['everyday-brown', '갈색', 'Brown', '#8D6E63', '#F1E9E5', '#4E342E', '#FFFFFF'],
+    ['everyday-beige', '베이지', 'Beige', '#D7C4A3', '#F7F1E7', '#756147', '#1D1C1A'],
+  ])('preserves the server identity and display tokens of %s', (slug, nameKo, nameEn, accent, tint, shade, onAccent) => {
+    const mission = parseDailyMission({ ...missionRow, color_id: slug, color_slug: slug, color_name_ko: nameKo, color_name_en: nameEn, color_hex: accent, color_tint_hex: tint, color_shade_hex: shade, color_on_color_hex: onAccent });
+    expect(mission.color).toEqual({ id: slug, slug, nameKo, nameEn, accent, accentTint: tint, accentShade: shade, onAccent });
   });
 });
 
