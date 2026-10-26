@@ -3,6 +3,8 @@ import { Skia } from '@shopify/react-native-skia';
 import { removeLocalPhotoFile } from '../localPhotoRepository';
 import { getColorIsolationUniforms } from '../../model/colorIsolation';
 import { applyColorIsolationToPhoto } from '../colorIsolationRepository';
+import { renderColorIsolationImage } from '../renderColorIsolationImage';
+import { type SkImage } from '@shopify/react-native-skia';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
 import { updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 
@@ -10,7 +12,7 @@ jest.mock('@shopify/react-native-skia', () => ({
   ImageFormat: { JPEG: 'jpeg' },
   TileMode: { Clamp: 0 }, FilterMode: { Nearest: 0 }, MipmapMode: { None: 0 },
   Skia: { Data: { fromURI: jest.fn() }, Image: { MakeImageFromEncoded: jest.fn() }, RuntimeEffect: { Make: jest.fn() },
-    Surface: { MakeOffscreen: jest.fn() }, Paint: jest.fn() },
+    Surface: { MakeOffscreen: jest.fn(), Make: jest.fn() }, Paint: jest.fn(), XYWHRect: (x: number, y: number, width: number, height: number) => ({ x, y, width, height }) },
 }));
 
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
@@ -44,7 +46,8 @@ const resources = {
   sourceShader: { dispose: jest.fn() },
   shader: { dispose: jest.fn() },
   paint: { dispose: jest.fn(), setShader: jest.fn() },
-  output: { dispose: jest.fn(), encodeToBytes: jest.fn() },
+  output: { dispose: jest.fn(), encodeToBytes: jest.fn(), width: () => 1600, height: () => 1200 },
+  snapshot: { dispose: jest.fn(), makeNonTextureImage: jest.fn() },
   surface: { dispose: jest.fn(), getCanvas: () => ({ drawPaint: jest.fn() }), flush: jest.fn(), makeImageSnapshot: jest.fn() },
 };
 const destination = { uri: 'file:///photos/filtered.jpg', exists: true, size: 200, write: jest.fn() };
@@ -65,7 +68,8 @@ beforeEach(() => {
   resources.effect.makeShaderWithChildren.mockReturnValue(resources.shader);
   resources.source.makeShaderOptions.mockReturnValue(resources.sourceShader);
   (Skia.Paint as jest.Mock).mockReturnValue(resources.paint);
-  resources.surface.makeImageSnapshot.mockReturnValue(resources.output);
+  resources.surface.makeImageSnapshot.mockReturnValue(resources.snapshot);
+  resources.snapshot.makeNonTextureImage.mockReturnValue(resources.output);
   resources.output.encodeToBytes.mockReturnValue(new Uint8Array([1, 2, 3]));
   destination.write.mockImplementation(() => undefined);
   jest.mocked(updatePendingPhoto).mockResolvedValue(undefined);
@@ -73,6 +77,21 @@ beforeEach(() => {
 });
 
 describe('color isolation save retries', () => {
+  it('keeps full-resolution classification but releases the large result after making a small grid image', () => {
+    const thumbnail = { dispose: jest.fn() };
+    const drawImageRect = jest.fn();
+    const smallSurface = { getCanvas: () => ({ drawImageRect }), flush: jest.fn(), makeImageSnapshot: () => thumbnail, dispose: jest.fn() };
+    jest.mocked(Skia.Surface.Make).mockReturnValue(smallSurface as unknown as ReturnType<typeof Skia.Surface.Make>);
+    const result = renderColorIsolationImage(resources.source as unknown as SkImage, getColorIsolationUniforms('#E53935', 'isolate')!, 384);
+    expect(Skia.Surface.MakeOffscreen).toHaveBeenCalledWith(1600, 1200);
+    expect(Skia.Surface.Make).toHaveBeenCalledWith(384, 288);
+    expect(drawImageRect).toHaveBeenCalledWith(resources.output, { x: 0, y: 0, width: 1600, height: 1200 }, { x: 0, y: 0, width: 384, height: 288 }, resources.paint);
+    expect(result).toBe(thumbnail);
+    expect(resources.output.dispose).toHaveBeenCalledTimes(1);
+    expect(smallSurface.dispose).toHaveBeenCalledTimes(1);
+    expect(thumbnail.dispose).not.toHaveBeenCalled();
+    expect(updatePendingPhoto).not.toHaveBeenCalled();
+  });
   it('reuses a rendered draft without opening, rendering, or replacing its file again', async () => {
     const rendered: PendingPhoto = { ...photo, colorIsolationApplied: true };
     await expect(applyColorIsolationToPhoto(rendered, '#E53935')).resolves.toBe(rendered);
@@ -103,6 +122,8 @@ describe('color isolation file preservation', () => {
       Object.values(getColorIsolationUniforms('#8B1E4B')!).flat(), [resources.sourceShader],
     );
     expect(Skia.Surface.MakeOffscreen).toHaveBeenCalledWith(1600, 1200);
+    expect(resources.snapshot.makeNonTextureImage).toHaveBeenCalledTimes(1);
+    expect(resources.snapshot.makeNonTextureImage.mock.invocationCallOrder[0]).toBeLessThan(resources.surface.dispose.mock.invocationCallOrder[0]);
     await expect(applyColorIsolationToPhoto(result, '#8B1E4B')).resolves.toBe(result);
     expect(resources.output.encodeToBytes).toHaveBeenCalledTimes(1);
   });
@@ -142,6 +163,18 @@ describe('color isolation file preservation', () => {
     for (const resource of [resources.data, resources.source, resources.effect, resources.sourceShader, resources.shader]) {
       expect(resource.dispose).toHaveBeenCalledTimes(1);
     }
+    expect(updatePendingPhoto).not.toHaveBeenCalled();
+    expect(removeLocalPhotoFile).not.toHaveBeenCalled();
+  });
+
+  it.each(['null', 'throw'])('preserves the source and releases GPU resources when raster conversion returns %s', async (failure) => {
+    if (failure === 'null') resources.snapshot.makeNonTextureImage.mockReturnValueOnce(null);
+    else resources.snapshot.makeNonTextureImage.mockImplementationOnce(() => { throw new Error('readback_failed'); });
+    await expect(applyColorIsolationToPhoto(photo, '#8B1E4B')).rejects.toThrow();
+    for (const resource of [resources.data, resources.source, resources.effect, resources.sourceShader, resources.shader, resources.snapshot, resources.surface, resources.paint]) {
+      expect(resource.dispose).toHaveBeenCalledTimes(1);
+    }
+    expect(resources.output.encodeToBytes).not.toHaveBeenCalled();
     expect(updatePendingPhoto).not.toHaveBeenCalled();
     expect(removeLocalPhotoFile).not.toHaveBeenCalled();
   });

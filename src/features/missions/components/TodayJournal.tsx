@@ -16,6 +16,7 @@ import { type DailyMission } from '@/src/features/missions/model/dailyMission';
 import { NextColorCountdown } from '@/src/features/missions/components/NextColorCountdown';
 import { getTodayJournalLayout } from '@/src/features/missions/model/todayJournalLayout';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
+import { PhotoColorThumbnail } from '@/src/features/entries/components/PhotoColorThumbnail';
 import { getPhotoSyncFeedback } from '@/src/features/sync/model/photoSyncFeedback';
 import { type NetworkStatus } from '@/src/features/sync/model/networkStatus';
 import { getPhotoAccessibilityLabel } from '@/src/utils/accessibility/photoAccessibility';
@@ -24,6 +25,8 @@ import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
 import { formatDateKey } from '@/src/lib/localization/dateFormat';
 
 type TodayJournalProps = {
+  colorViewingPreferences?: Record<string, string>;
+  openPhotoId?: string | null;
   mission: DailyMission;
   millisecondsUntilMidnight: number;
   photos: TodayPhoto[];
@@ -39,7 +42,7 @@ type TodayJournalProps = {
   timeZone: string;
 };
 
-export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyncing, networkStatus, pendingPhotoCount, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, onSettingsPress, timeZone }: TodayJournalProps) {
+export function TodayJournal({ colorViewingPreferences = {}, openPhotoId, mission, millisecondsUntilMidnight, photos, isSyncing, networkStatus, pendingPhotoCount, hasSyncFailure, onAddPhotoPress, onPhotoLongPress, onPhotoPress, onRetrySync, onSettingsPress, timeZone }: TodayJournalProps) {
   const theme = useAppTheme();
   const { format, language, t } = useAppLanguage();
   const [fontsLoaded] = useFonts({
@@ -80,6 +83,8 @@ export function TodayJournal({ mission, millisecondsUntilMidnight, photos, isSyn
           ? <EmptyJournalCanvas bodyFont={bodyFont} boldFont={boldFont} colorName={colorName} colors={theme.colors} language={language} mission={mission} size={journalLayout.mosaicSize} />
           : <View style={[styles.mosaicFrame, mosaicStyle]}>
               <NinePhotoMosaic
+                renderPhoto={(photo) => photo.id !== openPhotoId && photo.uri && colorViewingPreferences[photo.id] === mission.color.accent && !photos.find((item) => item.id === photo.id)?.colorIsolationApplied
+                  ? <PhotoColorThumbnail key={`${photo.id}:${photo.uri}:${mission.color.accent}`} uri={photo.uri} colorHex={mission.color.accent} /> : null}
                 accessibilityLabel={format('오늘의 사진 {count}장, 9칸 기록판', { count: photos.length })}
                 onPhotoLongPress={(photo) => {
                   const todayPhoto = photos.find((item) => item.id === photo.id);

@@ -4,6 +4,16 @@ type Translation = Readonly<Record<AppLanguage, string>>;
 export type TranslationValues = Readonly<Record<string, number | string>>;
 
 const translationEntries: readonly Translation[] = [
+  entry('{position}번째 오늘의 사진', 'Today’s photo {position}'),
+  entry('색 강조가 적용된 채 저장된 사진이에요.', 'This photo was saved with color isolation already applied.'),
+  entry('색 강조를 불러오지 못했어요. 저장된 사진을 표시해요. 다시 켜서 재시도해 주세요.', 'Could not load color isolation. Showing the saved photo. Turn it on again to retry.'),
+  entry('사진을 불러온 뒤 색 강조를 사용할 수 있어요.', 'Color isolation is available after the photo loads.'),
+  entry('이 기기에서는 저장된 사진으로 표시해요.', 'Showing the saved photo on this device.'),
+  entry('이 기기의 9칸에도 반영돼요. 끄면 저장된 사진으로 돌아가요.', 'Also applies to the grid on this device. Turn it off to return to the saved photo.'),
+  entry('보기 설정을 저장하지 못했어요. 다시 시도해 주세요.', 'Could not save your viewing preference. Please try again.'),
+  entry('색 강조 재시도', 'Retry color effect'),
+  entry('사진 보기 설정을 불러오지 못했어요.', 'Could not load photo viewing preferences.'),
+  entry('앞·뒤 칸으로 옮겨 오늘 사진의 순서를 바꿀 수 있어요.', 'Move the photo backward or forward to reorder today’s photos.'),
   entry("멤버 관리", "Manage members"),
   entry("차단", "Block"),
   entry("사용자 차단", "Block user"),

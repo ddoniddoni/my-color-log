@@ -15,6 +15,7 @@ import { TodayJournal } from '@/src/features/missions/components/TodayJournal';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { useDailyEntry } from '@/src/features/entries/hooks/useDailyEntry';
 import { useTodayPhotoActions } from '@/src/features/entries/hooks/useTodayPhotoActions';
+import { usePhotoViewingPreferences } from '@/src/features/entries/hooks/usePhotoViewingPreferences';
 import { TodayPhotoManagerModal } from '@/src/features/entries/components/TodayPhotoManagerModal';
 import { canMovePhoto } from '@/src/features/entries/model/photoManagement';
 import { getNextPhotoPosition, mergeTodayPhotos } from '@/src/features/entries/model/todayPhotos';
@@ -54,6 +55,7 @@ function TodayContent() {
   const photoActions = useTodayPhotoActions({ dateKey, entry: entryQuery.data, queuedPhotos: queueQuery.data ?? [], userId });
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const photoSource = usePhotoSourceSelection();
+  const colorViewing = usePhotoViewingPreferences(userId, dateKey);
 
   const hasLocalPhotos = queueQuery.data?.some((photo) => photo.status !== 'cancelled') ?? false;
   if (sessionState.status === 'loading' || !cacheReady) return <TodayLoadingScreen isNewDay={isNewDay} />;
@@ -83,6 +85,8 @@ function TodayContent() {
   return (
     <>
       <TodayJournal
+        openPhotoId={selectedPhoto?.id}
+        colorViewingPreferences={colorViewing.preferences}
         hasSyncFailure={hasSyncFailure}
         isSyncing={photoSync.isSyncing}
         millisecondsUntilMidnight={millisecondsUntilMidnight}
@@ -108,6 +112,13 @@ function TodayContent() {
         timeZone={timeZone}
       />
       <TodayPhotoManagerModal
+        colorViewingEnabled={selectedPhoto !== null && colorViewing.preferences[selectedPhoto.id] === mission.color.accent}
+        colorViewingDisabled={colorViewing.loading || colorViewing.saving || colorViewing.loadFailed}
+        onColorViewingChange={async (enabled) => {
+          if (selectedPhoto) await colorViewing.setEnabled({ photoId: selectedPhoto.id, colorHex: mission.color.accent, enabled });
+        }}
+        colorHex={mission.color.accent}
+        colorName={{ ko: mission.color.nameKo, en: mission.color.nameEn }}
         moveAvailability={{
           backward: selectedPhoto ? canMovePhoto(photos, selectedPhoto.id, 'backward') : false,
           forward: selectedPhoto ? canMovePhoto(photos, selectedPhoto.id, 'forward') : false,
@@ -119,6 +130,7 @@ function TodayContent() {
         selectedPhoto={selectedPhoto}
         visible={selectedPhoto !== null}
       />
+      {colorViewing.loadFailed ? <View><AppText>사진 보기 설정을 불러오지 못했어요.</AppText><Button label="다시 시도" onPress={() => void colorViewing.retry()} /></View> : null}
       <PhotoSourceModal
         errorMessage={photoSource.errorMessage}
         isImporting={photoSource.isGalleryImporting}

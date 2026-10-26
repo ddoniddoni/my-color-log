@@ -172,7 +172,9 @@ export function toNormalizedRgb(colorHex: string): NormalizedRgb | null {
   ];
 }
 
-export function getColorIsolationUniforms(colorHex: string): ColorIsolationUniforms | null {
+export type ColorIsolationMode = 'emphasize' | 'isolate';
+
+export function getColorIsolationUniforms(colorHex: string, mode: ColorIsolationMode = 'emphasize'): ColorIsolationUniforms | null {
   const targetColor = toNormalizedRgb(colorHex);
   if (!targetColor) return null;
   const [r, g, b] = targetColor;
@@ -225,6 +227,12 @@ export function getColorIsolationUniforms(colorHex: string): ColorIsolationUnifo
   } else if (hue >= 150 && hue < 250) {
     // Pale sky still has color; almost-white pixels remain below the floor.
     uniforms.saturationRange = [0.04, 0.12];
+  }
+  // Viewing a saved photo must not repeatedly boost saturation or darken it.
+  // This mode only removes color outside the selection; it never writes a file.
+  if (mode === 'isolate') {
+    uniforms.backgroundBrightness = 1;
+    uniforms.saturationBoost = 1;
   }
   return uniforms;
 }

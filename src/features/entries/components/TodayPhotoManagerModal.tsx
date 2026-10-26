@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -10,8 +9,14 @@ import { useAppTheme } from '@/src/design/ThemeProvider';
 import { spacing, type ThemeColors } from '@/src/design/tokens';
 import { type PhotoMoveDirection } from '@/src/features/entries/model/photoManagement';
 import { type TodayPhoto } from '@/src/features/entries/model/todayPhotos';
+import { SavedPhotoColorViewer } from './SavedPhotoColorViewer';
 
 type TodayPhotoManagerModalProps = {
+  colorViewingEnabled: boolean;
+  colorViewingDisabled?: boolean;
+  onColorViewingChange: (enabled: boolean) => Promise<void>;
+  colorHex: string;
+  colorName: { ko: string; en: string };
   moveAvailability: Record<PhotoMoveDirection, boolean>;
   operation: 'idle' | 'deleting' | 'moving';
   onClose: () => void;
@@ -26,6 +31,11 @@ type PhotoManagerDialog =
   | { kind: 'delete_confirmation' };
 
 export function TodayPhotoManagerModal({
+  colorViewingEnabled,
+  colorViewingDisabled = false,
+  onColorViewingChange,
+  colorHex,
+  colorName,
   moveAvailability,
   operation,
   onClose,
@@ -69,19 +79,16 @@ export function TodayPhotoManagerModal({
   return (
     <>
       <AppModal accessibilityLabel="사진 관리 닫기" contentStyle={styles.card} isBusy={isInteractionBlocked} onClose={onClose} visible={visible && selectedPhoto !== null}>
-          {selectedPhoto ? <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
+          {visible && selectedPhoto ? <ScrollView bounces={false} contentContainerStyle={styles.content} style={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.heading}>
               <View><AppText style={styles.eyebrow}>TODAY&apos;S PHOTO</AppText><AppText accessibilityRole="header" style={styles.title}>사진 관리</AppText></View>
               <Pressable accessibilityLabel="사진 관리 닫기" accessibilityRole="button" accessibilityState={{ disabled: isInteractionBlocked }} disabled={isInteractionBlocked} onPress={onClose} style={styles.closeButton}><CloseIcon /></Pressable>
             </View>
 
-            <View style={styles.photoFrame}>
-              <Image accessibilityLabel={`${selectedPhoto.position}번째 오늘의 사진`} cachePolicy="memory-disk" contentFit="cover" source={selectedPhoto.uri ? { uri: selectedPhoto.uri } : undefined} style={styles.photo} />
-              <View style={styles.positionBadge}><AppText style={styles.positionText}>{selectedPhoto.position} / 9</AppText></View>
-            </View>
+            <SavedPhotoColorViewer key={`${selectedPhoto.id}:${selectedPhoto.uri}:${colorHex}`} colorHex={colorHex} colorName={colorName} disabled={isInteractionBlocked || colorViewingDisabled} enabled={colorViewingEnabled} onEnabledChange={onColorViewingChange} photo={selectedPhoto} />
 
             <View style={styles.descriptionBlock}>
-              <AppText style={styles.description}>길게 눌러 연 사진이에요. 앞·뒤 칸으로 옮겨 9칸 기록의 순서를 바꿀 수 있어요.</AppText>
+              <AppText style={styles.description}>앞·뒤 칸으로 옮겨 오늘 사진의 순서를 바꿀 수 있어요.</AppText>
               {selectedPhoto.caption ? <AppText style={styles.memo}>“{selectedPhoto.caption}”</AppText> : null}
             </View>
 
@@ -145,10 +152,6 @@ function createStyles(colors: ThemeColors) {
   eyebrow: { color: colors.textSecondary, fontFamily: 'monospace', fontSize: 10, letterSpacing: 0.6 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '800', lineHeight: 29, marginTop: 2 },
   closeButton: { alignItems: 'center', borderColor: colors.ink, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
-  photoFrame: { backgroundColor: colors.surfaceMuted, borderColor: colors.ink, borderWidth: 1.5, height: 240, overflow: 'hidden', position: 'relative' },
-  photo: { height: '100%', width: '100%' },
-  positionBadge: { backgroundColor: colors.surface, borderColor: colors.ink, borderWidth: 1, bottom: 8, paddingHorizontal: 8, paddingVertical: 4, position: 'absolute', right: 8 },
-  positionText: { color: colors.ink, fontFamily: 'monospace', fontSize: 10 },
   descriptionBlock: { gap: 7, marginTop: spacing[3] },
   description: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
   memo: { color: colors.ink, fontSize: 13, fontStyle: 'italic', lineHeight: 19 },

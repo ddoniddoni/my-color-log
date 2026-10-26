@@ -1,4 +1,5 @@
 export const queryKeys = {
+  photoViewingPreferences: (userId: string, dateKey: string) => ['photoViewingPreferences', userId, dateKey] as const,
   notificationSettings: ['notificationSettings'] as const,
   profile: (userId: string) => ['profile', userId] as const,
   dailyMission: (dateKey: string) => ['dailyMission', dateKey] as const,
