@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 
-import { getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
+import { getColorIsolationUniforms, type ColorIsolationMode } from '@/src/features/camera/model/colorIsolation';
 
 const nativeSkiaModule = Platform.OS === 'web' ? null : TurboModuleRegistry.get('RNSkiaModule');
 const ColorIsolationSkiaPreview = nativeSkiaModule === null
@@ -14,17 +14,17 @@ const ColorIsolationSkiaPreview = nativeSkiaModule === null
 
 export const isColorIsolationPreviewAvailable = ColorIsolationSkiaPreview !== null;
 
-type PreviewProps = { colorHex: string; size: number; uri: string; onError: () => void };
+type PreviewProps = { colorHex: string; size: number; uri: string; onError: () => void; mode?: ColorIsolationMode; maxDimension?: number };
 
-export function ColorIsolationPreview({ colorHex, onError, size, uri }: PreviewProps) {
-  const uniforms = useMemo(() => getColorIsolationUniforms(colorHex), [colorHex]);
+export function ColorIsolationPreview({ colorHex, onError, size, uri, mode = 'emphasize', maxDimension }: PreviewProps) {
+  const uniforms = useMemo(() => getColorIsolationUniforms(colorHex, mode), [colorHex, mode]);
   const original = <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri }} style={{ height: size, width: size }} />;
   if (!ColorIsolationSkiaPreview || !uniforms) return original;
 
   return (
     <PreviewErrorBoundary key={`${uri}:${colorHex}`} fallback={original} onError={onError}>
       <Suspense fallback={original}>
-        <ColorIsolationSkiaPreview fallback={original} onError={onError} size={size} uniforms={uniforms} uri={uri} />
+        <ColorIsolationSkiaPreview fallback={original} onError={onError} size={size} uniforms={uniforms} uri={uri} maxDimension={maxDimension} />
       </Suspense>
     </PreviewErrorBoundary>
   );

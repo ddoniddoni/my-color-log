@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { TextDecoder } from 'node:util';
 import CanvasKitInit, { type CanvasKit, type RuntimeEffect, type ColorSpace } from 'canvaskit-wasm';
 
-import { COLOR_ISOLATION_SHADER, getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
+import { COLOR_ISOLATION_SHADER, getColorIsolationUniforms, type ColorIsolationMode } from '@/src/features/camera/model/colorIsolation';
 
 type Pixel = readonly [number, number, number, number];
 
@@ -30,8 +30,8 @@ afterAll(() => {
   if (textDecoderDescriptor) Object.defineProperty(globalThis, 'TextDecoder', textDecoderDescriptor);
 });
 
-function render(pixel: Pixel, targetHex = '#E53935', sourceSpace?: ColorSpace): number[] {
-  const uniforms = getColorIsolationUniforms(targetHex);
+function render(pixel: Pixel, targetHex = '#E53935', sourceSpace?: ColorSpace, mode: ColorIsolationMode = 'emphasize'): number[] {
+  const uniforms = getColorIsolationUniforms(targetHex, mode);
   if (!uniforms) throw new Error('invalid_test_color');
   const values = new Map<string, readonly number[]>(
     Object.entries(uniforms).map(([key, value]) => [key, typeof value === 'number' ? [value] : value]),
@@ -139,6 +139,14 @@ describe('spatial color confidence', () => {
 });
 
 describe('color isolation rendered pixels', () => {
+  it('isolates a saved photo without boosting its target or darkening already-gray pixels', () => {
+    const target: Pixel = [210, 50, 55, 1];
+    const kept = render(target, '#E53935', undefined, 'isolate');
+    kept.slice(0, 3).forEach((channel, index) => expect(Math.abs(channel - target[index])).toBeLessThanOrEqual(1));
+    expect(render([170, 170, 170, 1], '#E53935', undefined, 'isolate')).toEqual([170, 170, 170, 255]);
+    const green = render([40, 190, 80, 1], '#E53935', undefined, 'isolate');
+    expect(saturation(green)).toBeLessThan(0.02);
+  });
   it.each<Pixel>([
     [200, 160, 158, 1],
     [190, 100, 96, 1],

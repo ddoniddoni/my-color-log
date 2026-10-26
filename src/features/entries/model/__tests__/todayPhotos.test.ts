@@ -9,6 +9,14 @@ const queuedPhoto: PendingPhoto = {
 };
 
 describe('today photos', () => {
+  it('keeps known saved-effect metadata for local and synced images without guessing remote history', () => {
+    const local = { ...queuedPhoto, colorIsolationApplied: true as const };
+    expect(mergeTodayPhotos(null, [local])[0].colorIsolationApplied).toBe(true);
+    const entry = { id: 'entry', userId: 'user-1', missionId: 'mission-1', dateKey: '2026-07-17', note: null,
+      photos: [{ ...queuedPhoto, signedUrl: 'https://signed.example/photo.jpg' }] };
+    expect(mergeTodayPhotos(entry, [{ ...local, status: 'synced' }])[0].colorIsolationApplied).toBe(true);
+    expect(mergeTodayPhotos(entry, [])[0].colorIsolationApplied).toBeUndefined();
+  });
   it('keeps a confirmed deletion compacted even if the next server refresh fails', () => {
     const photos = [1, 2, 3].map((position) => ({ id: `photo-${position}`, entryId: 'entry', storagePath: `user/${position}.jpg`, position,
       caption: null, capturedAt: queuedPhoto.capturedAt, width: 100, height: 100, byteSize: 100, signedUrl: null }));

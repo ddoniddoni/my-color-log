@@ -10,6 +10,7 @@ export type TodayPhoto = {
   capturedAt: string;
   caption: string | null;
   status: 'pending' | 'synced' | 'syncing' | 'failed';
+  colorIsolationApplied?: true;
 };
 
 export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPhotos: PendingPhoto[]): TodayPhoto[] {
@@ -31,6 +32,7 @@ export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPho
       capturedAt: photo.capturedAt,
       caption: photo.caption,
       status: 'synced',
+      ...(localById.get(photo.id)?.colorIsolationApplied ? { colorIsolationApplied: true as const } : {}),
     });
   }
   for (const photo of queuedPhotos) {
@@ -52,6 +54,7 @@ export function mergeTodayPhotos(entry: DailyEntry | null | undefined, queuedPho
       position,
       capturedAt: photo.capturedAt,
       caption: photo.caption,
+      ...(photo.colorIsolationApplied ? { colorIsolationApplied: true as const } : {}),
       status: photo.status === 'failed'
         ? 'failed'
         : photo.status === 'synced'

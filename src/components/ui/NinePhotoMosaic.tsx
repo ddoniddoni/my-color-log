@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/src/components/ui/AppText';
@@ -15,6 +16,7 @@ export type NinePhotoMosaicPhoto = {
 };
 
 type NinePhotoMosaicProps = {
+  renderPhoto?: (photo: NinePhotoMosaicPhoto) => ReactNode;
   accessibilityLabel: string;
   photos: NinePhotoMosaicPhoto[];
   imageHeaders?: Record<string, string>;
@@ -24,7 +26,7 @@ type NinePhotoMosaicProps = {
   onPhotoLongPress?: (photo: NinePhotoMosaicPhoto) => void;
 };
 
-export function NinePhotoMosaic({ accessibilityLabel, photos, imageHeaders, imageCachePolicy = 'memory-disk', onEmptyPress, onPhotoLongPress, onPhotoPress }: NinePhotoMosaicProps) {
+export function NinePhotoMosaic({ accessibilityLabel, photos, imageHeaders, imageCachePolicy = 'memory-disk', onEmptyPress, onPhotoLongPress, onPhotoPress, renderPhoto }: NinePhotoMosaicProps) {
   const theme = useAppTheme();
   const slots = getNinePhotoMosaicSlots(photos);
 
@@ -52,7 +54,7 @@ export function NinePhotoMosaic({ accessibilityLabel, photos, imageHeaders, imag
             const content = (
               <>
                 {photo.uri
-                  ? <Image cachePolicy={imageCachePolicy} contentFit="cover" source={{ uri: photo.uri, headers: imageHeaders }} style={styles.photoImage} />
+                  ? renderPhoto?.(photo) ?? <Image cachePolicy={imageCachePolicy} contentFit="cover" source={{ uri: photo.uri, headers: imageHeaders }} style={styles.photoImage} />
                   : <View style={styles.unavailablePhoto}><AppText variant="caption" color="secondary">연결 후 사진을 볼 수 있어요</AppText></View>}
                 {photo.status && photo.status !== 'synced' ? <View style={[
                   styles.photoStatus,

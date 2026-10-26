@@ -34,7 +34,7 @@ afterEach(async () => { await act(async () => screen?.unmount()); });
 it('renders using the same source-resolution processor as saving, and retains only its output', async () => {
   await act(async () => { screen = create(view()); });
   expect(JSON.stringify(screen.toJSON())).toContain('SkiaImage');
-  expect(renderColorIsolationImage).toHaveBeenCalledWith(image, uniforms);
+  expect(renderColorIsolationImage).toHaveBeenCalledWith(image, uniforms, undefined);
   expect(data.dispose).toHaveBeenCalledTimes(1);
   expect(image.dispose).toHaveBeenCalledTimes(1);
   expect(filtered.dispose).not.toHaveBeenCalled();
