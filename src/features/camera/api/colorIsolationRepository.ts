@@ -1,6 +1,6 @@
 import { File } from 'expo-file-system';
 
-import { COLOR_ISOLATION_SHADER, getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
+import { getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
 import { removeLocalPhotoFile } from '@/src/features/camera/api/localPhotoRepository';
 import { updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
 import { type PendingPhoto } from '@/src/features/sync/model/pendingPhoto';
@@ -17,37 +17,20 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
   const sourceFile = new File(photo.localUri);
   if (!sourceFile.exists) throw new Error('photo_color_isolation_source_missing');
 
-  const { ImageFormat, Skia } = await import('@shopify/react-native-skia');
+  const [{ ImageFormat, Skia }, { renderColorIsolationImage }] = await Promise.all([
+    import('@shopify/react-native-skia'), import('./renderColorIsolationImage'),
+  ]);
   let sourceData: Awaited<ReturnType<typeof Skia.Data.fromURI>> | null = null;
   let sourceImage: ReturnType<typeof Skia.Image.MakeImageFromEncoded> = null;
-  let runtimeEffect: ReturnType<typeof Skia.RuntimeEffect.Make> = null;
   let destination: File | null = null;
-  let surface: ReturnType<typeof Skia.Surface.MakeOffscreen> = null;
   let filteredImage: ReturnType<typeof Skia.Image.MakeImageFromEncoded> = null;
-  let builder: ReturnType<typeof Skia.RuntimeShaderBuilder> | null = null;
-  let imageFilter: ReturnType<typeof Skia.ImageFilter.MakeRuntimeShader> | null = null;
-  let paint: ReturnType<typeof Skia.Paint> | null = null;
 
   try {
     sourceData = await Skia.Data.fromURI(photo.localUri);
     sourceImage = Skia.Image.MakeImageFromEncoded(sourceData);
-    runtimeEffect = Skia.RuntimeEffect.Make(COLOR_ISOLATION_SHADER);
-    if (!sourceImage || !runtimeEffect) throw new Error('photo_color_isolation_render_unavailable');
+    if (!sourceImage) throw new Error('photo_color_isolation_render_unavailable');
+    filteredImage = renderColorIsolationImage(sourceImage, uniforms);
     destination = new File(sourceFile.parentDirectory, `${photo.id}-color-${Date.now()}.jpg`);
-    surface = Skia.Surface.MakeOffscreen(sourceImage.width(), sourceImage.height());
-    if (!surface) throw new Error('photo_color_isolation_surface_unavailable');
-
-    builder = Skia.RuntimeShaderBuilder(runtimeEffect);
-    for (const [name, value] of Object.entries(uniforms)) {
-      builder.setUniform(name, typeof value === 'number' ? [value] : value);
-    }
-    imageFilter = Skia.ImageFilter.MakeRuntimeShader(builder, null, null);
-    paint = Skia.Paint();
-    paint.setImageFilter(imageFilter);
-
-    surface.getCanvas().drawImage(sourceImage, 0, 0, paint);
-    surface.flush();
-    filteredImage = surface.makeImageSnapshot();
     const bytes = filteredImage.encodeToBytes(ImageFormat.JPEG, COLOR_ISOLATION_JPEG_QUALITY);
     if (bytes.byteLength === 0) throw new Error('photo_color_isolation_encode_failed');
 
@@ -75,12 +58,7 @@ export async function applyColorIsolationToPhoto(photo: PendingPhoto, colorHex: 
     if (destination) await removeLocalPhotoFile(destination.uri);
     throw error;
   } finally {
-    paint?.dispose();
-    imageFilter?.dispose();
-    builder?.dispose();
     filteredImage?.dispose();
-    surface?.dispose();
-    runtimeEffect?.dispose();
     sourceImage?.dispose();
     sourceData?.dispose();
   }

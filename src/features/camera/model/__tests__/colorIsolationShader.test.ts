@@ -72,6 +72,72 @@ function saturation(rgb: readonly number[]): number {
   return (Math.max(...channels) - Math.min(...channels)) / Math.max(1, ...channels);
 }
 
+function renderPatch(center: Pixel, surrounding: Pixel, target = '#E53935'): number[] {
+  const uniforms = getColorIsolationUniforms(target)!;
+  const values = new Map(Object.entries(uniforms).map(([name, value]) => [name, typeof value === 'number' ? [value] : [...value]]));
+  const ordered = Array.from({ length: effect.getUniformCount() }, (_, index) => values.get(effect.getUniformName(index))!).flat();
+  const rgba = new Uint8Array(5 * 5 * 4);
+  for (let i = 0; i < 25; i += 1) {
+    const pixel = i === 12 ? center : surrounding;
+    rgba.set([pixel[0], pixel[1], pixel[2], Math.round(pixel[3] * 255)], i * 4);
+  }
+  const image = skia.MakeImage({ width: 5, height: 5, alphaType: skia.AlphaType.Unpremul,
+    colorType: skia.ColorType.RGBA_8888, colorSpace: skia.ColorSpace.SRGB }, rgba, 20)!;
+  const source = image.makeShaderOptions(skia.TileMode.Clamp, skia.TileMode.Clamp, skia.FilterMode.Nearest, skia.MipmapMode.None);
+  const shader = effect.makeShaderWithChildren(ordered, [source]);
+  const surface = skia.MakeSurface(5, 5)!;
+  const paint = new skia.Paint();
+  try {
+    paint.setShader(shader);
+    surface.getCanvas().drawPaint(paint);
+    const output = surface.getCanvas().readPixels(2, 2, { width: 1, height: 1, alphaType: skia.AlphaType.Unpremul,
+      colorType: skia.ColorType.RGBA_8888, colorSpace: skia.ColorSpace.SRGB });
+    return Array.from(output!);
+  } finally { paint.delete(); surface.dispose(); shader.delete(); source.delete(); image.delete(); }
+}
+
+describe('spatial color confidence', () => {
+  it('suppresses isolated weak color noise more than a continuous pale target surface', () => {
+    const weakRed: Pixel = [180, 165, 164, 1];
+    const coherent = renderPatch(weakRed, weakRed);
+    const noise = renderPatch(weakRed, [170, 170, 170, 1]);
+    expect(saturation(noise)).toBeLessThan(saturation(coherent) * 0.6);
+  });
+
+  it('supports a weak reflection surrounded by the same color without flattening its brightness', () => {
+    const reflection: Pixel = [190, 175, 173, 1];
+    const isolated = render(reflection);
+    const supported = renderPatch(reflection, [190, 150, 145, 1]);
+    expect(saturation(supported)).toBeGreaterThan(saturation(isolated) * 1.3);
+    expect(Math.max(...supported.slice(0, 3))).toBeGreaterThanOrEqual(Math.max(...isolated.slice(0, 3)));
+  });
+
+  it.each<Pixel>([[170, 170, 170, 1], [210, 50, 95, 1], [4, 1, 1, 1], [40, 190, 80, 1]])(
+    'does not spread red into excluded colors, neutral highlights or deep noise (%i,%i,%i)', (r, g, b, a) => {
+      expect(saturation(renderPatch([r, g, b, a], [210, 50, 55, 1]))).toBeLessThan(0.03);
+    },
+  );
+
+  it('preserves a tiny saturated target even when its neighbors are unrelated', () => {
+    expect(renderPatch([210, 50, 55, 1], [40, 190, 80, 1])).toEqual(render([210, 50, 55, 1]));
+  });
+
+  it('does not let transparent neighbors weaken an opaque edge', () => {
+    const edge: Pixel = [180, 165, 164, 1];
+    expect(renderPatch(edge, [0, 0, 0, 0])).toEqual(render(edge));
+  });
+
+  it('does not create brightness blotches when weak chroma confidence changes', () => {
+    const source: Pixel = [190, 175, 173, 1];
+    const expected = (source[0] * 0.2126 + source[1] * 0.7152 + source[2] * 0.0722) * 0.82;
+    for (const surrounding of [[170, 170, 170, 1], source, [190, 150, 145, 1]] as const) {
+      const result = renderPatch(source, surrounding);
+      const brightness = result[0] * 0.2126 + result[1] * 0.7152 + result[2] * 0.0722;
+      expect(Math.abs(brightness - expected)).toBeLessThan(1);
+    }
+  });
+});
+
 describe('color isolation rendered pixels', () => {
   it.each<Pixel>([
     [200, 160, 158, 1],

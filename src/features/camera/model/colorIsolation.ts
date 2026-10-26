@@ -91,6 +91,38 @@ const CLASSIFIER = `
     float brightnessPresence = 1.0 - smoothstep(valueCeiling.x, valueCeiling.y, hi);
     return hueMatch * colorPresence * shadowPresence * targetPresence * brightnessPresence;
   }
+
+  float3 readColor(half4 pixel) {
+    return encodeSrgb(toLinearSrgb(pixel.rgb / max(pixel.a, 0.001)));
+  }
+  float2 neighborConfidence(float2 xy, float3 center) {
+    half4 pixel = image.eval(xy);
+    float3 rgb = readColor(pixel);
+    // A small, edge-aware window: unrelated colors and transparent borders
+    // cannot vote. Only the confidence changes, never the photo's RGB detail.
+    float weight = (1.0 - smoothstep(0.04, 0.28, length(rgb - center))) * pixel.a;
+    return float2(colorIsolationMask(rgb) * weight, weight);
+  }
+  float refinedMask(float2 xy, float3 rgb) {
+    float center = colorIsolationMask(rgb);
+    // Keep hard family exclusions and confidently colored tiny details intact.
+    if (center <= 0.001 || center >= 0.95) return center;
+    float hi = max(rgb.r, max(rgb.g, rgb.b));
+    float saturation = (hi - min(rgb.r, min(rgb.g, rgb.b))) / max(hi, 0.001);
+    // Only uncertain chroma benefits from local evidence. Averaging masks at
+    // hue/brightness limits would erode dark foliage or mix wine with pink.
+    float uncertainty = 1.0 - smoothstep(saturationRange.x, saturationRange.y, saturation);
+    if (uncertainty <= 0.001) return center;
+    float2 votes = float2(2.0 * center, 2.0);
+    votes += neighborConfidence(xy + float2(-1.0, 0.0), rgb);
+    votes += neighborConfidence(xy + float2(1.0, 0.0), rgb);
+    votes += neighborConfidence(xy + float2(0.0, -1.0), rgb);
+    votes += neighborConfidence(xy + float2(0.0, 1.0), rgb);
+    // Local context may repair a weak reflection, but never turn a weak match
+    // into an unrestricted selection. This operates in source-image pixels.
+    float refined = clamp(votes.x / votes.y, max(0.0, center - 0.20), min(1.0, center + 0.20));
+    return mix(center, refined, uncertainty);
+  }
 `;
 
 export const COLOR_ISOLATION_SHADER = `${CLASSIFIER}
@@ -106,7 +138,14 @@ export const COLOR_ISOLATION_SHADER = `${CLASSIFIER}
     float vividSaturation = min(saturation * saturationBoost, 1.0);
     float3 vividColor = brightest * mix(float3(1.0), pixelHue, vividSaturation);
     float3 grayscale = float3(dot(rgb, float3(0.2126, 0.7152, 0.0722)) * backgroundBrightness);
-    float3 result = mix(grayscale, vividColor, colorIsolationMask(rgb));
+    float3 result = mix(grayscale, vividColor, refinedMask(xy, rgb));
+    // In pale surfaces, mask confidence must change chroma rather than create
+    // bright/dark islands. Fade this tonal correction out for saturated colors
+    // so their existing emphasis remains. This only scales down, avoiding clips.
+    float pale = 1.0 - smoothstep(0.18, 0.35, saturation);
+    float resultTone = dot(result, float3(0.2126, 0.7152, 0.0722));
+    float toneScale = min(1.0, grayscale.r / max(resultTone, 0.001));
+    result *= mix(1.0, toneScale, pale);
     return half4(fromLinearSrgb(decodeSrgb(result)) * pixel.a, pixel.a);
   }
 `;
@@ -116,7 +155,7 @@ export const COLOR_ISOLATION_MASK_SHADER = `${CLASSIFIER}
   half4 main(float2 xy) {
     half4 pixel = image.eval(xy);
     float3 rgb = encodeSrgb(toLinearSrgb(pixel.rgb / max(pixel.a, 0.001)));
-    return half4(float3(colorIsolationMask(rgb) * pixel.a), 1.0);
+    return half4(float3(refinedMask(xy, rgb) * pixel.a), 1.0);
   }
 `;
 
