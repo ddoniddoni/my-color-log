@@ -2,6 +2,7 @@ import { randomUUID } from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import { ImageManipulator, type ImageManipulatorContext, SaveFormat } from 'expo-image-manipulator';
 
+import { getCameraSquareCrop, type CameraFrame } from '@/src/features/camera/model/cameraFraming';
 import { type SquareCrop } from '@/src/features/camera/model/squareCrop';
 import { getCenteredSquareCrop, getSquareResize } from '@/src/features/camera/model/squareCrop';
 import { addPendingPhoto, confirmReviewPhoto, updatePendingPhoto } from '@/src/features/sync/queue/photoQueue';
@@ -14,6 +15,7 @@ export type SavePhotoForReviewInput = {
   sourceUri: string;
   sourceWidth: number;
   sourceHeight: number;
+  cameraFrame?: CameraFrame;
   userId: string;
   missionId: string;
   dateKey: string;
@@ -22,10 +24,12 @@ export type SavePhotoForReviewInput = {
 };
 
 export async function saveCapturedPhotoForReview(input: SavePhotoForReviewInput): Promise<PendingPhoto> {
+  const crop = input.cameraFrame
+    ? getCameraSquareCrop(input.sourceWidth, input.sourceHeight, input.cameraFrame)
+    : getCenteredSquareCrop(input.sourceWidth, input.sourceHeight);
   const photoId = randomUUID();
   const entryId = randomUUID();
   const context = ImageManipulator.manipulate(input.sourceUri);
-  const crop = getCenteredSquareCrop(input.sourceWidth, input.sourceHeight);
   context.crop(crop);
   const resize = getSquareResize(crop.width, MAX_IMAGE_DIMENSION);
   if (resize) context.resize(resize);
