@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 
 import { getColorIsolationUniforms } from '@/src/features/camera/model/colorIsolation';
@@ -17,7 +17,7 @@ export const isColorIsolationPreviewAvailable = ColorIsolationSkiaPreview !== nu
 type PreviewProps = { colorHex: string; size: number; uri: string; onError: () => void };
 
 export function ColorIsolationPreview({ colorHex, onError, size, uri }: PreviewProps) {
-  const uniforms = getColorIsolationUniforms(colorHex);
+  const uniforms = useMemo(() => getColorIsolationUniforms(colorHex), [colorHex]);
   const original = <Image cachePolicy="memory-disk" contentFit="cover" source={{ uri }} style={{ height: size, width: size }} />;
   if (!ColorIsolationSkiaPreview || !uniforms) return original;
 
