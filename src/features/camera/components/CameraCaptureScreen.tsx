@@ -10,7 +10,10 @@ import { useAppTheme } from '@/src/design/ThemeProvider';
 import { colors, spacing, type ThemeColors } from '@/src/design/tokens';
 import { useSessionBootstrap } from '@/src/features/auth/hooks/useSessionBootstrap';
 import { saveCapturedPhotoForReview } from '@/src/features/camera/api/localPhotoRepository';
+import { resolveCameraFrame, type CameraLayout } from '@/src/features/camera/model/cameraFraming';
 import { useAppLanguage } from '@/src/lib/localization/LanguageProvider';
+
+const GUIDE_BORDER_WIDTH = 2;
 
 export type CaptureContext = {
   colorHex: string;
@@ -30,8 +33,13 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
   const [flash, setFlash] = useState<FlashMode>('auto');
   const [isReady, setIsReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [previewLayout, setPreviewLayout] = useState<CameraLayout | null>(null);
+  const [guideAreaLayout, setGuideAreaLayout] = useState<CameraLayout | null>(null);
+  const [guideLayout, setGuideLayout] = useState<CameraLayout | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const sessionState = useSessionBootstrap();
+  const cameraFrame = resolveCameraFrame(previewLayout, guideAreaLayout, guideLayout, GUIDE_BORDER_WIDTH);
+  const canCapture = isReady && cameraFrame !== null && !isCapturing;
 
   const refreshCameraPermission = useCallback((): void => {
     void getPermission().catch(() => undefined);
@@ -60,7 +68,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
   }
 
   const takePhoto = async (): Promise<void> => {
-    if (!cameraRef.current || !isReady || isCapturing) return;
+    if (!cameraRef.current || !canCapture || !cameraFrame) return;
     if (sessionState.status !== 'ready' || !sessionState.session) {
       setErrorMessage(t('로그인 정보를 확인하지 못했어요. 오늘 화면에서 다시 시도해 주세요.'));
       return;
@@ -74,6 +82,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         sourceUri: photo.uri,
         sourceWidth: photo.width,
         sourceHeight: photo.height,
+        cameraFrame,
         userId: sessionState.session.user.id,
         missionId: captureContext.missionId,
         dateKey: captureContext.dateKey,
@@ -102,6 +111,7 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         flash={flash}
         mode="picture"
         onCameraReady={() => setIsReady(true)}
+        onLayout={(event) => setPreviewLayout(event.nativeEvent.layout)}
         onMountError={() => setErrorMessage(t('카메라를 시작하지 못했어요.'))}
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
@@ -111,8 +121,8 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         <AppText style={styles.cameraTitle}>오늘의 색 · {captureContext.position}/9</AppText>
         <CameraControl accessibilityLabel={language === 'ko' ? `플래시 ${flash}` : `Flash ${flash}`} onPress={() => setFlash(getNextFlashMode(flash))}><FlashIcon mode={flash} /></CameraControl>
       </View>
-      <View pointerEvents="none" style={styles.squareGuideArea}>
-        <View accessible accessibilityLabel={t('정사각형 사진 저장 가이드')} accessibilityRole="image" style={styles.squareGuide}>
+      <View onLayout={(event) => setGuideAreaLayout(event.nativeEvent.layout)} pointerEvents="none" style={styles.squareGuideArea} testID="camera-guide-area">
+        <View accessible accessibilityLabel={t('정사각형 사진 저장 가이드')} accessibilityRole="image" onLayout={(event) => setGuideLayout(event.nativeEvent.layout)} style={styles.squareGuide}>
           <AppText style={styles.squareGuideLabel}>{t('정사각형 프레임')} · {t('정사각형으로 저장돼요')}</AppText>
         </View>
       </View>
@@ -122,10 +132,10 @@ export function CameraCaptureScreen({ captureContext }: { captureContext: Captur
         <Pressable
           accessibilityLabel={t('사진 촬영')}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !isReady || isCapturing }}
-          disabled={!isReady || isCapturing}
+          accessibilityState={{ busy: isCapturing, disabled: !canCapture }}
+          disabled={!canCapture}
           onPress={() => void takePhoto()}
-          style={({ pressed }) => [styles.shutterOuter, pressed && styles.shutterPressed, (!isReady || isCapturing) && styles.controlDisabled]}>
+          style={({ pressed }) => [styles.shutterOuter, pressed && styles.shutterPressed, !canCapture && styles.controlDisabled]}>
           <View style={styles.shutterInner} />
         </Pressable>
       </View>
@@ -217,7 +227,7 @@ const styles = StyleSheet.create({
   cameraPage: { backgroundColor: colors.black, flex: 1 },
   cameraTopBar: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.34)', flexDirection: 'row', justifyContent: 'space-between', left: 0, paddingBottom: spacing[3], paddingHorizontal: spacing[4], position: 'absolute', right: 0, top: 0 },
   squareGuideArea: { alignItems: 'center', bottom: 172, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 98 },
-  squareGuide: { alignItems: 'flex-start', alignSelf: 'center', aspectRatio: 1, borderColor: 'rgba(255,255,255,0.92)', borderWidth: 2, justifyContent: 'flex-end', maxWidth: 420, padding: 10, width: '88%' },
+  squareGuide: { alignItems: 'flex-start', alignSelf: 'center', aspectRatio: 1, borderColor: 'rgba(255,255,255,0.92)', borderWidth: GUIDE_BORDER_WIDTH, justifyContent: 'flex-end', maxWidth: 420, padding: 10, width: '88%' },
   squareGuideLabel: { backgroundColor: 'rgba(0,0,0,0.56)', color: colors.white, fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.45, paddingHorizontal: 6, paddingVertical: 4 },
   cameraTitle: { color: colors.white, fontFamily: 'monospace', fontSize: 12, letterSpacing: 0.8 },
   cameraControl: { alignItems: 'center', height: 48, justifyContent: 'center', width: 48 },
